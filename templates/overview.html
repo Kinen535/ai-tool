@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-title">总览</h1>
+
+<!-- ① 顶部统计卡片 -->
+<div class="stats-grid">
+    {% for k, v in stats.items() %}
+    <div class="card stat-card">
+        <div class="stat-label">{{ k }}</div>
+        <div class="stat-value">{{ v }}</div>
+    </div>
+    {% endfor %}
+</div>
+<div class="card">
+    <div class="card-title">🔥 今日决策建议</div>
+    <ul>
+      {% for line in advice_summary %}
+        <li>{{ line }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+<!-- ② 中部决策区 -->
+<div class="card" style="margin-top:20px;">
+    <div class="card-title">自动管理建议（核心决策）</div>
+
+    <div class="card-grid">
+        <div class="mini-card">
+            <div class="mini-title">🔴 清理名单（{{ advice["清理名单"]|length }}人）</div>
+            <ul class="scroll-list">
+                {% for x in advice["清理名单"] %}
+                <li class="text-red">{{ x }}</li>
+                {% endfor %}
+                {% if advice["清理名单"]|length == 0 %}
+                <li class="muted">暂无</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="mini-card">
+            <div class="mini-title">🟡 警告名单（{{ advice["警告名单"]|length }}人）</div>
+            <ul class="scroll-list">
+                {% for x in advice["警告名单"] %}
+                <li class="text-yellow">{{ x }}</li>
+                {% endfor %}
+                {% if advice["警告名单"]|length == 0 %}
+                <li class="muted">暂无</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="mini-card">
+            <div class="mini-title">🟢 核心成员（{{ advice["核心成员"]|length }}人）</div>
+            <ul class="scroll-list">
+                {% for x in advice["核心成员"] %}
+                <li class="text-green">{{ x }}</li>
+                {% endfor %}
+                {% if advice["核心成员"]|length == 0 %}
+                <li class="muted">暂无</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="mini-card">
+            <div class="mini-title">⚪ 未执行名单（{{ advice["未执行名单"]|length }}人）</div>
+            <ul class="scroll-list">
+                {% for x in advice["未执行名单"] %}
+                <li>{{ x }}</li>
+                {% endfor %}
+                {% if advice["未执行名单"]|length == 0 %}
+                <li class="muted">暂无</li>
+                {% endif %}
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<!-- ③ 底部数据区 -->
+<div class="two-col" style="margin-top:20px;">
+    <div class="card">
+        <div class="card-title">战力前十</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>昵称</th>
+                    <th>战力</th>
+                    <th>所属团</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_members %}
+                <tr>
+                    <td>{{ row.nickname }}</td>
+                    <td>{{ row.power }}</td>
+                    <td>{{ row.team_name }}</td>
+                </tr>
+                {% endfor %}
+                {% if not top_members %}
+                <tr>
+                    <td colspan="3" class="muted">暂无成员</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="card-title">最近异常（按势力增长）</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>成员</th>
+                    <th>团</th>
+                    <th>势力增长</th>
+                    <th>执行状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_abnormal %}
+                <tr>
+                    <td>{{ row["成员"] }}</td>
+                    <td>{{ row["分组"] }}</td>
+                    <td>{{ row["势力增长"] }}</td>
+                    <td>{{ row["执行状态"] }}</td>
+                </tr>
+                {% endfor %}
+                {% if not top_abnormal %}
+                <tr>
+                    <td colspan="4" class="muted">暂无对比结果</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

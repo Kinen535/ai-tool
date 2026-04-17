@@ -1,0 +1,132 @@
+:root { --bg:#f4f6fb; --card:#ffffff; --line:#e4e8f0; --text:#172033; --muted:#6b7485; --nav:#0f1b33; --nav-hover:#1d2a48; --primary:#2f67f6; --danger:#e45757; --warning:#f5a623; --success:#20a464; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+.layout { display:flex; min-height:100vh; }
+.sidebar { width:210px; background:var(--nav); color:#fff; padding:22px 0; position:sticky; top:0; height:100vh; }
+.brand { padding:0 18px 18px; border-bottom:1px solid rgba(255,255,255,.08); }
+.brand-title { font-size:20px; font-weight:700; }
+.brand-sub { font-size:12px; color:rgba(255,255,255,.7); margin-top:6px; }
+.nav { padding:14px 8px; display:flex; flex-direction:column; gap:6px; }
+.nav-item { color:rgba(255,255,255,.85); text-decoration:none; padding:12px 14px; border-radius:10px; display:block; }
+.nav-item:hover { background:var(--nav-hover); }
+.nav-item.active { background:#1b2b50; color:#fff; }
+.main { flex:1; padding:28px; overflow-x:auto; }
+.page-title { margin:0 0 20px; font-size:28px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:18px; }
+.card-title { font-size:18px; font-weight:700; margin-bottom:14px; }
+.stats-grid { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:16px; margin-bottom:18px; }
+.stat-card { min-height:100px; display:flex; flex-direction:column; justify-content:center; }
+.stat-label { color:var(--muted); margin-bottom:8px; }
+.stat-value { font-size:30px; font-weight:700; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+.top-align { align-items:start; }
+label { display:block; margin:12px 0 8px; font-weight:600; }
+.input { width:100%; border:1px solid #d7dde8; border-radius:14px; padding:12px 14px; font-size:15px; background:#fff; }
+textarea.input { resize:vertical; }
+.input.file { padding:10px; }
+.btn { display:inline-block; border:1px solid #cfd7e7; background:white; padding:10px 18px; border-radius:12px; cursor:pointer; text-decoration:none; color:var(--text); margin-top:16px; }
+.btn.primary { background:var(--primary); color:white; border-color:var(--primary); }
+.table { width:100%; border-collapse:collapse; min-width:980px; }
+.table th,.table td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; vertical-align:top; white-space:nowrap; }
+.table th { background:#f8f9fc; font-weight:700; }
+.muted { color:var(--muted); }
+.mb12 { margin-bottom:12px; }
+.mt16 { margin-top:16px; }
+.row-gap { display:flex; gap:16px; flex-wrap:wrap; }
+.flash-wrap { margin-bottom:16px; }
+.flash { padding:12px 14px; border-radius:12px; margin-bottom:10px; border:1px solid var(--line); background:white; }
+.flash.success { border-color:rgba(32,164,100,.25); background:rgba(32,164,100,.08); }
+.flash.warning { border-color:rgba(245,166,35,.25); background:rgba(245,166,35,.08); }
+.flash.error { border-color:rgba(228,87,87,.25); background:rgba(228,87,87,.08); }
+.link-danger { border:none; background:none; color:var(--danger); cursor:pointer; padding:0; }
+.list { margin:0; padding-left:18px; line-height:1.9; }
+.paragraph { line-height:1.9; margin-bottom:10px; }
+.advice-block { margin-bottom:14px; }
+.advice-title { font-weight:700; margin-bottom:8px; }
+@media (max-width:1100px) { .stats-grid,.two-col { grid-template-columns:1fr; } .sidebar { width:170px; } }
+.limit-list {
+  max-height: 120px;
+  overflow-y: auto;   /* ✅允许滚动 */
+  padding-right: 6px;
+  transition: all 0.3s;
+}
+
+.limit-list.expanded {
+  max-height: 800px;
+}
+
+.toggle-btn {
+  margin-top: 5px;
+  border: none;
+  background: #2d8cf0;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+/* 颜色区分 */
+.danger-item {
+  color: #e45757;
+  font-weight: bold;
+}
+
+.warn-item {
+  color: #f5a623;
+}
+
+.core-item {
+  color: #2aa464;
+}
+
+.normal-item {
+  color: #666;
+}
+.limit-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.limit-list::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 3px;
+}
+
+.limit-list::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+/* 横向卡片布局 */
+.card-grid {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+.card-grid .mini-card {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.mini-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid #eee;
+}
+
+.mini-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+/* 表格滚动优化 */
+.table-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* 表头固定 */
+table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+}

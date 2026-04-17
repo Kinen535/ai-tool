@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block content %}
+<h1 class="page-title">快照上传</h1>
+<div class="two-col top-align">
+<div class="card">
+<div class="card-title">上传游戏原始表</div>
+<div class="muted mb12">一天可以上传多次。系统会把每次上传作为一个时间点快照，后续可自动或手动选择任意两个时间点做对比。</div>
+<form method="post" enctype="multipart/form-data">
+<label>快照时间（可手动填，不填则自动取当前时间）</label>
+<input class="input" type="text" name="snapshot_time" placeholder="例如：2026-04-14 15:30">
+<label>原始 CSV 快照</label>
+<input class="input file" type="file" name="snapshot_file" accept=".csv" required>
+<button class="btn primary" type="submit">保存快照</button>
+</form></div>
+<div class="card"><div class="card-title">已保存时间点</div><table class="table"><thead><tr><th>时间点</th></tr></thead><tbody>
+{% for t in times %}<tr><td>{{ t }}</td></tr>{% endfor %}
+{% if not times %}<tr><td class="muted">暂无快照</td></tr>{% endif %}
+</tbody></table></div></div>{% endblock %}

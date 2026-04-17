@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block content %}
+<h1 class="page-title">趋势分析</h1>
+<div class="card"><div class="card-title">按成员或按团查看历史趋势</div>
+<form method="get">
+<div class="two-col top-align">
+<div><label>成员关键词</label><input class="input" type="text" name="member_keyword" value="{{ member_keyword }}" placeholder="输入成员名，查看这个成员的历史"></div>
+<div><label>团关键词</label><input class="input" type="text" name="team_keyword" value="{{ team_keyword }}" placeholder="输入团名，查看这个团的历史"></div>
+</div><button class="btn primary" type="submit">查看趋势</button></form></div>
+
+<div class="card"><div class="card-title">趋势结果</div><table class="table"><thead>
+{% if member_keyword %}<tr><th>时间点</th><th>成员</th><th>团</th><th>战功总量</th><th>助攻总量</th><th>势力值</th></tr>
+{% elif team_keyword %}<tr><th>时间点</th><th>团</th><th>团总战功</th><th>团总助攻</th><th>团总势力</th><th>团人数</th></tr>
+{% else %}<tr><th>说明</th></tr>{% endif %}
+</thead><tbody>
+{% if member_keyword %}{% for row in trend_rows %}<tr><td>{{ row["snapshot_time"] }}</td><td>{{ row["member"] }}</td><td>{{ row["team_name"] }}</td><td>{{ row["battle_total"] }}</td><td>{{ row["assist_total"] }}</td><td>{{ row["power_value"] }}</td></tr>{% endfor %}
+{% elif team_keyword %}{% for row in trend_rows %}<tr><td>{{ row["snapshot_time"] }}</td><td>{{ row["team_name"] }}</td><td>{{ row["battle_total_sum"] }}</td><td>{{ row["assist_total_sum"] }}</td><td>{{ row["power_value_sum"] }}</td><td>{{ row["members_count"] }}</td></tr>{% endfor %}
+{% else %}<tr><td class="muted">输入成员关键词或团关键词后查看趋势</td></tr>{% endif %}
+{% if (member_keyword or team_keyword) and not trend_rows %}<tr><td colspan="6" class="muted">没有匹配到历史数据</td></tr>{% endif %}
+</tbody></table></div>{% endblock %}

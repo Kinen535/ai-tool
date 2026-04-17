@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">对比分析（A+B）</h1>
+
+<div class="card">
+    <div class="card-title">对比设置</div>
+    <form method="post">
+        <label>模式</label>
+        <select class="input" name="compare_mode">
+            <option value="auto" {% if compare_mode == 'auto' %}selected{% endif %}>A 自动对比最近两次上传</option>
+            <option value="manual" {% if compare_mode == 'manual' %}selected{% endif %}>B 手动选择两个时间点</option>
+        </select>
+
+        <div class="two-col top-align">
+            <div>
+                <label>起始时间点（手动模式）</label>
+                <select class="input" name="snapshot_old">
+                    <option value="">请选择</option>
+                    {% for t in times %}
+                    <option value="{{ t }}" {% if selected_old == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>结束时间点（手动模式）</label>
+                <select class="input" name="snapshot_new">
+                    <option value="">请选择</option>
+                    {% for t in times %}
+                    <option value="{{ t }}" {% if selected_new == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+<!-- ===== 第一行：基础筛选 ===== -->
+<div class="two-col top-align">
+
+    <div>
+        <label>团关键词筛选</label>
+        <input class="input" type="text" name="team_keyword" value="{{ team_keyword }}">
+    </div>
+
+    <div>
+        <label>势力增长范围</label>
+        <div style="display:flex; gap:6px;">
+            <input class="input" type="number" name="power_growth_min" placeholder="最小值">
+            <input class="input" type="number" name="power_growth_max" placeholder="最大值">
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ===== 第二行：战斗行为 ===== -->
+<div class="two-col top-align">
+
+    <div>
+        <label>战功增长范围</label>
+        <div style="display:flex; gap:6px;">
+            <input class="input" type="number" name="war_min" placeholder="最小值">
+            <input class="input" type="number" name="war_max" placeholder="最大值">
+        </div>
+    </div>
+
+    <div>
+        <label>助攻增长范围</label>
+        <div style="display:flex; gap:6px;">
+            <input class="input" type="number" name="assist_min" placeholder="最小值">
+            <input class="input" type="number" name="assist_max" placeholder="最大值">
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ===== 第三行：贡献行为 ===== -->
+<div class="two-col top-align">
+
+    <div>
+        <label>捐献增长范围</label>
+        <div style="display:flex; gap:6px;">
+            <input class="input" type="number" name="donate_min" placeholder="最小值">
+            <input class="input" type="number" name="donate_max" placeholder="最大值">
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ===== 按钮 ===== -->
+<button class="btn primary" type="submit">开始分析</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-title">自动管理建议</div>
+
+    <div class="card" style="margin-top:20px;">
+        <div class="card-title">执行名单（可选择复制）</div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+            <div id="copyOptions" style="display:flex; gap:14px; flex-wrap:wrap;">
+                <label><input type="checkbox" value="清理名单" checked> 清理名单</label>
+                <label><input type="checkbox" value="警告名单" checked> 警告名单</label>
+                <label><input type="checkbox" value="核心成员"> 核心成员</label>
+                <label><input type="checkbox" value="未执行名单"> 未执行名单</label>
+            </div>
+
+            <div id="selectedCount" class="muted" style="margin-left:auto;">已选：0 人</div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+            <input id="searchInput" class="input" type="text" placeholder="搜索成员名字（仅过滤下方表格）" style="max-width:320px;">
+            <button class="btn" type="button" onclick="selectAllAbnormal()">全选异常</button>
+            <button class="btn" type="button" onclick="selectAllClean()">全选清理</button>
+            <label style="margin-left:10px; display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="autoModeToggle" checked>
+                自动生成名单
+            </label>
+        </div>
+
+        <textarea id="kickText" style="width:100%;height:180px;"></textarea>
+
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn primary" type="button" onclick="generateKickText()">生成名单</button>
+            <button class="btn" type="button" onclick="copyKickText(event)">一键复制</button>
+            <button class="btn" type="button" onclick="clearSelectedRows()">清空点选</button>
+        </div>
+    </div>
+
+    <!-- ⭐ 原名单展示（已迁移到总览页）
+
+<div class="card-grid">
+    {% for title, key in [("清理名单","清理名单"),("警告名单","警告名单"),("核心成员","核心成员"),("未执行名单","未执行名单")] %}
+    <div class="mini-card">
+        <div class="mini-title">{{ title }}</div>
+
+        <button class="toggle-btn" onclick="toggleList(this)" type="button">
+            展开 ({{ advice[key]|length }}人)
+        </button>
+
+        <ul class="limit-list">
+            {% for x in advice[key] %}
+            <li>{{ x }}</li>
+            {% endfor %}
+            {% if not advice[key] %}
+            <li class="muted">暂无</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+
+-->
+</div>
+
+<div class="card">
+    <div class="card-title">成员明细（完整版）</div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>成员</th>
+                    <th>分组</th>
+                    <th>所属州</th>
+                
+                    <th>势力值</th>
+                    <th>贡献排行</th>
+                
+                    <th>战功本周</th>
+                    <th>助攻本周</th>
+                    <th>捐献本周</th>
+                
+                    <th>战功总量</th>
+                    <th>助攻总量</th>
+                    <th>捐献总量</th>
+                
+                    <th>战功增长</th>
+                    <th>助攻增长</th>
+                    <th>捐献增长</th>
+                    <th>势力增长</th>
+                
+                    <th>执行状态</th>
+                    <th>违规标记</th>
+                    <th>状态</th>
+                    <th>建议</th>
+                    <th>评分</th>
+                    <th>风险原因</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in data %}
+                    {% set risk = row.get('风险原因', '') %}
+                    {% set exec = row.get('执行状态', '') %}
+                
+                    {% if '偷地' in risk %}
+                    <tr class="row-red selectable-row"
+                        data-name="{{ row['成员'] }}"
+                        data-type="偷地">
+                    {% elif '未参战' in exec or '完全摆烂' in exec or '无战功增长' in risk %}
+                    <tr class="row-yellow selectable-row"
+                        data-name="{{ row['成员'] }}"
+                        data-type="未执行">
+                    {% elif '低活跃' in row.get('状态', '') or '低活跃' in row.get('违规', '') %}
+                    <tr class="row-yellow selectable-row"
+                        data-name="{{ row['成员'] }}"
+                        data-type="低活跃">
+                    {% else %}
+                    <tr class="selectable-row"
+                        data-name="{{ row['成员'] }}"
+                        data-type="正常">
+                    {% endif %}
+                        <td>{{ row["成员"] }}</td>
+                        <td>{{ row["分组"] }}</td>
+                        <td>{{ row["所属州"] }}</td>
+                
+                        <td>{{ row["势力值"] }}</td>
+                        <td>{{ row["贡献排行"] }}</td>
+                
+                        <td>{{ row["战功本周"] }}</td>
+                        <td>{{ row["助攻本周"] }}</td>
+                        <td>{{ row["捐献本周"] }}</td>
+                
+                        <td>{{ row["战功总量"] }}</td>
+                        <td>{{ row["助攻总量"] }}</td>
+                        <td>{{ row["捐献总量"] }}</td>
+                
+                        <td>{{ row["战功增长"] }}</td>
+                        <td>{{ row["助攻增长"] }}</td>
+                        <td>{{ row["捐献增长"] }}</td>
+                        <td>{{ row["势力增长"] }}</td>
+                
+                        <td>{{ row["执行状态"] }}</td>
+                
+                        <td>
+                            {% if row["违规"] == "疑似偷地" %}
+                            🚨 偷地
+                            {% elif row["违规"] == "未执行" %}
+                            ⚠️ 未执行
+                            {% elif row["违规"] == "低活跃" %}
+                            低活跃
+                            {% else %}
+                            正常
+                            {% endif %}
+                        </td>
+                
+                        <td>{{ row["状态"] }}</td>
+                        <td>{{ row["建议"] }}</td>
+                
+                        <td>
+                            <span style="font-weight:700; color:#2c3e50;">
+                                {{ row["评分"] }}
+                            </span>
+                        </td>
+                
+                        <td>
+                            <span style="color:#d48806;">
+                                {{ row["风险原因"] }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleList(btn) {
+    const ul = btn.nextElementSibling;
+    ul.classList.toggle("expanded");
+
+    if (ul.classList.contains("expanded")) {
+        btn.innerText = "收起";
+    } else {
+        btn.innerText = "展开（" + ul.children.length + "人）";
+    }
+}
+
+function copyKickText(e) {
+    const text = document.getElementById("kickText");
+    text.select();
+    document.execCommand("copy");
+
+    const btn = e.target;
+    const oldText = btn.innerText;
+
+    btn.innerText = "✅ 已复制";
+    btn.style.background = "#52c41a";
+    btn.style.color = "#fff";
+
+    setTimeout(() => {
+        btn.innerText = oldText;
+        btn.style.background = "";
+        btn.style.color = "";
+    }, 1500);
+}
+
+
+let autoMode = true;
+let selectedMap = {};
+
+function updateSelectedCount() {
+    const el = document.getElementById("selectedCount");
+    if (el) {
+        el.innerText = "已选：" + Object.keys(selectedMap).length + " 人";
+    }
+}
+
+function generateKickText() {
+    let result = "";
+
+    const checked = [];
+    document.querySelectorAll("#copyOptions input[type=checkbox]:checked").forEach(cb => {
+        checked.push(cb.value);
+    });
+
+    const grouped = {
+        "清理名单": [],
+        "警告名单": [],
+        "核心成员": [],
+        "未执行名单": []
+    };
+
+    // 只输出手动点选结果
+    for (const name in selectedMap) {
+        const type = selectedMap[name];
+        if (grouped[type]) {
+            grouped[type].push(name);
+        }
+    }
+
+    checked.forEach(type => {
+        const list = grouped[type];
+        if (!list || list.length === 0) return;
+
+        result += "【" + type + "】\n";
+        list.forEach(name => {
+            if (type === "清理名单") {
+                result += "🔴 " + name + "\n";
+            } else if (type === "警告名单") {
+                result += "🟡 " + name + "\n";
+            } else {
+                result += name + "\n";
+            }
+        });
+        result += "\n";
+    });
+
+    document.getElementById("kickText").value = result.trim();
+    updateSelectedCount();
+}
+
+function resetRowColor(row, rawType) {
+    row.classList.remove("row-red", "row-yellow");
+
+    if (rawType.includes("偷") || rawType.includes("偷地")) {
+        row.classList.add("row-red");
+    } else if (rawType.includes("未执行") || rawType.includes("低活跃")) {
+        row.classList.add("row-yellow");
+    }
+}
+
+function applyRowVisual(row, currentType, rawType) {
+    row.classList.remove("row-red", "row-yellow", "selected-row");
+
+    if (currentType === "清理名单") {
+        row.classList.add("row-red", "selected-row");
+    } else if (currentType === "警告名单") {
+        row.classList.add("row-yellow", "selected-row");
+    } else {
+        resetRowColor(row, rawType);
+    }
+}
+
+function clearSelectedRows() {
+    selectedMap = {};
+
+    document.querySelectorAll(".selectable-row").forEach(row => {
+        row.classList.remove("selected-row");
+        resetRowColor(row, row.dataset.type || "");
+    });
+
+    generateKickText();
+}
+
+function selectAllAbnormal() {
+    document.querySelectorAll(".selectable-row").forEach(row => {
+        const name = row.dataset.name;
+        const type = row.dataset.type || "";
+
+        if (type.includes("偷") || type.includes("偷地")) {
+            selectedMap[name] = "清理名单";
+            applyRowVisual(row, "清理名单", type);
+        } else if (type.includes("未执行") || type.includes("低活跃")) {
+            selectedMap[name] = "警告名单";
+            applyRowVisual(row, "警告名单", type);
+        }
+    });
+
+    if (autoMode) {
+        generateKickText();
+    }
+}
+
+function selectAllClean() {
+    document.querySelectorAll(".selectable-row").forEach(row => {
+        const name = row.dataset.name;
+        const type = row.dataset.type || "";
+
+        if (type.includes("偷") || type.includes("偷地")) {
+            selectedMap[name] = "清理名单";
+            applyRowVisual(row, "清理名单", type);
+        }
+    });
+
+    if (autoMode) {
+        generateKickText();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const toggle = document.getElementById("autoModeToggle");
+    if (toggle) {
+        toggle.addEventListener("change", function() {
+            autoMode = this.checked;
+        });
+    }
+
+    document.querySelectorAll(".selectable-row").forEach(row => {
+        row.addEventListener("click", function() {
+            const name = this.dataset.name;
+            const type = this.dataset.type || "";
+
+            let defaultType = "";
+            if (type.includes("偷") || type.includes("偷地")) {
+                defaultType = "清理名单";
+            } else if (type.includes("未执行") || type.includes("低活跃")) {
+                defaultType = "警告名单";
+            } else {
+                return;
+            }
+
+            const current = selectedMap[name];
+
+            if (!current) {
+                selectedMap[name] = defaultType;
+            } else if (current === "清理名单") {
+                selectedMap[name] = "警告名单";
+            } else if (current === "警告名单") {
+                delete selectedMap[name];
+            }
+
+            applyRowVisual(this, selectedMap[name], type);
+
+            if (autoMode) {
+                generateKickText();
+            } else {
+                updateSelectedCount();
+            }
+        });
+    });
+
+    document.querySelectorAll("#copyOptions input[type=checkbox]").forEach(cb => {
+        cb.addEventListener("change", function() {
+            if (autoMode) {
+                generateKickText();
+            }
+        });
+    });
+
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+        searchInput.addEventListener("input", function() {
+            const keyword = this.value.trim().toLowerCase();
+
+            document.querySelectorAll(".selectable-row").forEach(row => {
+                const name = (row.dataset.name || "").toLowerCase();
+                row.style.display = name.includes(keyword) ? "" : "none";
+            });
+        });
+    }
+
+    document.getElementById("kickText").value = "";
+    updateSelectedCount();
+});
+</script>
+
+{% endblock %}

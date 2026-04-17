@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title or "三战同盟管理系统.决策版 V9" }}</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<style>
+
+/* ===== 表格高亮 ===== */
+.row-red {
+    background: #ffe6e6;
+}
+
+.row-yellow {
+    background: #fff5e6;
+}
+
+.selected-row {
+    box-shadow: inset 0 0 0 2px #1890ff;
+    cursor: pointer;
+}
+
+/* ===== 总览页：决策区布局 ===== */
+.decision-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 16px;
+}
+
+.decision-grid > * {
+    flex: 0 0 260px !important;
+}
+/* 每个卡片固定宽度 */
+.mini-card {
+    width: 260px;        /* 固定宽度 */
+    flex-shrink: 0;      /* 禁止被压缩 */
+
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+/* ===== 卡片 ===== */
+.mini-card {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-height: 160px;
+}
+
+/* ===== 标题 ===== */
+.mini-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #1f2937;
+}
+
+/* ===== 名单滚动核心（重点优化） ===== */
+.mini-card ul {
+    margin: 0;
+    padding-left: 20px;
+
+    max-height: 140px;   /* ⭐ 控制显示高度（约5条） */
+    overflow-y: auto;    /* ⭐ 启用滚动 */
+}
+
+/* ===== 列表项 ===== */
+.mini-card li {
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+
+/* ===== 滚动条美化 ===== */
+.mini-card ul::-webkit-scrollbar {
+    width: 5px;
+}
+
+.mini-card ul::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+/* ===== 颜色 ===== */
+.text-red {
+    color: #cf1322;
+}
+
+.text-yellow {
+    color: #d48806;
+}
+
+.text-green {
+    color: #389e0d;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+    <!-- 左侧导航 -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-title">同盟管理台</div>
+            <div class="logo-sub">V9 · 智能评分决策版</div>
+        </div>
+
+        <nav class="nav">
+            <a class="nav-item {% if request.path == '/' %}active{% endif %}" href="{{ url_for('overview') }}">总览</a>
+            <a class="nav-item {% if request.path.startswith('/snapshots') %}active{% endif %}" href="{{ url_for('snapshots') }}">快照上传</a>
+            <a class="nav-item {% if request.path.startswith('/compare') %}active{% endif %}" href="{{ url_for('compare') }}">对比分析</a>
+            <a class="nav-item {% if request.path.startswith('/trends') %}active{% endif %}" href="{{ url_for('trends') }}">趋势分析</a>
+            <a class="nav-item {% if request.path.startswith('/members') %}active{% endif %}" href="{{ url_for('members') }}">成员</a>
+            <a class="nav-item {% if request.path.startswith('/rules') %}active{% endif %}" href="{{ url_for('rules') }}">规则</a>
+            <a class="nav-item {% if request.path.startswith('/usage') %}active{% endif %}" href="{{ url_for('usage') }}">使用说明</a>
+        </nav>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="main">
+
+        <!-- 提示信息 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-wrap">
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- 页面内容 -->
+        {% block content %}{% endblock %}
+
+    </main>
+
+</div>
+
+</body>
+</html>

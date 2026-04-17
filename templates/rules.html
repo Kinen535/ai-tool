@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block content %}
+<h1 class="page-title">规则说明</h1>
+<div class="card"><div class="card-title">当前默认规则</div>
+<table class="table"><tbody>
+<tr><td>高战判定</td><td>势力值 ≥ {{ high_power }}</td></tr>
+<tr><td>中战判定</td><td>势力值 ≥ {{ mid_power }}</td></tr>
+<tr><td>高战最低战功增长</td><td>{{ high_battle_min }}</td></tr>
+<tr><td>中战最低战功增长</td><td>{{ mid_battle_min }}</td></tr>
+<tr><td>核心判定</td><td>战功增长 ≥ {{ core_battle_min }} 且助攻有明显增长</td></tr>
+</tbody></table></div>
+<div class="card"><div class="card-title">关键能力</div>
+<div class="paragraph">1. 一天可以上传多次原始表，形成多个时间点快照。</div>
+<div class="paragraph">2. A 模式：自动对比最近两次快照，适合偷懒日常巡查。</div>
+<div class="paragraph">3. B 模式：手动选择任意两个时间点，适合抓禁地违规、查打城执行。</div>
+<div class="paragraph">4. 势力增长阈值由你自己输入筛选，不会在程序里写死。</div>
+</div>{% endblock %}

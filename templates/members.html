@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block content %}
+<h1 class="page-title">成员管理</h1>
+<div class="two-col top-align">
+<div class="card"><div class="card-title">新增成员</div>
+<form method="post">
+<input type="hidden" name="action" value="add_member">
+<label>昵称</label><input class="input" name="nickname" type="text" required>
+<label>战力</label><input class="input" name="power" type="number" value="0">
+<label>所属团</label><input class="input" name="team_name" type="text">
+<label>角色</label><select class="input" name="role"><option value="成员">成员</option><option value="团长">团长</option><option value="管理">管理</option></select>
+<label>备注</label><textarea class="input" name="notes" rows="4"></textarea>
+<button class="btn primary" type="submit">保存成员</button></form></div>
+
+<div class="card"><div class="card-title">批量导入成员 CSV</div><div class="muted mb12">文件表头：nickname,power,team_name,role,notes</div>
+<form method="post" enctype="multipart/form-data">
+<input type="hidden" name="action" value="import_members">
+<input class="input file" type="file" name="file" accept=".csv">
+<button class="btn" type="submit">导入成员</button></form>
+<div class="mt16"><a href="{{ url_for('static', filename='members_template.csv') }}">下载成员模板</a></div></div></div>
+
+<div class="card"><div class="card-title">成员列表</div><table class="table"><thead><tr><th>昵称</th><th>战力</th><th>所属团</th><th>角色</th><th>备注</th><th>操作</th></tr></thead><tbody>
+{% for row in members %}<tr><td>{{ row.nickname }}</td><td>{{ row.power }}</td><td>{{ row.team_name }}</td><td>{{ row.role }}</td><td>{{ row.notes }}</td><td><form method="post" action="{{ url_for('delete_member', nickname=row.nickname) }}" onsubmit="return confirm('确认删除该成员？')"><button class="link-danger" type="submit">删除</button></form></td></tr>{% endfor %}
+{% if not members %}<tr><td colspan="6" class="muted">暂无成员</td></tr>{% endif %}
+</tbody></table></div>{% endblock %}

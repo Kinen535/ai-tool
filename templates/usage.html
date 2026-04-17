@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block content %}
+<h1 class="page-title">使用说明</h1>
+<div class="card"><div class="card-title">推荐流程</div>
+<ol class="list">
+<li>先进入“快照上传”，把游戏原始 CSV 存成多个时间点快照。一天导入几次都可以。</li>
+<li>进入“对比分析”，日常可选 A 自动模式，默认比较最近两次上传。</li>
+<li>要抓人时选 B 手动模式，自行选择起始和结束时间点。</li>
+<li>用团关键词筛选指定团，用势力增长阈值筛选异常人群。</li>
+<li>到“趋势分析”里查某个成员或某个团的历史变化。</li>
+</ol></div>
+<div class="card"><div class="card-title">两个典型场景</div>
+<ul class="list">
+<li>禁地期间：选两个时间点，看势力增长，筛异常。</li>
+<li>攻城结束后：选两个时间点，看助攻增长，筛未执行和消极玩家。</li>
+</ul></div>{% endblock %}
