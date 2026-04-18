@@ -148,8 +148,12 @@ def load_members():
     except Exception:
         df = pd.read_csv(MEMBERS_FILE)
         # 兼容新赛季字段
+# 兼容新赛季字段
 if "门阀" in df.columns and "分组" not in df.columns:
     df["分组"] = df["门阀"]
+
+if "分组" not in df.columns:
+    raise Exception("周表缺少字段：分组")
     expected = ["nickname", "power", "team_name", "role", "notes"]
     for col in expected:
         if col not in df.columns:
