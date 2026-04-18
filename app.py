@@ -902,3 +902,25 @@ if __name__ == "__main__":
     ensure_default_files()
     init_db()
     app.run(host="127.0.0.1", port=8080, debug=True)
+from flask import send_file
+import io
+
+@app.route('/export_members')
+def export_members():
+    import pandas as pd
+    
+    file_path = MEMBERS_FILE
+    
+    df = pd.read_csv(file_path)
+    
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    
+    output.seek(0)
+    
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='members_export.csv'
+    )
