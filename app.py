@@ -104,6 +104,12 @@ def get_conn():
     return conn
 
 def init_db():
+    import os
+
+DB_PATH = "data/snapshots.db"
+
+if os.path.exists(DB_PATH):
+    os.remove(DB_PATH)
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
