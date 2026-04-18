@@ -1,4 +1,6 @@
 from __future__ import annotations
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
