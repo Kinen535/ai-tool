@@ -1,6 +1,8 @@
 from __future__ import annotations
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask import send_file
+import io
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
@@ -898,13 +900,6 @@ def export_group_summary():
         return redirect(url_for("compare"))
     return send_file(GROUP_SUMMARY_FILE, as_attachment=True, download_name="group_summary.csv")
 
-if __name__ == "__main__":
-    ensure_default_files()
-    init_db()
-    app.run(host="127.0.0.1", port=8080, debug=True)
-from flask import send_file
-import io
-
 @app.route('/export_members')
 def export_members():
     import pandas as pd
@@ -924,3 +919,9 @@ def export_members():
         as_attachment=True,
         download_name='members_export.csv'
     )
+
+
+if __name__ == "__main__":
+    ensure_default_files()
+    init_db()
+    app.run(host="127.0.0.1", port=8080, debug=True)
