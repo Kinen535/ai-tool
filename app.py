@@ -2,6 +2,7 @@ from __future__ import annotations
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask import send_file
+from pathlib import Path
 import io
 import os
 # ====== 评分系统 ======
@@ -88,7 +89,7 @@ MEMBERS_FILE = DATA_DIR / "members.csv"
 COMPARE_RESULT_FILE = DATA_DIR / "compare_result.csv"
 GROUP_SUMMARY_FILE = DATA_DIR / "group_summary.csv"
 ADVICE_FILE = DATA_DIR / "advice.json"
-DB_FILE = DATA_DIR / "snapshots.db
+DB_FILE = DATA_DIR / "snapshots.db"
 
 HIGH_POWER = 35000
 MID_POWER = 25000
