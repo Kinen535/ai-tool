@@ -187,29 +187,37 @@ def read_csv_flexible(file_storage):
 def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
     df.columns = [str(c).strip() for c in df.columns]
+
+    # 兼容第一列无表头
     if "成员" not in df.columns:
         unnamed_cols = [c for c in df.columns if "Unnamed" in str(c)]
         if unnamed_cols:
             df = df.rename(columns={unnamed_cols[0]: "成员"})
+
+    # 兼容新赛季字段：门阀 = 分组
+    if "门阀" in df.columns and "分组" not in df.columns:
+        df["分组"] = df["门阀"]
+
     required = [
-        "成员","贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
-        "贡献总量","战功总量","助攻总量","捐献总量","势力值","所属州","分组"
+        "成员", "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
+        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值", "所属州", "分组"
     ]
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"周表缺少字段：{', '.join(missing)}")
+
     numeric_cols = [
-        "贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
-        "贡献总量","战功总量","助攻总量","捐献总量","势力值"
+        "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
+        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值"
     ]
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
     df["成员"] = df["成员"].astype(str).str.strip()
     df["所属州"] = df["所属州"].astype(str).str.strip()
     df["分组"] = df["分组"].astype(str).str.strip()
-    return df
 
-def update_members_from_snapshot(df):
+    return df
     members = load_members()
     current = members.set_index("nickname").to_dict(orient="index")
     for _, row in df.iterrows():
