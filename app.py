@@ -113,16 +113,14 @@ def init_db():
 
     DB_PATH = "data/snapshots.db"
 
-    # ✅ 确保目录存在
     os.makedirs("data", exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-
-    # ✅ 第二步：创建新结构
+    # ✅ 正确写法：加 IF NOT EXISTS
     cur.execute("""
-    CREATE TABLE snapshots (
+    CREATE TABLE IF NOT EXISTS snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         snapshot_time TEXT NOT NULL UNIQUE,
         data TEXT NOT NULL
