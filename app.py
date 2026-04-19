@@ -636,7 +636,7 @@ def snapshots():
         try:
             df = load_game_csv(file)
             save_snapshot(df, snapshot_time)
-            update_members_from_snapshot(df)
+   
             flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条", "success")
         except Exception as e:
             flash(f"快照保存失败：{e}", "error")
