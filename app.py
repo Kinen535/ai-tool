@@ -100,14 +100,20 @@ app = Flask(__name__)
 app.secret_key = "alliance-manager-v7-ab"
 
 def get_conn():
-    conn = sqlite3.connect(DB_FILE)
+    import sqlite3
+    DB_PATH = "data/snapshots.db"
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     import sqlite3
+    import os
 
     DB_PATH = "data/snapshots.db"
+
+    # ✅ 确保目录存在
+    os.makedirs("data", exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
