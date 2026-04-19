@@ -162,6 +162,16 @@ def load_members():
     df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
 
     return df[expected]
+
+def read_csv_flexible(file_storage):
+    import pandas as pd
+    try:
+        return pd.read_csv(file_storage, encoding="utf-8-sig")
+    except:
+        try:
+            return pd.read_csv(file_storage, encoding="gbk")
+        except:
+            return pd.read_csv(file_storage)
     
 def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
