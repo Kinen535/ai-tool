@@ -4,7 +4,6 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask import send_file
 import io
 import os
-init_db()
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
@@ -123,6 +122,8 @@ def init_db():
 
     conn.commit()
     conn.close()
+    # ✅ 在这里调用
+init_db()
 
 def ensure_default_files():
     if not MEMBERS_FILE.exists():
