@@ -210,29 +210,23 @@ def load_game_csv(file_storage):
     return df
     
 def save_snapshot(df, snapshot_time):
+    import json
+
     conn = get_conn()
     cur = conn.cursor()
-    inserted = 0
-    for _, row in df.iterrows():
-        cur.execute("""
-            INSERT OR REPLACE INTO snapshots (
-                snapshot_time, member, team_name, state_name,
-                contribution_rank, contribution_week, battle_week, assist_week, donate_week,
-                contribution_total, battle_total, assist_total, donate_total, power_value
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            snapshot_time,
-            str(row["成员"]).strip(),
-            str(row["分组"]).strip(),
-            str(row["所属州"]).strip(),
-            int(row["贡献排行"]), int(row["贡献本周"]), int(row["战功本周"]),
-            int(row["助攻本周"]), int(row["捐献本周"]), int(row["贡献总量"]),
-            int(row["战功总量"]), int(row["助攻总量"]), int(row["捐献总量"]), int(row["势力值"])
-        ))
-        inserted += 1
+
+    # 整个DataFrame转JSON
+    data_json = df.to_json(orient="records", force_ascii=False)
+
+    cur.execute(
+        "INSERT INTO snapshots (snapshot_time, data) VALUES (?, ?)",
+        (snapshot_time, data_json)
+    )
+
     conn.commit()
     conn.close()
-    return inserted
+
+    return len(df)
 
 def list_snapshot_times():
     conn = get_conn()
