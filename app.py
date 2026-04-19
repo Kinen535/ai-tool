@@ -119,8 +119,6 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    # 🚨 第一步：强制删除旧表（只用一次）
-    cur.execute("DROP TABLE IF EXISTS snapshots")
 
     # ✅ 第二步：创建新结构
     cur.execute("""
@@ -739,7 +737,7 @@ def compare():
     "清理名单": result[result["分类"] == "清理名单"]["成员"].tolist(),
     "警告名单": result[result["分类"] == "警告名单"]["成员"].tolist(),
     "核心成员": result[result["分类"] == "核心成员"]["成员"].tolist(),
-    "未执行名单": result[result["执行状态"] == "未参战"]["成员"].tolist()
+    "未执行名单": result[result["执行状态"] == "完全摆烂"]["成员"].tolist()
 }
 
             kick_text = build_kick_text(advice)
