@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask import send_file
 import io
 import os
+init_db()
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
@@ -105,34 +106,21 @@ def get_conn():
     return conn
 
 def init_db():
-    import os
+    import sqlite3
 
-DB_PATH = "data/snapshots.db"
+    DB_PATH = "data/snapshots.db"
 
-if os.path.exists(DB_PATH):
-    os.remove(DB_PATH)
-    conn = get_conn()
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            snapshot_time TEXT NOT NULL,
-            member TEXT NOT NULL,
-            team_name TEXT,
-            state_name TEXT,
-            contribution_rank INTEGER,
-            contribution_week INTEGER,
-            battle_week INTEGER,
-            assist_week INTEGER,
-            donate_week INTEGER,
-            contribution_total INTEGER,
-            battle_total INTEGER,
-            assist_total INTEGER,
-            donate_total INTEGER,
-            power_value INTEGER,
-            UNIQUE(snapshot_time, member)
-        )
+    CREATE TABLE IF NOT EXISTS snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snapshot_time TEXT NOT NULL,
+        data TEXT NOT NULL
+    )
     """)
+
     conn.commit()
     conn.close()
 
