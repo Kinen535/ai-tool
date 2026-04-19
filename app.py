@@ -162,17 +162,30 @@ if "分组" not in df.columns:
     df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
         return df[expected]
 
-def save_members(df):
+def load_members():
+    ensure_default_files()
+    try:
+        df = pd.read_csv(MEMBERS_FILE, encoding="utf-8-sig")
+    except Exception:
+        df = pd.read_csv(MEMBERS_FILE)
+
+    # ✅ 必须在函数里面（4个空格）
+    if "门阀" in df.columns and "分组" not in df.columns:
+        df["分组"] = df["门阀"]
+
+    if "分组" not in df.columns:
+        raise Exception("周表缺少字段：分组")
+
     expected = ["nickname", "power", "team_name", "role", "notes"]
+
     for col in expected:
         if col not in df.columns:
             df[col] = ""
-    df = df[expected].copy()
+
     df["nickname"] = df["nickname"].astype(str).fillna("").str.strip()
     df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
-    df = df.drop_duplicates(subset=["nickname"], keep="last")
-    df.to_csv(MEMBERS_FILE, index=False, encoding="utf-8-sig")
 
+    return df[expected]
 def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
     df.columns = [str(c).strip() for c in df.columns]
