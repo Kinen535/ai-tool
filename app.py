@@ -118,7 +118,6 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    # ✅ 正确写法：加 IF NOT EXISTS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,9 +128,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    # ✅ 在这里调用
-init_db()
-
+    
 def ensure_default_files():
     if not MEMBERS_FILE.exists():
         pd.DataFrame(columns=["nickname", "power", "team_name", "role", "notes"]).to_csv(
@@ -913,3 +910,7 @@ if __name__ == "__main__":
     ensure_default_files()
     init_db()
     app.run(host="127.0.0.1", port=8080, debug=True)
+
+@app.before_first_request
+def setup():
+    init_db()
