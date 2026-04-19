@@ -119,10 +119,14 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
+    # 🚨 第一步：强制删除旧表（只用一次）
+    cur.execute("DROP TABLE IF EXISTS snapshots")
+
+    # ✅ 第二步：创建新结构
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS snapshots (
+    CREATE TABLE snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        snapshot_time TEXT NOT NULL,
+        snapshot_time TEXT NOT NULL UNIQUE,
         data TEXT NOT NULL
     )
     """)
