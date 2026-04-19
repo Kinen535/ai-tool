@@ -160,7 +160,7 @@ if "分组" not in df.columns:
             df[col] = ""
     df["nickname"] = df["nickname"].astype(str).fillna("").str.strip()
     df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
-    return df[expected]
+        return df[expected]
 
 def save_members(df):
     expected = ["nickname", "power", "team_name", "role", "notes"]
