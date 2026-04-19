@@ -147,26 +147,6 @@ def load_members():
         df = pd.read_csv(MEMBERS_FILE, encoding="utf-8-sig")
     except Exception:
         df = pd.read_csv(MEMBERS_FILE)
-        # 兼容新赛季字段
-# 兼容新赛季字段
-if "门阀" in df.columns and "分组" not in df.columns:
-    df["分组"] = df["门阀"]
-
-if "分组" not in df.columns:
-    raise Exception("周表缺少字段：分组")
-    expected = ["nickname", "power", "team_name", "role", "notes"]
-    for col in expected:
-        if col not in df.columns:
-            df[col] = ""
-    df["nickname"] = df["nickname"].astype(str).fillna("").str.strip()
-    df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
-    return df[expected]
-def load_members():
-    ensure_default_files()
-    try:
-        df = pd.read_csv(MEMBERS_FILE, encoding="utf-8-sig")
-    except Exception:
-        df = pd.read_csv(MEMBERS_FILE)
 
     # ✅ 必须在函数里面（4个空格）
     if "门阀" in df.columns and "分组" not in df.columns:
