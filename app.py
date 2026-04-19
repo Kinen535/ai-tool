@@ -165,6 +165,7 @@ def load_members():
     df["power"] = pd.to_numeric(df["power"], errors="coerce").fillna(0).astype(int)
 
     return df[expected]
+    
 def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
     df.columns = [str(c).strip() for c in df.columns]
