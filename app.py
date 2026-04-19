@@ -173,43 +173,33 @@ def save_members(df):
     df = df.drop_duplicates(subset=["nickname"], keep="last")
     df.to_csv(MEMBERS_FILE, index=False, encoding="utf-8-sig")
 
-def read_csv_flexible(file_storage):
-    encodings = ["utf-8", "utf-8-sig", "gb18030", "gbk"]
-    last_error = None
-    for enc in encodings:
-        try:
-            file_storage.stream.seek(0)
-            return pd.read_csv(file_storage, encoding=enc)
-        except Exception as e:
-            last_error = e
-    raise ValueError(f"文件读取失败：{last_error}")
-
 def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
     df.columns = [str(c).strip() for c in df.columns]
 
-    # 兼容第一列无表头
     if "成员" not in df.columns:
         unnamed_cols = [c for c in df.columns if "Unnamed" in str(c)]
         if unnamed_cols:
             df = df.rename(columns={unnamed_cols[0]: "成员"})
 
-    # 兼容新赛季字段：门阀 = 分组
+    # ⭐关键：门阀 → 分组
     if "门阀" in df.columns and "分组" not in df.columns:
         df["分组"] = df["门阀"]
 
     required = [
-        "成员", "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
-        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值", "所属州", "分组"
+        "成员","贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
+        "贡献总量","战功总量","助攻总量","捐献总量","势力值","所属州","分组"
     ]
+
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"周表缺少字段：{', '.join(missing)}")
 
     numeric_cols = [
-        "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
-        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值"
+        "贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
+        "贡献总量","战功总量","助攻总量","捐献总量","势力值"
     ]
+
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
@@ -218,28 +208,7 @@ def load_game_csv(file_storage):
     df["分组"] = df["分组"].astype(str).str.strip()
 
     return df
-    members = load_members()
-    current = members.set_index("nickname").to_dict(orient="index")
-    for _, row in df.iterrows():
-        nickname = str(row["成员"]).strip()
-        power = int(row["势力值"])
-        team_name = str(row["分组"]).strip()
-        if nickname in current:
-            current[nickname]["power"] = power
-            current[nickname]["team_name"] = team_name
-        else:
-            current[nickname] = {"power": power, "team_name": team_name, "role": "成员", "notes": ""}
-    out = []
-    for nickname, info in current.items():
-        out.append({
-            "nickname": nickname,
-            "power": int(info.get("power", 0) or 0),
-            "team_name": info.get("team_name", ""),
-            "role": info.get("role", "成员") or "成员",
-            "notes": info.get("notes", "")
-        })
-    save_members(pd.DataFrame(out))
-
+    
 def save_snapshot(df, snapshot_time):
     conn = get_conn()
     cur = conn.cursor()
