@@ -234,29 +234,33 @@ def list_snapshot_times():
     conn.close()
     return [r["snapshot_time"] for r in rows]
 
+import json
+import pandas as pd
+
 def load_snapshot_df(snapshot_time):
     conn = get_conn()
-    rows = conn.execute("""
-        SELECT
-            member AS 成员,
-            team_name AS 分组,
-            state_name AS 所属州,
-            contribution_rank AS 贡献排行,
-            contribution_week AS 贡献本周,
-            battle_week AS 战功本周,
-            assist_week AS 助攻本周,
-            donate_week AS 捐献本周,
-            contribution_total AS 贡献总量,
-            battle_total AS 战功总量,
-            assist_total AS 助攻总量,
-            donate_total AS 捐献总量,
-            power_value AS 势力值
-        FROM snapshots
-        WHERE snapshot_time = ?
-    """, (snapshot_time,)).fetchall()
-    conn.close()
-    return pd.DataFrame([dict(r) for r in rows])
+    cur = conn.cursor()
 
+    row = cur.execute(
+        "SELECT data FROM snapshots WHERE snapshot_time=?",
+        (snapshot_time,)
+    ).fetchone()
+
+    conn.close()
+
+    if not row:
+        return pd.DataFrame()
+
+    # 关键：解析 JSON
+    data = json.loads(row["data"])
+
+    df = pd.DataFrame(data)
+
+    # 统一字段（防止后面报错）
+    df.columns = [str(c).strip() for c in df.columns]
+
+    return df
+    
 def compare_snapshots(df_old, df_new):
     # ===== 只保留两张表共同成员，做总量对比 =====
     df = pd.merge(df_old, df_new, on="成员", how="outer", suffixes=("_old", "_new"))
