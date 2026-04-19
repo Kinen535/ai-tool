@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask import send_file
 import io
+import os
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
