@@ -1,21 +1,23 @@
 print("🔥🔥🔥 我这个 app.py 被加载了！🔥🔥🔥")
+
 from __future__ import annotations
+
+from flask import Flask, send_file, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask import send_file
 from pathlib import Path
+
 import io
 import os
 import json
 import re
 import sqlite3
 import traceback
-print("🚀 app.py 正在加载...")
-app = Flask(__name__)
-from datetime import datetime
 
+from datetime import datetime
 import pandas as pd
-from flask import flash, redirect, render_template, request, url_for
+
+app = Flask(__name__)
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
