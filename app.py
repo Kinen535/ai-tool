@@ -111,10 +111,12 @@ app.secret_key = "alliance-manager-v7-ab"
 def get_conn():
     conn = sqlite3.connect(
         DB_FILE,
-        timeout=10,  # ⭐关键
+        timeout=15,
         check_same_thread=False
     )
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout = 15000;")
     return conn
 
 def init_db():
@@ -248,23 +250,8 @@ def load_game_csv(file_storage):
     return df
 
 
-# ✅ 就放这里（紧挨着下面）
-def extract_snapshot_time(filename):
-    try:
-        match = re.search(
-            r"(\d{4})年(\d{2})月(\d{2})日(\d{2})时(\d{2})分(\d{2})秒",
-            filename
-        )
-        if match:
-            y, m, d, h, mi, s = match.groups()
-            return f"{y}-{m}-{d} {h}:{mi}:{s}"
-    except:
-        pass
-
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-
 def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = ""):
+    conn = None
     try:
         payload = df.to_dict(orient="records")
         payload_json = json.dumps(payload, ensure_ascii=False)
@@ -272,17 +259,16 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         conn = get_conn()
         cur = conn.cursor()
 
-        # ✅ 防重复（必须）
+        # 防重复
         cur.execute(
-            "SELECT 1 FROM snapshots WHERE snapshot_time=?",
+            "SELECT 1 FROM snapshots WHERE snapshot_time = ?",
             (snapshot_time,)
         )
         if cur.fetchone():
-            print("⚠️ 已存在该时间快照，跳过写入")
-            conn.close()
-            return
+            print(f"⚠️ 已存在该时间快照，跳过写入: {snapshot_time}")
+            return False
 
-        # ✅ 写入数据库（注意三引号结构）
+        # 正常插入
         cur.execute("""
             INSERT INTO snapshots
             (snapshot_time, data, source_filename, created_at)
@@ -295,22 +281,32 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         ))
 
         conn.commit()
-        conn.close()
-
         print(f"✅ 快照已保存: {snapshot_time}, 文件: {source_filename}, 行数: {len(df)}")
+        return True
 
     except Exception as e:
         print("❌ save_snapshot 出错:", str(e))
         traceback.print_exc()
         raise
+
+    finally:
+        if conn is not None:
+            conn.close()
     
 
 def list_snapshot_times():
-    conn = get_conn()
-    rows = conn.execute("SELECT DISTINCT snapshot_time FROM snapshots ORDER BY snapshot_time DESC").fetchall()
-    conn.close()
-    return [r["snapshot_time"] for r in rows]
-
+    conn = None
+    try:
+        conn = get_conn()
+        rows = conn.execute("""
+            SELECT snapshot_time
+            FROM snapshots
+            ORDER BY snapshot_time DESC
+        """).fetchall()
+        return [r["snapshot_time"] for r in rows]
+    finally:
+        if conn is not None:
+            conn.close()
 import json
 import pandas as pd
 
@@ -695,18 +691,23 @@ def snapshots():
 
             df = load_game_csv(file)
 
+            # 手填优先，否则自动识别文件名时间（精确到秒）
             snapshot_time = manual_time if manual_time else extract_snapshot_time(file.filename)
             print("🕒 使用快照时间:", snapshot_time)
 
-            save_snapshot(df, snapshot_time, file.filename)
-            update_members_from_snapshot(df)
+            inserted = save_snapshot(df, snapshot_time, file.filename)
 
-            flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条", "success")
+            if inserted:
+                update_members_from_snapshot(df)
+                flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条", "success")
+            else:
+                flash(f"该时间点快照已存在：{snapshot_time}", "warning")
+
             return redirect(url_for("snapshots"))
 
         except Exception as e:
             print("❌ 快照保存失败:", str(e))
-            print(traceback.format_exc())
+            traceback.print_exc()
             flash(f"快照保存失败：{str(e)}", "error")
             return redirect(url_for("snapshots"))
 
@@ -714,9 +715,8 @@ def snapshots():
         times = list_snapshot_times()
     except Exception as e:
         print("❌ 读取快照列表失败:", str(e))
-        print(traceback.format_exc())
+        traceback.print_exc()
         times = []
-        flash(f"读取快照列表失败：{str(e)}", "error")
 
     return render_template("snapshots.html", times=times)
 
