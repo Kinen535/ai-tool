@@ -1,3 +1,4 @@
+print("🔥🔥🔥 我这个 app.py 被加载了！🔥🔥🔥")
 from __future__ import annotations
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -9,7 +10,7 @@ import json
 import re
 import sqlite3
 import traceback
-print("🚀 Flask App 启动加载中...")
+print("🚀 app.py 正在加载...")
 app = Flask(__name__)
 from datetime import datetime
 
