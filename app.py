@@ -1,6 +1,6 @@
-print("🔥🔥🔥 我这个 app.py 被加载了！🔥🔥🔥")
+from __future__ import annotations  # ✅ 必须第一行
 
-from __future__ import annotations
+print("🔥🔥🔥 我这个 app.py 被加载了！🔥🔥🔥")
 
 from flask import Flask, send_file, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -16,6 +16,8 @@ import traceback
 
 from datetime import datetime
 import pandas as pd
+
+print("🚀 app.py 正在加载...")
 
 app = Flask(__name__)
 # ====== 评分系统 ======
