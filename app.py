@@ -9,6 +9,8 @@ import json
 import re
 import sqlite3
 import traceback
+print("🚀 Flask App 启动加载中...")
+app = Flask(__name__)
 from datetime import datetime
 
 import pandas as pd
@@ -676,6 +678,9 @@ def overview():
         advice=advice,
         advice_summary=advice_summary
     )
+
+print("📌 snapshots 路由已注册")
+
 @app.route("/snapshots", methods=["GET", "POST"])
 def snapshots():
     init_db()
@@ -981,13 +986,6 @@ def export_members():
         download_name='members_export.csv'
     )
 
-
-if __name__ == "__main__":
-    ensure_default_files()
-    init_db()
-    app.run(host="127.0.0.1", port=8080, debug=True)
-
-app = Flask(__name__)
 
 # ✅ 初始化数据库（启动时执行一次）
 init_db()
