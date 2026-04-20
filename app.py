@@ -5,6 +5,14 @@ from flask import send_file
 from pathlib import Path
 import io
 import os
+import json
+import re
+import sqlite3
+import traceback
+from datetime import datetime
+
+import pandas as pd
+from flask import flash, redirect, render_template, request, url_for
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
@@ -101,33 +109,59 @@ app = Flask(__name__)
 app.secret_key = "alliance-manager-v7-ab"
 
 def get_conn():
-    import sqlite3
-    DB_PATH = "data/snapshots.db"
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    import sqlite3
-    import os
-
-    DB_PATH = "data/snapshots.db"
-
-    os.makedirs("data", exist_ok=True)
-
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS snapshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         snapshot_time TEXT NOT NULL UNIQUE,
-        data TEXT NOT NULL
+        data TEXT NOT NULL,
+        source_filename TEXT,
+        created_at TEXT NOT NULL
     )
     """)
 
     conn.commit()
     conn.close()
+
+def extract_snapshot_time(filename: str) -> str:
+    if not filename:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    name = str(filename)
+
+    patterns = [
+        r"(\d{4}年\d{2}月\d{2}日\d{2}时\d{2}分\d{2}秒)",
+        r"(\d{4}-\d{2}-\d{2}[ _]\d{2}[:\-]\d{2}[:\-]\d{2})",
+        r"(\d{4}-\d{2}-\d{2}[ _]\d{2}[:\-]\d{2})",
+        r"(\d{4}年\d{2}月\d{2}日\d{2}时\d{2}分)"
+    ]
+
+    for pattern in patterns:
+        m = re.search(pattern, name)
+        if m:
+            raw = m.group(1)
+            raw = raw.replace("年", "-").replace("月", "-").replace("日", " ")
+            raw = raw.replace("时", ":").replace("分", ":").replace("秒", "")
+            raw = raw.replace("_", " ")
+
+            parts = raw.split(" ")
+            if len(parts) == 2:
+                date_part = parts[0]
+                time_part = parts[1].replace("-", ":")
+
+                if len(time_part.split(":")) == 2:
+                    time_part += ":00"
+
+                return f"{date_part} {time_part}"
+
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
 def ensure_default_files():
     if not MEMBERS_FILE.exists():
@@ -174,56 +208,71 @@ def load_game_csv(file_storage):
     df = read_csv_flexible(file_storage)
     df.columns = [str(c).strip() for c in df.columns]
 
+    print("📊 原始列名:", df.columns.tolist())
+
     if "成员" not in df.columns:
         unnamed_cols = [c for c in df.columns if "Unnamed" in str(c)]
         if unnamed_cols:
             df = df.rename(columns={unnamed_cols[0]: "成员"})
 
-    # ⭐关键：门阀 → 分组
     if "门阀" in df.columns and "分组" not in df.columns:
         df["分组"] = df["门阀"]
 
     required = [
-        "成员","贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
-        "贡献总量","战功总量","助攻总量","捐献总量","势力值","所属州","分组"
+        "成员", "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
+        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值", "所属州", "分组"
     ]
-
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"周表缺少字段：{', '.join(missing)}")
 
     numeric_cols = [
-        "贡献排行","贡献本周","战功本周","助攻本周","捐献本周",
-        "贡献总量","战功总量","助攻总量","捐献总量","势力值"
+        "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
+        "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值"
     ]
-
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    df["成员"] = df["成员"].astype(str).str.strip()
-    df["所属州"] = df["所属州"].astype(str).str.strip()
-    df["分组"] = df["分组"].astype(str).str.strip()
+    df["成员"] = df["成员"].astype(str).fillna("").str.strip()
+    df["所属州"] = df["所属州"].astype(str).fillna("").str.strip()
+    df["分组"] = df["分组"].astype(str).fillna("").str.strip()
 
+    # 赛季初期：power 临时取 贡献总量；后期再切换规则
+    df["power"] = df["贡献总量"].astype(int)
+
+    print("✅ 清洗后行数:", len(df))
     return df
+
+def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = ""):
+    try:
+        payload = df.to_dict(orient="records")
+        payload_json = json.dumps(payload, ensure_ascii=False)
+
+        conn = get_conn()
+        cur = conn.cursor()
+
+        cur.execute("""
+        INSERT OR REPLACE INTO snapshots 
+        (snapshot_time, data, source_filename, created_at)
+        VALUES (?, ?, ?, ?)
+        """, (
+            snapshot_time,
+            payload_json,
+            source_filename,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ 快照已保存: {snapshot_time}, 文件: {source_filename}, 行数: {len(df)}")
+
+    except Exception as e:
+        print("❌ save_snapshot 出错：", str(e))
+        import traceback
+        traceback.print_exc()
+        raise
     
-def save_snapshot(df, snapshot_time):
-    import json
-
-    conn = get_conn()
-    cur = conn.cursor()
-
-    # 整个DataFrame转JSON
-    data_json = df.to_json(orient="records", force_ascii=False)
-
-    cur.execute(
-        "INSERT INTO snapshots (snapshot_time, data) VALUES (?, ?)",
-        (snapshot_time, data_json)
-    )
-
-    conn.commit()
-    conn.close()
-
-    return len(df)
 
 def list_snapshot_times():
     conn = get_conn()
@@ -234,30 +283,7 @@ def list_snapshot_times():
 import json
 import pandas as pd
 
-def load_snapshot_df(snapshot_time):
-    conn = get_conn()
-    cur = conn.cursor()
 
-    row = cur.execute(
-        "SELECT data FROM snapshots WHERE snapshot_time=?",
-        (snapshot_time,)
-    ).fetchone()
-
-    conn.close()
-
-    if not row:
-        return pd.DataFrame()
-
-    # 关键：解析 JSON
-    data = json.loads(row["data"])
-
-    df = pd.DataFrame(data)
-
-    # 统一字段（防止后面报错）
-    df.columns = [str(c).strip() for c in df.columns]
-
-    return df
-    
 def compare_snapshots(df_old, df_new):
     # ===== 只保留两张表共同成员，做总量对比 =====
     df = pd.merge(df_old, df_new, on="成员", how="outer", suffixes=("_old", "_new"))
@@ -626,23 +652,42 @@ def overview():
 @app.route("/snapshots", methods=["GET", "POST"])
 def snapshots():
     init_db()
+
     if request.method == "POST":
-        file = request.files.get("snapshot_file")
-        snapshot_time = request.form.get("snapshot_time", "").strip()
-        if not file or not file.filename:
-            flash("请先选择原始CSV快照", "error")
-            return redirect(url_for("snapshots"))
-        if not snapshot_time:
-            snapshot_time = datetime.now().strftime("%Y-%m-%d %H:%M")
         try:
+            file = request.files.get("snapshot_file")
+            manual_time = request.form.get("snapshot_time", "").strip()
+
+            if not file or not file.filename:
+                flash("请选择原始CSV快照", "error")
+                return redirect(url_for("snapshots"))
+
             df = load_game_csv(file)
-            save_snapshot(df, snapshot_time)
-   
+
+            snapshot_time = manual_time if manual_time else extract_snapshot_time(file.filename)
+            print("🕒 使用快照时间:", snapshot_time)
+
+            save_snapshot(df, snapshot_time, file.filename)
+            update_members_from_snapshot(df)
+
             flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条", "success")
+            return redirect(url_for("snapshots"))
+
         except Exception as e:
-            flash(f"快照保存失败：{e}", "error")
-        return redirect(url_for("snapshots"))
-    return render_template("snapshots.html", times=list_snapshot_times())
+            print("❌ 快照保存失败:", str(e))
+            print(traceback.format_exc())
+            flash(f"快照保存失败：{str(e)}", "error")
+            return redirect(url_for("snapshots"))
+
+    try:
+        times = list_snapshot_times()
+    except Exception as e:
+        print("❌ 读取快照列表失败:", str(e))
+        print(traceback.format_exc())
+        times = []
+        flash(f"读取快照列表失败：{str(e)}", "error")
+
+    return render_template("snapshots.html", times=times)
 
 @app.route("/compare", methods=["GET", "POST"])
 def compare():
