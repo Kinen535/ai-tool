@@ -987,6 +987,7 @@ if __name__ == "__main__":
     init_db()
     app.run(host="127.0.0.1", port=8080, debug=True)
 
-@app.before_first_request
-def setup():
-    init_db()
+app = Flask(__name__)
+
+# ✅ 初始化数据库（启动时执行一次）
+init_db()
