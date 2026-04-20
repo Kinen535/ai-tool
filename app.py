@@ -109,7 +109,11 @@ app = Flask(__name__)
 app.secret_key = "alliance-manager-v7-ab"
 
 def get_conn():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(
+        DB_FILE,
+        timeout=10,  # ⭐关键
+        check_same_thread=False
+    )
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -243,6 +247,23 @@ def load_game_csv(file_storage):
     print("✅ 清洗后行数:", len(df))
     return df
 
+
+# ✅ 就放这里（紧挨着下面）
+def extract_snapshot_time(filename):
+    try:
+        match = re.search(
+            r"(\d{4})年(\d{2})月(\d{2})日(\d{2})时(\d{2})分(\d{2})秒",
+            filename
+        )
+        if match:
+            y, m, d, h, mi, s = match.groups()
+            return f"{y}-{m}-{d} {h}:{mi}:{s}"
+    except:
+        pass
+
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+
 def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = ""):
     try:
         payload = df.to_dict(orient="records")
@@ -251,10 +272,21 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         conn = get_conn()
         cur = conn.cursor()
 
+        # ✅ 防重复（必须）
+        cur.execute(
+            "SELECT 1 FROM snapshots WHERE snapshot_time=?",
+            (snapshot_time,)
+        )
+        if cur.fetchone():
+            print("⚠️ 已存在该时间快照，跳过写入")
+            conn.close()
+            return
+
+        # ✅ 写入数据库（注意三引号结构）
         cur.execute("""
-        INSERT OR REPLACE INTO snapshots 
-        (snapshot_time, data, source_filename, created_at)
-        VALUES (?, ?, ?, ?)
+            INSERT INTO snapshots
+            (snapshot_time, data, source_filename, created_at)
+            VALUES (?, ?, ?, ?)
         """, (
             snapshot_time,
             payload_json,
@@ -268,8 +300,7 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         print(f"✅ 快照已保存: {snapshot_time}, 文件: {source_filename}, 行数: {len(df)}")
 
     except Exception as e:
-        print("❌ save_snapshot 出错：", str(e))
-        import traceback
+        print("❌ save_snapshot 出错:", str(e))
         traceback.print_exc()
         raise
     
