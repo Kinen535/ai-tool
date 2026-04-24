@@ -20,6 +20,22 @@ import pandas as pd
 print("🚀 app.py 正在加载...")
 
 app = Flask(__name__)
+
+def load_snapshot_df(snapshot_time):
+    import pandas as pd
+    from pathlib import Path
+
+    folder = Path("snapshots")
+
+    if not folder.exists():
+        raise ValueError("snapshots 文件夹不存在")
+
+    for file in folder.glob("*.csv"):
+        if snapshot_time in file.name:
+            print("📂 找到快照文件:", file)
+            return pd.read_csv(file)
+
+    raise ValueError(f"找不到对应快照文件: {snapshot_time}")
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
