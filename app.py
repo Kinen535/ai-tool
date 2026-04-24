@@ -771,8 +771,15 @@ def compare():
 
             df_old = load_snapshot_df(selected_old)
             df_new = load_snapshot_df(selected_new)
+            print("📊 df_old shape:", df_old.shape)
+            print("📊 df_new shape:", df_new.shape)
+            print("📊 df_old columns:", df_old.columns.tolist())
+            print("📊 df_new columns:", df_new.columns.tolist())
 
             result, groups, advice = compare_snapshots(df_old, df_new)
+            print("📊 result shape:", result.shape if hasattr(result, "shape") else type(result))
+            print("📊 groups shape:", groups.shape if hasattr(groups, "shape") else type(groups))
+            print("📊 advice:", advice)
 
             # 分组筛选
             if team_keyword:
