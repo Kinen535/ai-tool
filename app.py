@@ -25,8 +25,8 @@ def load_snapshot_df(snapshot_time):
     import pandas as pd
     from pathlib import Path
 
-    folder = Path("snapshots")
-
+    folder = Path(__file__).parent / "snapshots"
+    
     if not folder.exists():
         raise ValueError("snapshots 文件夹不存在")
 
