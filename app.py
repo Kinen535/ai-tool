@@ -708,7 +708,7 @@ def snapshots():
             inserted = save_snapshot(df, snapshot_time, file.filename)
 
             if inserted:
-                update_members_from_snapshot(df)
+                # update_members_from_snapshot(df)
                 flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条", "success")
             else:
                 flash(f"该时间点快照已存在：{snapshot_time}", "warning")
