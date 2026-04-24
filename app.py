@@ -732,6 +732,8 @@ def snapshots():
 
 @app.route("/compare", methods=["GET", "POST"])
 def compare():
+    print("🚀 进入 compare 路由，method:", request.method)
+
     init_db()
     times = list_snapshot_times()
 
@@ -746,21 +748,25 @@ def compare():
     kick_text = ""
 
     if request.method == "POST":
+        print("🔥 进入 POST 逻辑")
+
         compare_mode = request.form.get("compare_mode", "auto")
         team_keyword = request.form.get("team_keyword", "").strip()
         power_growth_min = request.form.get("power_growth_min", "").strip()
         power_growth_max = request.form.get("power_growth_max", "").strip()
-        # ===== 新增筛选参数（必须加） =====
+
         war_min = request.form.get("war_min", "").strip()
         war_max = request.form.get("war_max", "").strip()
-
         assist_min = request.form.get("assist_min", "").strip()
         assist_max = request.form.get("assist_max", "").strip()
-
         donate_min = request.form.get("donate_min", "").strip()
         donate_max = request.form.get("donate_max", "").strip()
 
         try:
+            print("🔥 try 开始执行")
+            print("📌 当前快照列表:", times)
+            print("📌 compare_mode:", compare_mode)
+
             if compare_mode == "manual":
                 selected_old = request.form.get("snapshot_old", "")
                 selected_new = request.form.get("snapshot_new", "")
@@ -769,32 +775,59 @@ def compare():
                     raise ValueError("至少需要两次快照才能自动对比")
                 selected_new, selected_old = times[0], times[1]
 
+            print("📌 selected_old:", selected_old)
+            print("📌 selected_new:", selected_new)
+
+            if not selected_old or not selected_new:
+                raise ValueError("请选择两个快照时间点")
+
             df_old = load_snapshot_df(selected_old)
             df_new = load_snapshot_df(selected_new)
+
             print("📊 df_old shape:", df_old.shape)
             print("📊 df_new shape:", df_new.shape)
             print("📊 df_old columns:", df_old.columns.tolist())
             print("📊 df_new columns:", df_new.columns.tolist())
 
+            if df_old.empty:
+                raise ValueError(f"旧快照为空：{selected_old}")
+            if df_new.empty:
+                raise ValueError(f"新快照为空：{selected_new}")
+
             result, groups, advice = compare_snapshots(df_old, df_new)
+
             print("📊 result shape:", result.shape if hasattr(result, "shape") else type(result))
             print("📊 groups shape:", groups.shape if hasattr(groups, "shape") else type(groups))
+            print("📊 result columns:", result.columns.tolist() if hasattr(result, "columns") else "无 columns")
+            print("📊 groups columns:", groups.columns.tolist() if hasattr(groups, "columns") else "无 columns")
             print("📊 advice:", advice)
+
+            if result is None or result.empty:
+                raise ValueError("对比结果为空，请检查两个快照是否为不同时间点，或成员字段是否一致")
+
+            if groups is None:
+                groups = pd.DataFrame()
 
             # 分组筛选
             if team_keyword:
+                if "分组" not in result.columns:
+                    raise ValueError("对比结果缺少字段：分组")
+
                 result = result[
                     result["分组"].astype(str).str.strip().str.contains(team_keyword, na=False)
                 ]
-                groups = groups[
-                    groups["分组"].astype(str).str.strip().str.contains(team_keyword, na=False)
-                ]
+
+                if not groups.empty and "分组" in groups.columns:
+                    groups = groups[
+                        groups["分组"].astype(str).str.strip().str.contains(team_keyword, na=False)
+                    ]
 
             # 势力增长筛选
             pg_min = int(power_growth_min) if power_growth_min else None
             pg_max = int(power_growth_max) if power_growth_max else None
             result = filter_result_df(result, pg_min=pg_min, pg_max=pg_max)
-            # ===== 多维筛选（直接写，不定义函数） =====
+
+            # 多维筛选
             war_min_v = int(war_min) if war_min else None
             war_max_v = int(war_max) if war_max else None
             assist_min_v = int(assist_min) if assist_min else None
@@ -804,59 +837,72 @@ def compare():
 
             if war_min_v is not None:
                 result = result[result["战功增长"] >= war_min_v]
-
             if war_max_v is not None:
                 result = result[result["战功增长"] <= war_max_v]
 
             if assist_min_v is not None:
                 result = result[result["助攻增长"] >= assist_min_v]
-
             if assist_max_v is not None:
                 result = result[result["助攻增长"] <= assist_max_v]
 
             if donate_min_v is not None:
                 result = result[result["捐献增长"] >= donate_min_v]
-
             if donate_max_v is not None:
                 result = result[result["捐献增长"] <= donate_max_v]
 
+            # 防止关键列缺失
+            required_result_cols = ["分类", "成员", "执行状态", "优先类别", "评分", "战功增长"]
+            missing_result_cols = [c for c in required_result_cols if c not in result.columns]
+            if missing_result_cols:
+                raise ValueError(f"对比结果缺少字段：{', '.join(missing_result_cols)}")
+
             # 筛选后重建建议名单
             advice = {
-    "清理名单": result[result["分类"] == "清理名单"]["成员"].tolist(),
-    "警告名单": result[result["分类"] == "警告名单"]["成员"].tolist(),
-    "核心成员": result[result["分类"] == "核心成员"]["成员"].tolist(),
-    "未执行名单": result[result["执行状态"] == "完全摆烂"]["成员"].tolist()
-}
+                "清理名单": result[result["分类"] == "清理名单"]["成员"].tolist(),
+                "警告名单": result[result["分类"] == "警告名单"]["成员"].tolist(),
+                "核心成员": result[result["分类"] == "核心成员"]["成员"].tolist(),
+                "未执行名单": result[result["执行状态"] == "完全摆烂"]["成员"].tolist()
+            }
 
             kick_text = build_kick_text(advice)
 
             # 最终排序
             result = result.sort_values(
-    by=["优先类别", "评分", "战功增长"],
-    ascending=[True, False, False]
-).reset_index(drop=True)
+                by=["优先类别", "评分", "战功增长"],
+                ascending=[True, False, False]
+            ).reset_index(drop=True)
+
             result["优先级排名"] = range(1, len(result) + 1)
 
             save_outputs(result, groups, advice)
 
             result_rows = result.to_dict(orient="records")
-            group_rows = groups.to_dict(orient="records")
+            group_rows = groups.to_dict(orient="records") if not groups.empty else []
 
             flash("对比分析完成", "success")
 
         except Exception as e:
+            print("❌ compare 报错:", str(e))
+            traceback.print_exc()
             flash(f"对比失败：{e}", "error")
 
     else:
-        result, groups, advice = load_outputs()
+        print("📄 compare GET 页面加载")
 
-        if result is not None:
-            result_rows = result.to_dict(orient="records")
+        try:
+            result, groups, advice = load_outputs()
 
-        if groups is not None:
-            group_rows = groups.to_dict(orient="records")
+            if result is not None:
+                result_rows = result.to_dict(orient="records")
 
-        kick_text = build_kick_text(advice)
+            if groups is not None:
+                group_rows = groups.to_dict(orient="records")
+
+            kick_text = build_kick_text(advice)
+
+        except Exception as e:
+            print("❌ compare GET 读取历史结果失败:", str(e))
+            traceback.print_exc()
 
     return render_template(
         "compare.html",
