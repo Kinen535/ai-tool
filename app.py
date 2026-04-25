@@ -26,16 +26,17 @@ def load_snapshot_df(snapshot_time):
     from pathlib import Path
 
     folder = Path(__file__).parent / "snapshots"
-    
-    if not folder.exists():
-        raise ValueError("snapshots 文件夹不存在")
+    folder.mkdir(exist_ok=True)
+
+    print("📂 当前 snapshots 目录:", folder)
+    print("📂 目录文件列表:", list(folder.glob("*")))
 
     for file in folder.glob("*.csv"):
         if snapshot_time in file.name:
-            print("📂 找到快照文件:", file)
+            print("📄 找到快照文件:", file)
             return pd.read_csv(file)
 
-    raise ValueError(f"找不到对应快照文件: {snapshot_time}")
+    raise ValueError(f"❌ 找不到对应快照文件: {snapshot_time}")
 # ====== 评分系统 ======
 
 def calc_growth_score(growth):
@@ -304,7 +305,25 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         ))
 
         conn.commit()
+
+        # ===== 保存 CSV（必须在 return 之前）=====
+        from pathlib import Path
+
+        folder = Path(__file__).parent / "snapshots"
+        folder.mkdir(exist_ok=True)
+
+        # 构造文件名
+        safe_time = snapshot_time.replace(":", "-").replace(" ", "_")
+        filename = f"{safe_time}.csv"
+
+        file_path = folder / filename
+
+        df.to_csv(file_path, index=False)
+
+        print(f"📁 CSV 已保存: {file_path}")
+
         print(f"✅ 快照已保存: {snapshot_time}, 文件: {source_filename}, 行数: {len(df)}")
+
         return True
 
     except Exception as e:
