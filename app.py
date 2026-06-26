@@ -6809,6 +6809,19 @@ def strategic_center():
     )
 
 
+@app.route("/tasks")
+def task_center():
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+    conn.close()
+
+    return render_template(
+        "task_center.html",
+        report=report,
+        title="战场任务协同中心"
+    )
+
+
 @app.route("/strategic/feedback", methods=["POST"])
 def strategic_feedback():
     from flask import request, redirect
@@ -6826,9 +6839,13 @@ def strategic_feedback():
     task_key = request.form.get("task_key", "").strip()
     status = request.form.get("status", "").strip()
     feedback_note = request.form.get("feedback_note", "").strip()
+    next_url = request.form.get("next", "/strategic").strip()
+
+    if next_url not in ("/strategic", "/tasks"):
+        next_url = "/strategic"
 
     if status not in allowed_status:
-        return redirect("/strategic")
+        return redirect(next_url)
 
     conn = sqlite3.connect("data/snapshots.db")
 
@@ -6856,7 +6873,7 @@ def strategic_feedback():
 
     conn.close()
 
-    return redirect("/strategic")
+    return redirect(next_url)
     
 @app.errorhandler(500)
 def error_500(e):

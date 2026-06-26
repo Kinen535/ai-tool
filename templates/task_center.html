@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>⚔️ 战场任务协同中心</h1>
+
+{% set fb = report.v12_execution_feedback %}
+{% set stats = fb.stats %}
+{% set audit = report.v12_feedback_audit %}
+{% set audit_stats = audit.stats %}
+
+<style>
+.task-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f3f4f6;
+    box-shadow: 0 1px 0 #e5e7eb;
+}
+</style>
+
+<div class="card" style="
+margin-bottom:20px;
+border-left:6px solid #2563eb;
+background:#eff6ff;
+">
+
+<h2>📌 任务总览</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>任务摘要：</b>
+{{ fb.summary }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(8,1fr);
+gap:15px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>总任务</div>
+    <h2>{{ stats.total_tasks }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>已反馈</div>
+    <h2>{{ stats.done_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>待反馈</div>
+    <h2>{{ stats.pending_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1任务</div>
+    <h2>{{ stats.p1_total }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1反馈率</div>
+    <h2>{{ (stats.p1_feedback_rate * 100) | round(0) }}%</h2>
+</div>
+
+<div class="stat-card">
+    <div>正向反馈</div>
+    <h2>{{ stats.positive_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>异常反馈</div>
+    <h2>{{ stats.abnormal_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>审计变更</div>
+    <h2>{{ audit_stats.total_logs }}</h2>
+</div>
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #bfdbfe;
+">
+
+<h3>🎯 当前任务判断</h3>
+
+<p>
+<b>结论：</b>
+<span style="color:#2563eb;font-weight:bold;">
+{{ fb.decision.label }}
+</span>
+</p>
+
+<p>
+<b>原因：</b>
+{{ fb.decision.reason }}
+</p>
+
+</div>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:1.4fr 1fr;
+gap:20px;
+align-items:start;
+">
+
+<div class="card" style="
+border-left:6px solid #dc2626;
+background:#fff7ed;
+">
+
+<h2>① 待反馈任务</h2>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #fed7aa;
+max-height:650px;
+overflow-y:auto;
+">
+
+{% if fb.pending_tasks %}
+<table class="task-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr>
+    <th style="padding:8px;text-align:left;">阶段</th>
+    <th style="padding:8px;text-align:left;">优先级</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">负责人</th>
+    <th style="padding:8px;text-align:left;">状态</th>
+    <th style="padding:8px;text-align:left;">反馈</th>
+</tr>
+</thead>
+<tbody>
+{% for task in fb.pending_tasks %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;">{{ task.phase }}</td>
+    <td style="padding:8px;"><b>{{ task.priority }}</b></td>
+    <td style="padding:8px;">{{ task.title }}</td>
+    <td style="padding:8px;">{{ task.target }}</td>
+    <td style="padding:8px;">{{ task.owner }}</td>
+    <td style="padding:8px;color:#dc2626;">{{ task.feedback_label }}</td>
+    <td style="padding:8px;">
+        <form method="post"
+              action="/strategic/feedback"
+              style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
+            <input type="hidden" name="next" value="/tasks">
+            <input type="hidden" name="task_key" value="{{ task.task_key }}">
+
+            <button type="submit" name="status" value="confirmed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;cursor:pointer;">确认</button>
+
+            <button type="submit" name="status" value="completed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #86efac;background:#f0fdf4;color:#15803d;cursor:pointer;">完成</button>
+
+            <button type="submit" name="status" value="protected"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#6d28d9;cursor:pointer;">转保护</button>
+
+            <button type="submit" name="status" value="ignored"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;cursor:pointer;">忽略</button>
+
+            <button type="submit" name="status" value="failed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">失败</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">当前没有待反馈任务。</p>
+{% endif %}
+
+</div>
+
+</div>
+
+<div class="card" style="
+border-left:6px solid #16a34a;
+background:#f0fdf4;
+">
+
+<h2>② 负责人压力</h2>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #bbf7d0;
+">
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for item in fb.owner_stats %}
+<li>
+    <b>{{ item.owner }}：</b>
+    总 {{ item.total }}，
+    待反馈 {{ item.pending }}，
+    反馈率 {{ (item.feedback_rate * 100) | round(0) }}%
+</li>
+{% endfor %}
+</ul>
+
+</div>
+
+<h2 style="margin-top:20px;">③ 阶段统计</h2>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #bbf7d0;
+">
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for phase, item in fb.phase_stats.items() %}
+<li>
+    <b>{{ phase }}：</b>
+    总 {{ item.total }}，
+    已反馈 {{ item.done }}，
+    待反馈 {{ item.pending }}，
+    反馈率 {{ (item.feedback_rate * 100) | round(0) }}%
+</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #0f766e;
+background:#ecfdf5;
+">
+
+<h2>④ 已反馈任务</h2>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #99f6e4;
+max-height:520px;
+overflow-y:auto;
+">
+
+{% if fb.confirmed_tasks %}
+<table class="task-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr>
+    <th style="padding:8px;text-align:left;">阶段</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">反馈状态</th>
+    <th style="padding:8px;text-align:left;">更新时间</th>
+    <th style="padding:8px;text-align:left;">操作</th>
+</tr>
+</thead>
+<tbody>
+{% for task in fb.confirmed_tasks %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;">{{ task.phase }}</td>
+    <td style="padding:8px;">{{ task.title }}</td>
+    <td style="padding:8px;"><b>{{ task.target }}</b></td>
+    <td style="padding:8px;font-weight:bold;
+    {% if task.feedback_status in ["confirmed", "completed"] %}
+        color:#16a34a;
+    {% elif task.feedback_status == "protected" %}
+        color:#7c3aed;
+    {% elif task.feedback_status == "ignored" %}
+        color:#b45309;
+    {% elif task.feedback_status == "failed" %}
+        color:#dc2626;
+    {% else %}
+        color:#666;
+    {% endif %}
+    ">
+        {{ task.feedback_label }}
+    </td>
+    <td style="padding:8px;color:#666;font-size:12px;">{{ task.feedback_updated_at }}</td>
+    <td style="padding:8px;">
+        <form method="post"
+              action="/strategic/feedback"
+              style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
+            <input type="hidden" name="next" value="/tasks">
+            <input type="hidden" name="task_key" value="{{ task.task_key }}">
+
+            <button type="submit" name="status" value="confirmed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;cursor:pointer;">确认</button>
+
+            <button type="submit" name="status" value="completed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #86efac;background:#f0fdf4;color:#15803d;cursor:pointer;">完成</button>
+
+            <button type="submit" name="status" value="protected"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#6d28d9;cursor:pointer;">转保护</button>
+
+            <button type="submit" name="status" value="ignored"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;cursor:pointer;">忽略</button>
+
+            <button type="submit" name="status" value="failed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">失败</button>
+
+            <button type="submit" name="status" value="pending"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;">撤回</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">当前没有已反馈任务。</p>
+{% endif %}
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #64748b;
+background:#f8fafc;
+">
+
+<h2>⑤ 反馈审计日志</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>审计摘要：</b>
+{{ audit.summary }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:1.3fr 1fr;
+gap:18px;
+align-items:start;
+">
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+max-height:420px;
+overflow-y:auto;
+">
+
+<h3>最近变更</h3>
+
+{% if audit.latest_logs %}
+<table class="task-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr>
+    <th style="padding:8px;text-align:left;">时间</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">变化</th>
+</tr>
+</thead>
+<tbody>
+{% for log in audit.latest_logs %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;color:#666;font-size:12px;">{{ log.created_at }}</td>
+    <td style="padding:8px;"><b>{{ log.target }}</b></td>
+    <td style="padding:8px;">{{ log.task_title }}</td>
+    <td style="padding:8px;">
+        {{ log.old_label }} → <b>{{ log.new_label }}</b>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">暂无反馈变更日志。</p>
+{% endif %}
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+">
+
+<h3>审计判断</h3>
+
+<p>
+<b>结论：</b>
+{{ audit.decision.label }}
+</p>
+
+<p>
+<b>原因：</b>
+{{ audit.decision.reason }}
+</p>
+
+<h3>审计建议</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for step in audit.execution %}
+<li>{{ step }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
