@@ -1,0 +1,1365 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>🔮 AI战略推演中心</h1>
+
+<style>
+.v12-feedback-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f3f4f6;
+    box-shadow: 0 1px 0 #e5e7eb;
+}
+
+.v12-feedback-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+</style>
+
+
+{% set reasoning = report.reasoning_report %}
+{% set sim = report.v11_simulation_report %}
+{% set plan = report.v11_execution_plan %}
+{% set ref = report.v11_reflection_report %}
+{% set learn = report.v11_learning_report %}
+{% set llm = report.v11_llm_report %}
+
+<div class="card" style="
+margin-bottom:20px;
+border-left:6px solid #7c3aed;
+background:#faf5ff;
+">
+
+<h2>🧠 V11 战略决策总览</h2>
+
+<p style="font-size:16px;line-height:1.9;">
+<b>总判断：</b>
+{{ llm.final_message }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin-top:18px;
+">
+
+<div class="stat-card">
+    <div>推理</div>
+    <h2>完成</h2>
+</div>
+
+<div class="stat-card">
+    <div>推演</div>
+    <h2>{{ sim.recommended_scenario.name }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>执行</div>
+    <h2>{{ plan.phases.today | length }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>复盘</div>
+    <h2>
+    {% if ref.status == "no_history" %}
+        基线
+    {% elif ref.status == "matched" %}
+        兑现
+    {% elif ref.status == "partial" %}
+        部分
+    {% elif ref.status == "worse" %}
+        失准
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+<div class="stat-card">
+    <div>学习</div>
+    <h2>
+    {% if learn.status == "blocked_by_execution_feedback" %}
+        反馈阻断
+    {% elif learn.status == "collecting_samples" %}
+        收集
+    {% elif learn.status == "stable" %}
+        稳定
+    {% elif learn.status == "needs_review" %}
+        复核
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+<div class="stat-card">
+    <div>LLM</div>
+    <h2>解释</h2>
+</div>
+
+</div>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+align-items:start;
+">
+
+<div class="card" style="
+border-left:6px solid #7c3aed;
+background:#faf5ff;
+">
+
+<h2>① Reasoning Engine｜推理链</h2>
+
+<p><b>摘要：</b>{{ reasoning.summary }}</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:12px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>已分析</div>
+    <h2>{{ reasoning.reasoning_stats.total_members_analyzed }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>风险池</div>
+    <h2>{{ reasoning.reasoning_stats.raw_cleanup_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>重点清理</div>
+    <h2>{{ reasoning.reasoning_stats.shown_cleanup_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>保护复核</div>
+    <h2>{{ reasoning.reasoning_stats.shown_protection_count }}</h2>
+</div>
+
+</div>
+
+<h3>今日重点推理对象</h3>
+
+<table style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr style="background:#f3f4f6;">
+    <th style="padding:8px;text-align:left;">成员</th>
+    <th style="padding:8px;text-align:left;">类型</th>
+    <th style="padding:8px;text-align:left;">决策</th>
+</tr>
+</thead>
+<tbody>
+{% for item in reasoning.member_reasoning[:8] %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;"><b>{{ item.target_name }}</b></td>
+    <td style="padding:8px;">{{ item.decision_type }}</td>
+    <td style="padding:8px;">{{ item.decision.label }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+</div>
+
+<div class="card" style="
+border-left:6px solid #0ea5e9;
+background:#f0f9ff;
+">
+
+<h2>② Simulation Engine｜战略推演</h2>
+
+<p><b>摘要：</b>{{ sim.summary }}</p>
+
+<h3>推荐方案：{{ sim.recommended_scenario.name }}</h3>
+
+<p>
+<b>原因：</b>
+{{ sim.recommended_scenario.decision.reason }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+margin-top:15px;
+">
+
+{% for s in sim.scenarios %}
+<div style="
+background:#fff;
+border:1px solid #e5e7eb;
+border-radius:10px;
+padding:12px;
+">
+
+<h4>方案 {{ s.scenario_id }}：{{ s.name }}</h4>
+
+<p>
+<b>评分：</b>
+<span style="
+font-size:20px;
+font-weight:bold;
+{% if s.score >= 20 %}
+color:#16a34a;
+{% elif s.score >= 0 %}
+color:#ca8a04;
+{% else %}
+color:#dc2626;
+{% endif %}
+">
+{{ s.score }}
+</span>
+</p>
+
+<p><b>可信度：</b>{{ (s.decision.confidence * 100) | round(0) }}%</p>
+
+<p style="color:#555;line-height:1.7;">
+{{ s.expected_result.overall_effect }}
+</p>
+
+</div>
+{% endfor %}
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #16a34a;
+background:#f0fdf4;
+">
+
+<h2>③ Execution Planner｜执行路线</h2>
+
+<p><b>摘要：</b>{{ plan.summary }}</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:18px;
+align-items:start;
+margin-top:15px;
+">
+
+{% set phase_map = [
+    ("today", "📌 今天"),
+    ("tomorrow", "🌅 明天"),
+    ("this_week", "📆 本周"),
+    ("season", "🏯 赛季")
+] %}
+
+{% for key, label in phase_map %}
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+max-height:520px;
+overflow-y:auto;
+">
+
+<h3>{{ label }}</h3>
+
+{% if plan.phases[key] %}
+<ul style="line-height:1.8;padding-left:18px;">
+{% for task in plan.phases[key] %}
+<li style="margin-bottom:12px;">
+    <b>{{ task.priority }}｜{{ task.title }}</b><br>
+    对象：{{ task.target }}<br>
+    负责人：{{ task.owner }}<br>
+    <span style="color:#666;font-size:12px;">
+    截止：{{ task.deadline }}｜指标：{{ task.review_metric }}
+    </span>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p style="color:#666;">暂无任务。</p>
+{% endif %}
+
+</div>
+{% endfor %}
+
+</div>
+
+</div>
+
+{% if report.v12_execution_feedback is defined %}
+
+{% set fb = report.v12_execution_feedback %}
+{% set fb_stats = fb.stats %}
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #22c55e;
+background:#f0fdf4;
+">
+
+<h2>🧩 V12 Execution Feedback｜执行反馈闭环</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>反馈摘要：</b>
+{{ fb.summary }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>总任务</div>
+    <h2>{{ fb_stats.total_tasks }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>已反馈</div>
+    <h2>{{ fb_stats.done_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>待反馈</div>
+    <h2>{{ fb_stats.pending_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1任务</div>
+    <h2>{{ fb_stats.p1_total }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1反馈率</div>
+    <h2>{{ (fb_stats.p1_feedback_rate * 100) | round(0) }}%</h2>
+</div>
+
+<div class="stat-card">
+    <div>反馈率</div>
+    <h2>{{ (fb_stats.feedback_rate * 100) | round(0) }}%</h2>
+</div>
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:18px;
+border:1px solid #bbf7d0;
+margin-top:15px;
+">
+
+<h3>🎯 反馈决策</h3>
+
+<p>
+<b>结论：</b>
+<span style="color:#16a34a;font-weight:bold;">
+{{ fb.decision.label }}
+</span>
+</p>
+
+<p>
+<b>可信度：</b>
+{{ (fb.decision.confidence * 100) | round(0) }}%
+</p>
+
+<p>
+<b>原因：</b>
+{{ fb.decision.reason }}
+</p>
+
+<p style="color:#666;">
+V12 当前已开放反馈按钮，可对任务提交“确认 / 完成 / 转保护 / 忽略 / 失败”等反馈结果。
+</p>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:1.2fr 1fr;
+gap:18px;
+align-items:start;
+margin-top:20px;
+">
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+max-height:560px;
+overflow-y:auto;
+">
+
+<h3>① 待反馈任务</h3>
+
+{% if fb.pending_tasks %}
+<table class="v12-feedback-table" style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr style="background:#f3f4f6;">
+    <th style="padding:8px;text-align:left;">阶段</th>
+    <th style="padding:8px;text-align:left;">优先级</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">负责人</th>
+    <th style="padding:8px;text-align:left;">状态</th>
+    <th style="padding:8px;text-align:left;">反馈</th>
+</tr>
+</thead>
+<tbody>
+{% for task in fb.pending_tasks[:20] %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;">{{ task.phase }}</td>
+    <td style="padding:8px;"><b>{{ task.priority }}</b></td>
+    <td style="padding:8px;">{{ task.title }}</td>
+    <td style="padding:8px;">{{ task.target }}</td>
+    <td style="padding:8px;">{{ task.owner }}</td>
+    <td style="padding:8px;color:#dc2626;">{{ task.feedback_label }}</td>
+    <td style="padding:8px;">
+        <form method="post"
+              action="/strategic/feedback"
+              style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
+            <input type="hidden"
+                   name="task_key"
+                   value="{{ task.task_key }}">
+
+            <button type="submit"
+                    name="status"
+                    value="confirmed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;cursor:pointer;">
+                确认
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="completed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #86efac;background:#f0fdf4;color:#15803d;cursor:pointer;">
+                完成
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="protected"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#6d28d9;cursor:pointer;">
+                转保护
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="ignored"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;cursor:pointer;">
+                忽略
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="failed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">
+                失败
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">当前没有待反馈任务。</p>
+{% endif %}
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+max-height:360px;
+overflow-y:auto;
+margin-top:18px;
+">
+
+<h3>② 已反馈任务</h3>
+
+{% if fb.confirmed_tasks %}
+<table style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr style="background:#f3f4f6;">
+    <th style="padding:8px;text-align:left;">阶段</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">反馈状态</th>
+    <th style="padding:8px;text-align:left;">更新时间</th>
+    <th style="padding:8px;text-align:left;">操作</th>
+</tr>
+</thead>
+<tbody>
+{% for task in fb.confirmed_tasks[:20] %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;">{{ task.phase }}</td>
+    <td style="padding:8px;">{{ task.title }}</td>
+    <td style="padding:8px;">{{ task.target }}</td>
+    <td style="padding:8px;font-weight:bold;
+    {% if task.feedback_status in ["confirmed", "completed"] %}
+        color:#16a34a;
+    {% elif task.feedback_status == "protected" %}
+        color:#7c3aed;
+    {% elif task.feedback_status == "ignored" %}
+        color:#b45309;
+    {% elif task.feedback_status == "failed" %}
+        color:#dc2626;
+    {% else %}
+        color:#666;
+    {% endif %}
+    ">
+        {{ task.feedback_label }}
+    </td>
+    <td style="padding:8px;color:#666;font-size:12px;">{{ task.feedback_updated_at }}</td>
+    <td style="padding:8px;">
+        <form method="post"
+              action="/strategic/feedback"
+              style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
+            <input type="hidden"
+                   name="task_key"
+                   value="{{ task.task_key }}">
+
+            <button type="submit"
+                    name="status"
+                    value="confirmed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;cursor:pointer;">
+                确认
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="completed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #86efac;background:#f0fdf4;color:#15803d;cursor:pointer;">
+                完成
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="protected"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#6d28d9;cursor:pointer;">
+                转保护
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="ignored"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;cursor:pointer;">
+                忽略
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="failed"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">
+                失败
+            </button>
+
+            <button type="submit"
+                    name="status"
+                    value="pending"
+                    style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;">
+                撤回
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">当前还没有已反馈任务。</p>
+{% endif %}
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+">
+
+<h3>③ 阶段反馈统计</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for phase, item in fb.phase_stats.items() %}
+<li>
+    <b>{{ phase }}：</b>
+    总 {{ item.total }}，
+    已反馈 {{ item.done }}，
+    待反馈 {{ item.pending }}，
+    反馈率 {{ (item.feedback_rate * 100) | round(0) }}%
+</li>
+{% endfor %}
+</ul>
+
+<h3>④ 负责人反馈压力</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for item in fb.owner_stats[:8] %}
+<li>
+    <b>{{ item.owner }}：</b>
+    总 {{ item.total }}，
+    待反馈 {{ item.pending }}，
+    反馈率 {{ (item.feedback_rate * 100) | round(0) }}%
+</li>
+{% endfor %}
+</ul>
+
+<h3>⑤ 执行建议</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for step in fb.execution %}
+<li>{{ step }}</li>
+{% endfor %}
+</ul>
+
+<h3>⑥ 下一轮复盘</h3>
+
+<p>
+<b>下次检查：</b>
+{{ fb.review.next_check }}
+</p>
+
+<p>
+<b>成功条件：</b>
+{{ fb.review.success_condition }}
+</p>
+
+<p>
+<b>失败条件：</b>
+{{ fb.review.failure_condition }}
+</p>
+
+</div>
+
+</div>
+
+<div style="
+margin-top:18px;
+padding:12px;
+background:#f8fafc;
+border-radius:10px;
+border-left:5px solid #22c55e;
+font-size:14px;
+line-height:1.8;
+">
+
+<b>说明：</b>
+本区块由 V12 Execution Feedback Engine 生成。
+它用于判断执行计划是否真正被组长或管理层反馈，后续将把反馈结果提供给 Reflection Engine 和 Learning Engine。
+当前阶段只读展示，下一阶段会增加反馈提交按钮。
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<div style="
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+align-items:start;
+margin-top:20px;
+">
+
+
+{% if report.v12_feedback_audit is defined %}
+
+{% set audit = report.v12_feedback_audit %}
+{% set audit_stats = audit.stats %}
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #0f766e;
+background:#ecfdf5;
+">
+
+<h2>🧾 V12 Feedback Audit｜反馈审计日志</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>审计摘要：</b>
+{{ audit.summary }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>变更次数</div>
+    <h2>{{ audit_stats.total_logs }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>涉及任务</div>
+    <h2>{{ audit_stats.changed_tasks }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>撤回次数</div>
+    <h2>{{ audit_stats.revert_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>异常反馈</div>
+    <h2>{{ audit_stats.abnormal_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>失败</div>
+    <h2>{{ audit_stats.failed_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>忽略</div>
+    <h2>{{ audit_stats.ignored_count }}</h2>
+</div>
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:18px;
+border:1px solid #99f6e4;
+margin-top:15px;
+">
+
+<h3>🎯 审计判断</h3>
+
+<p>
+<b>结论：</b>
+<span style="
+{% if audit.decision.action == "audit_healthy" %}
+color:#16a34a;
+{% elif audit.decision.action in ["review_reverted_feedback", "review_abnormal_feedback"] %}
+color:#dc2626;
+{% else %}
+color:#0f766e;
+{% endif %}
+font-weight:bold;
+">
+{{ audit.decision.label }}
+</span>
+</p>
+
+<p>
+<b>可信度：</b>
+{{ (audit.decision.confidence * 100) | round(0) }}%
+</p>
+
+<p>
+<b>原因：</b>
+{{ audit.decision.reason }}
+</p>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:1.3fr 1fr;
+gap:18px;
+align-items:start;
+margin-top:20px;
+">
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+max-height:420px;
+overflow-y:auto;
+">
+
+<h3>① 最近反馈变更</h3>
+
+{% if audit.latest_logs %}
+<table style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr style="background:#f3f4f6;">
+    <th style="padding:8px;text-align:left;">时间</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">变化</th>
+    <th style="padding:8px;text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+{% for log in audit.latest_logs %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;color:#666;font-size:12px;">{{ log.created_at }}</td>
+    <td style="padding:8px;"><b>{{ log.target }}</b></td>
+    <td style="padding:8px;">{{ log.task_title }}</td>
+    <td style="padding:8px;">
+        <span style="color:#666;">{{ log.old_label }}</span>
+        →
+        <span style="font-weight:bold;
+        {% if log.new_status in ["confirmed", "completed"] %}
+            color:#16a34a;
+        {% elif log.new_status == "protected" %}
+            color:#7c3aed;
+        {% elif log.new_status == "ignored" %}
+            color:#b45309;
+        {% elif log.new_status == "failed" %}
+            color:#dc2626;
+        {% elif log.new_status == "pending" %}
+            color:#374151;
+        {% else %}
+            color:#666;
+        {% endif %}
+        ">
+        {{ log.new_label }}
+        </span>
+    </td>
+    <td style="padding:8px;color:#666;font-size:12px;">{{ log.feedback_note }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">暂无反馈变更日志。</p>
+{% endif %}
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+">
+
+<h3>② 状态变化统计</h3>
+
+{% if audit.transition_stats %}
+<ul style="line-height:1.8;padding-left:18px;">
+{% for item in audit.transition_stats[:10] %}
+<li>
+    <b>{{ item.old_label }} → {{ item.new_label }}：</b>
+    {{ item.count }} 次
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p style="color:#666;">暂无状态变化统计。</p>
+{% endif %}
+
+<h3 style="margin-top:18px;">③ 频繁变更对象</h3>
+
+{% if audit.target_stats %}
+<ul style="line-height:1.8;padding-left:18px;">
+{% for item in audit.target_stats[:8] %}
+<li>
+    <b>{{ item.target }}：</b>
+    变更 {{ item.change_count }} 次，
+    最新状态 {{ item.latest_label }}
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p style="color:#666;">暂无频繁变更对象。</p>
+{% endif %}
+
+<h3 style="margin-top:18px;">④ 审计建议</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for step in audit.execution %}
+<li>{{ step }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+<div style="
+margin-top:18px;
+padding:12px;
+background:#f8fafc;
+border-radius:10px;
+border-left:5px solid #0f766e;
+font-size:14px;
+line-height:1.8;
+">
+
+<b>说明：</b>
+本区块由 V12 Execution Feedback Audit Engine 生成。
+它负责记录反馈状态变更轨迹，帮助判断是否存在频繁撤回、误点、异常反馈过多等执行过程问题。
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<div class="card" style="
+border-left:6px solid #f59e0b;
+background:#fffbeb;
+">
+
+<h2>④ Reflection Engine｜复盘中心</h2>
+
+<p><b>摘要：</b>{{ ref.summary }}</p>
+
+<p>
+<b>复盘决策：</b>
+<span style="color:#d97706;font-weight:bold;">
+{{ ref.decision.label }}
+</span>
+</p>
+
+<p><b>原因：</b>{{ ref.decision.reason }}</p>
+
+<h3>复盘事实</h3>
+
+<ul style="line-height:1.8;">
+{% for fact in ref.facts %}
+    {% if fact.value not in [None, ""] %}
+    <li>
+        <b>{{ fact.label }}：</b>{{ fact.value }}
+        <span style="color:#888;font-size:12px;">（{{ fact.meaning }}）</span>
+    </li>
+    {% endif %}
+{% endfor %}
+</ul>
+
+
+{% if ref.execution_feedback %}
+
+{% set ref_fb = ref.execution_feedback %}
+
+<h3 style="margin-top:18px;">V12 执行反馈上下文</h3>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:14px;
+border:1px solid #fde68a;
+margin-top:10px;
+">
+
+<div style="
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:12px;
+margin-bottom:12px;
+">
+
+<div class="stat-card">
+    <div>执行任务</div>
+    <h2>{{ ref_fb.total_tasks }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>已反馈</div>
+    <h2>{{ ref_fb.done_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>待反馈</div>
+    <h2>{{ ref_fb.pending_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1反馈率</div>
+    <h2>{{ (ref_fb.p1_feedback_rate * 100) | round(0) }}%</h2>
+</div>
+
+<div class="stat-card">
+    <div>反馈质量</div>
+    <h2 style="font-size:18px;">
+    {% if ref_fb.quality == "healthy" %}
+        健康
+    {% elif ref_fb.quality == "weak_p1_feedback" %}
+        P1不足
+    {% elif ref_fb.quality == "no_feedback" %}
+        无反馈
+    {% elif ref_fb.quality == "partial_feedback" %}
+        部分反馈
+    {% elif ref_fb.quality == "no_tasks" %}
+        无任务
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+</div>
+
+<p style="line-height:1.8;">
+<b>反馈判断：</b>
+<span style="
+{% if ref_fb.quality == "healthy" %}
+color:#16a34a;
+{% elif ref_fb.quality in ["weak_p1_feedback", "no_feedback"] %}
+color:#dc2626;
+{% else %}
+color:#ca8a04;
+{% endif %}
+font-weight:bold;
+">
+{{ ref_fb.decision_label }}
+</span>
+</p>
+
+<p style="line-height:1.8;color:#555;">
+<b>判断原因：</b>
+{{ ref_fb.decision_reason }}
+</p>
+
+<ul style="line-height:1.8;padding-left:18px;">
+    <li><b>忽略反馈：</b>{{ ref_fb.ignored_count }}</li>
+    <li><b>失败反馈：</b>{{ ref_fb.failed_count }}</li>
+    <li><b>整体反馈率：</b>{{ (ref_fb.feedback_rate * 100) | round(0) }}%</li>
+</ul>
+
+<div style="
+margin-top:10px;
+padding:10px;
+background:#fffbeb;
+border-left:5px solid #f59e0b;
+border-radius:8px;
+font-size:14px;
+line-height:1.8;
+">
+
+<b>复盘解释：</b>
+{% if ref_fb.quality == "weak_p1_feedback" %}
+当前 P1 任务反馈不足。即使下一轮风险池没有明显下降，也不能直接判断策略失败，必须先确认关键任务是否真正执行。
+{% elif ref_fb.quality == "no_feedback" %}
+当前执行任务完全没有反馈。Reflection Engine 只能建立观察结论，不能可靠判断策略好坏。
+{% elif ref_fb.quality == "healthy" %}
+当前执行反馈质量较高。下一轮若风险仍未下降，系统可以更有把握判断策略或规则需要调整。
+{% else %}
+当前已有部分反馈，但样本仍不充分。复盘时需要同时参考快照变化和执行反馈结果。
+{% endif %}
+
+</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+<div class="card" style="
+border-left:6px solid #6366f1;
+background:#eef2ff;
+">
+
+<h2>⑤ Learning Engine｜安全学习</h2>
+
+<p><b>摘要：</b>{{ learn.summary }}</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>历史记录</div>
+    <h2>{{ learn.history_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>有效复盘</div>
+    <h2>{{ learn.valid_reflection_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>自动应用</div>
+    <h2>
+    {% if learn.auto_apply %}
+        开
+    {% else %}
+        关
+    {% endif %}
+    </h2>
+</div>
+
+</div>
+
+
+{% if learn.execution_feedback %}
+
+{% set learn_fb = learn.execution_feedback %}
+
+<h3 style="margin-top:18px;">V12 执行反馈质量</h3>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:14px;
+border:1px solid #c7d2fe;
+margin:12px 0 18px 0;
+">
+
+<div style="
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:12px;
+margin-bottom:12px;
+">
+
+<div class="stat-card">
+    <div>执行任务</div>
+    <h2>{{ learn_fb.total_tasks }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>已反馈</div>
+    <h2>{{ learn_fb.done_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1反馈率</div>
+    <h2>{{ (learn_fb.p1_feedback_rate * 100) | round(0) }}%</h2>
+</div>
+
+<div class="stat-card">
+    <div>异常反馈</div>
+    <h2>{{ learn_fb.ignored_count + learn_fb.failed_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>学习状态</div>
+    <h2 style="font-size:18px;">
+    {% if learn.status == "blocked_by_execution_feedback" %}
+        阻断
+    {% elif learn_fb.quality == "healthy" %}
+        可学习
+    {% elif learn_fb.quality == "partial_feedback" %}
+        谨慎
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+</div>
+
+<p style="line-height:1.8;">
+<b>反馈质量：</b>
+<span style="
+{% if learn_fb.quality == "healthy" %}
+color:#16a34a;
+{% elif learn_fb.quality in ["weak_p1_feedback", "no_feedback"] %}
+color:#dc2626;
+{% else %}
+color:#ca8a04;
+{% endif %}
+font-weight:bold;
+">
+{% if learn_fb.quality == "weak_p1_feedback" %}
+P1反馈不足
+{% elif learn_fb.quality == "no_feedback" %}
+无反馈
+{% elif learn_fb.quality == "healthy" %}
+反馈健康
+{% elif learn_fb.quality == "partial_feedback" %}
+部分反馈
+{% elif learn_fb.quality == "no_tasks" %}
+无任务
+{% else %}
+观察
+{% endif %}
+</span>
+</p>
+
+<p style="line-height:1.8;color:#555;">
+<b>反馈判断：</b>
+{{ learn_fb.decision_label }}
+</p>
+
+<p style="line-height:1.8;color:#555;">
+<b>判断原因：</b>
+{{ learn_fb.decision_reason }}
+</p>
+
+<div style="
+margin-top:10px;
+padding:10px;
+background:#eef2ff;
+border-left:5px solid #6366f1;
+border-radius:8px;
+font-size:14px;
+line-height:1.8;
+">
+
+<b>学习保护：</b>
+{% if learn.status == "blocked_by_execution_feedback" %}
+当前关键任务反馈不足，Learning Engine 已进入保护状态：只记录误差和反馈信号，不把当前结果学习为策略失败，也不会自动调整权重、阈值或策略参数。
+{% elif learn_fb.quality == "healthy" %}
+当前执行反馈质量较高，后续复盘结果更适合作为学习样本。
+{% else %}
+当前执行反馈仍需继续积累，学习结论保持保守。
+{% endif %}
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<h3>学习信号</h3>
+
+<ul style="line-height:1.8;">
+{% for signal in learn.learning_signals %}
+<li>
+    <b>{{ signal.name }}</b>：
+    {{ signal.conclusion }}
+</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #ec4899;
+background:#fdf2f8;
+">
+
+<h2>⑥ LLM Layer｜解释层</h2>
+
+<p><b>解释摘要：</b>{{ llm.summary }}</p>
+
+<div style="
+display:grid;
+grid-template-columns:1.4fr 1fr;
+gap:20px;
+align-items:start;
+">
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+">
+
+<h3>给盟主的解释</h3>
+
+<p style="
+font-size:16px;
+line-height:1.9;
+font-weight:500;
+color:#831843;
+">
+{{ llm.final_message }}
+</p>
+
+{% for section in llm.sections %}
+<div style="
+margin-top:14px;
+padding-top:12px;
+border-top:1px solid #f3f4f6;
+">
+
+<h4>{{ section.title }}</h4>
+
+<p style="line-height:1.8;">
+{{ section.content }}
+</p>
+
+<p style="color:#888;font-size:12px;">
+来源：{{ section.source }}
+</p>
+
+</div>
+{% endfor %}
+
+</div>
+
+<div style="
+background:#fff;
+border-radius:12px;
+padding:16px;
+border:1px solid #e5e7eb;
+">
+
+<h3>安全边界</h3>
+
+<ul style="line-height:1.9;">
+{% for rule in llm.safety_rules %}
+<li>{{ rule }}</li>
+{% endfor %}
+</ul>
+
+<div style="
+margin-top:15px;
+padding:12px;
+background:#fff1f2;
+border-left:5px solid #e11d48;
+border-radius:8px;
+">
+
+<b>当前状态：</b><br>
+provider：{{ llm.provider }}<br>
+真实 LLM API：
+{% if llm.llm_api_enabled %}
+已启用
+{% else %}
+未启用
+{% endif %}<br>
+决策来源：{{ llm.decision_source }}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #111827;
+background:#f9fafb;
+">
+
+<h2>📌 V11 六阶段闭环</h2>
+
+<p style="line-height:1.9;">
+当前页面展示的是 V11《AI战略推演中心》的完整主链路：
+<b>推理 → 推演 → 执行 → 复盘 → 学习 → 解释</b>。
+其中推理、推演、执行、复盘、学习都由规则引擎完成；
+LLM Layer 当前只做解释，不参与核心决策。
+</p>
+
+</div>
+
+{% endblock %}

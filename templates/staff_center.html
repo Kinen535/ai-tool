@@ -1,0 +1,801 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>🤖 AI幕僚中心</h1>
+
+{% if report.v11_llm_report is defined %}
+
+{% set reasoning = report.reasoning_report %}
+{% set sim = report.v11_simulation_report %}
+{% set plan = report.v11_execution_plan %}
+{% set ref = report.v11_reflection_report %}
+{% set learn = report.v11_learning_report %}
+{% set llm = report.v11_llm_report %}
+
+<div class="card" style="
+margin-bottom:20px;
+border-left:6px solid #7c3aed;
+background:#faf5ff;
+">
+
+<h2>🔮 V11 AI战略推演中心</h2>
+
+<p style="font-size:15px;line-height:1.9;">
+<b>战略摘要：</b>
+{{ llm.final_message }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>风险池</div>
+    <h2>{{ reasoning.reasoning_stats.raw_cleanup_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>今日重点</div>
+    <h2>{{ reasoning.reasoning_stats.shown_cleanup_count }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>推荐方案</div>
+    <h2 style="font-size:20px;">{{ sim.recommended_scenario.name }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>今日执行</div>
+    <h2>{{ plan.phases.today | length }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>复盘状态</div>
+    <h2 style="font-size:20px;">
+    {% if ref.status == "no_history" %}
+        基线
+    {% elif ref.status == "matched" %}
+        兑现
+    {% elif ref.status == "partial" %}
+        部分
+    {% elif ref.status == "worse" %}
+        失准
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+<div class="stat-card">
+    <div>学习状态</div>
+    <h2 style="font-size:20px;">
+    {% if learn.status == "collecting_samples" %}
+        收集
+    {% elif learn.status == "stable" %}
+        稳定
+    {% elif learn.status == "needs_review" %}
+        复核
+    {% else %}
+        观察
+    {% endif %}
+    </h2>
+</div>
+
+</div>
+
+<div style="
+display:flex;
+gap:12px;
+align-items:center;
+margin-top:15px;
+">
+
+<a href="/strategic" style="
+display:inline-block;
+padding:10px 16px;
+background:#7c3aed;
+color:white;
+border-radius:10px;
+text-decoration:none;
+font-weight:bold;
+">
+进入 AI战略推演中心 →
+</a>
+
+<span style="color:#666;font-size:14px;">
+完整推理、推演、执行、复盘、学习、解释链路已迁移到独立页面。
+</span>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+<div class="card" style="
+margin-bottom:20px;
+border-left:6px solid #dc2626;
+">
+
+<div class="strategy-box">
+
+<h2>
+🎖 AI总指挥驾驶舱
+</h2>
+
+<div style="
+background:#fff7ed;
+border:2px solid #fb923c;
+padding:18px;
+border-radius:12px;
+margin:20px 0;
+">
+
+<h2 style="color:#ea580c;">
+
+🔥 AI最终决策
+
+</h2>
+
+<div class="card">
+
+<h2>
+📋 AI执行路线图
+</h2>
+
+<div style="
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:20px;
+">
+
+<div>
+
+<h3>
+今天
+</h3>
+
+<ul>
+
+{% for item in report.execution_plan.today %}
+
+<li>{{ item }}</li>
+
+{% endfor %}
+
+</ul>
+
+</div>
+
+<div>
+
+<h3>
+明天
+</h3>
+
+<ul>
+
+{% for item in report.execution_plan.tomorrow %}
+
+<li>{{ item }}</li>
+
+{% endfor %}
+
+</ul>
+
+</div>
+
+<div>
+
+<h3>
+本周
+</h3>
+
+<ul>
+
+{% for item in report.execution_plan.this_week %}
+
+<li>{{ item }}</li>
+
+{% endfor %}
+
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+<h3>
+
+{{ report.final_decision.decision }}
+
+</h3>
+
+<p>
+
+执行优先级：
+
+<b style="color:red;">
+
+{{ report.final_decision.priority }}
+
+</b>
+
+</p>
+
+<p>
+
+预计战力提升：
+
+<b>
+
+{{ report.final_decision.expected_power }}
+
+</b>
+
+</p>
+
+<p>
+
+预计风险变化：
+
+<b>
+
+{{ report.final_decision.risk_reduce }}
+
+</b>
+
+</p>
+
+<p>
+
+决策可信度：
+
+<b style="color:#16a34a;">
+
+{{ report.final_decision.confidence }}%
+
+</b>
+
+</p>
+
+<p>
+
+执行后预计战力：
+
+<b>
+
+{{ report.final_decision.future_score }}
+
+</b>
+
+</p>
+
+<p>
+
+执行后预计风险成员：
+
+<b>
+
+{{ report.final_decision.future_risk }}
+
+</b>
+
+</p>
+
+<ul>
+
+{% for r in report.final_decision.reason %}
+
+<li>{{ r }}</li>
+
+{% endfor %}
+
+</ul>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:15px;
+margin:20px 0;
+">
+
+<div class="stat-card">
+    <div>当前战力</div>
+    <h2>
+    {{ report.strategy_v25.current_power }}
+    </h2>
+</div>
+
+<div class="stat-card">
+    <div>7天后预测</div>
+    <h2>
+    {{ report.strategy_v25.future_power }}
+    </h2>
+</div>
+
+<div class="stat-card">
+    <div>未来风险</div>
+    <h2>
+    {{ report.strategy_simulation.future_count }}
+    </h2>
+</div>
+
+</div>
+
+<p>
+
+<b>AI判断：</b>
+
+{{ report.strategy_simulation.battle_judgement }}
+
+</p>
+
+<p>
+
+<b>推荐方案：</b>
+
+{{ report.strategy_v2.recommended_plan }}
+
+</p>
+
+<p>
+
+<b>AI建议：</b>
+
+{{ report.strategy_v25.suggestion }}
+
+</p>
+
+<div style="
+background:#f8fafc;
+padding:15px;
+border-radius:10px;
+margin-bottom:20px;
+border-left:5px solid #2563eb;
+">
+
+<h3>
+⚔ 当前战争阶段
+</h3>
+
+<p>
+
+<b>
+{{ report.stage_strategy.stage }}
+</b>
+
+</p>
+
+<p>
+
+战略目标：
+
+<b>
+{{ report.stage_strategy.goal }}
+</b>
+
+</p>
+
+<p>
+
+当前重点：
+
+<b>
+{{ report.stage_strategy.focus }}
+</b>
+
+</p>
+
+<h4>
+今日战略行动
+</h4>
+
+<ul>
+
+<hr style="margin:20px 0;">
+
+<div class="card">
+
+<h2>
+📜 今日军令
+</h2>
+
+{% for order in report.daily_orders %}
+
+<div style="
+margin-bottom:20px;
+padding-bottom:15px;
+border-bottom:1px solid #eee;
+">
+
+<h3>
+
+{{ order.priority }}
+｜
+{{ order.title }}
+
+</h3>
+
+<p>
+
+执行动作：
+
+{{ order.action }}
+
+</p>
+
+<p>
+
+涉及成员：
+
+{{ order.count }} 人
+
+</p>
+
+<div>
+
+{% for member in order.members %}
+
+<span style="
+display:inline-block;
+padding:4px 10px;
+margin:4px;
+background:#f3f4f6;
+border-radius:6px;
+">
+
+{{ member }}
+
+</span>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+<div class="card">
+
+<div style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+flex-wrap:wrap;
+">
+
+<h2 style="margin:0;">
+🧠 AI成员决策名单
+</h2>
+
+<div style="
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+">
+
+<button class="copy-btn"
+onclick="copyAllList()">
+📋复制成员名
+</button>
+
+<button class="copy-btn"
+onclick="copyFullList()">
+📄复制完整信息
+</button>
+
+<button class="copy-btn"
+onclick="copyRiskList()">
+🚨风险成员
+</button>
+
+<button class="copy-btn"
+onclick="copyGrowthList()">
+🌱培养成员
+</button>
+
+<button class="copy-btn"
+onclick="copyWatchList()">
+👀观察成员
+</button>
+
+</div>
+
+</div>
+
+<table
+id="decisionTable"
+style="
+width:100%;
+border-collapse:collapse;
+">
+
+<tr style="background:#f5f7fa;">
+
+<th align="left">成员</th>
+<th align="left">AI建议</th>
+<th align="left">置信度</th>
+<th align="left">原因</th>
+
+</tr>
+
+{% for item in report.decision_list %}
+
+<tr>
+
+<td>
+
+<a
+href="/identity/view/{{ item.member }}?from=staff"
+style="
+color:#2563eb;
+font-weight:600;
+text-decoration:none;
+">
+
+🔗 {{ item.member }}
+
+</a>
+
+</td>
+
+<td>
+
+{% if item.decision == "重点培养" %}
+
+<span style="
+color:#16a34a;
+font-weight:600;
+">
+🌱 {{ item.decision }}
+</span>
+
+{% elif item.decision == "重点关注" %}
+
+<span style="
+color:#dc2626;
+font-weight:600;
+">
+🚨 {{ item.decision }}
+</span>
+
+{% else %}
+
+<span style="
+color:#f59e0b;
+font-weight:600;
+">
+👀 {{ item.decision }}
+</span>
+
+{% endif %}
+
+</td>
+
+<td>{{ item.confidence }}%</td>
+
+<td>{{ item.reason }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+<style>
+
+.copy-btn{
+
+    border:none;
+
+    padding:8px 14px;
+
+    border-radius:8px;
+
+    background:#f5f7fa;
+
+    cursor:pointer;
+
+    font-size:14px;
+
+}
+
+.copy-btn:hover{
+
+    background:#e9eef5;
+
+}
+
+</style>
+
+<script>
+
+function copyText(text){
+
+    let textarea =
+        document.createElement("textarea");
+
+    textarea.value = text;
+
+    document.body.appendChild(textarea);
+
+    textarea.select();
+
+    document.execCommand("copy");
+
+    document.body.removeChild(textarea);
+
+    alert("名单已复制");
+
+}
+
+function copyText(text){
+
+let textarea =
+document.createElement("textarea");
+
+textarea.value = text;
+
+document.body.appendChild(textarea);
+
+textarea.select();
+
+document.execCommand("copy");
+
+document.body.removeChild(textarea);
+
+alert("复制成功");
+
+}
+
+function copyMember(name){
+
+copyText(name);
+
+}
+
+function getRows(){
+
+return document.querySelectorAll(
+"#decisionTable tr"
+);
+
+}
+
+function copyAllList(){
+
+let text = "";
+
+getRows().forEach((row,index)=>{
+
+if(index===0)return;
+
+let td=row.querySelectorAll("td");
+
+if(td.length<4)return;
+
+text += td[0].innerText + "\n";
+
+});
+
+copyText(text);
+
+}
+
+function copyFullList(){
+
+let text = "";
+
+getRows().forEach((row,index)=>{
+
+if(index===0)return;
+
+let td=row.querySelectorAll("td");
+
+if(td.length<4)return;
+
+text +=
+td[0].innerText
++ " | "
++ td[1].innerText
++ " | "
++ td[3].innerText
++ "\n";
+
+});
+
+copyText(text);
+
+}
+
+function copyRiskList(){
+
+let text = "";
+
+getRows().forEach((row,index)=>{
+
+if(index===0)return;
+
+let td=row.querySelectorAll("td");
+
+if(td.length<4)return;
+
+if(td[1].innerText.includes("重点关注")){
+
+text += td[0].innerText + "\n";
+
+}
+
+});
+
+copyText(text);
+
+}
+
+function copyGrowthList(){
+
+let text = "";
+
+getRows().forEach((row,index)=>{
+
+if(index===0)return;
+
+let td=row.querySelectorAll("td");
+
+if(td.length<4)return;
+
+if(td[1].innerText.includes("重点培养")){
+
+text += td[0].innerText + "\n";
+
+}
+
+});
+
+copyText(text);
+
+}
+
+function copyWatchList(){
+
+let text = "";
+
+getRows().forEach((row,index)=>{
+
+if(index===0)return;
+
+let td=row.querySelectorAll("td");
+
+if(td.length<4)return;
+
+if(td[1].innerText.includes("提前观察")){
+
+text += td[0].innerText + "\n";
+
+}
+
+});
+
+copyText(text);
+
+}
+
+</script>
+
+{% endblock %}

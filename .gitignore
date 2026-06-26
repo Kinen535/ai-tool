@@ -1,0 +1,25 @@
+
+# Runtime / cache
+__pycache__/
+*.pyc
+venv/
+gunicorn.log
+*.log
+
+# Databases / runtime data
+*.db
+data/*.db
+snapshots.db
+snapshots/
+
+# Backups
+backup/
+*.bak
+*.bak_*
+*.save
+app_backup_*.py
+app_before_*.py
+
+# Temporary text/debug files
+*_html.txt
+alliance_check.txt
