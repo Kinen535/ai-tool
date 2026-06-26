@@ -8,6 +8,10 @@
 {% set stats = fb.stats %}
 {% set audit = report.v12_feedback_audit %}
 {% set audit_stats = audit.stats %}
+{% set tf = report.v13_task_filter %}
+{% set tf_stats = tf.stats %}
+{% set tf_filters = tf.filters %}
+{% set tf_options = tf.options %}
 
 <style>
 .task-table thead th {
@@ -106,6 +110,124 @@ border:1px solid #bfdbfe;
 
 </div>
 
+<div class="card" style="
+margin-bottom:20px;
+border-left:6px solid #7c3aed;
+background:#faf5ff;
+">
+
+<h2>🔎 任务筛选器</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>筛选摘要：</b>
+{{ tf.summary }}
+</p>
+
+<form method="get"
+      action="/tasks"
+      id="taskFilterForm"
+      style="
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:15px;
+      align-items:end;
+      ">
+
+<div>
+    <label><b>优先级</b></label>
+    <select name="priority" onchange="this.form.submit()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+        <option value="all" {% if tf_filters.priority == "all" %}selected{% endif %}>全部</option>
+        {% for item in tf_options.priorities %}
+        <option value="{{ item.value }}" {% if tf_filters.priority == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div>
+    <label><b>状态</b></label>
+    <select name="status" onchange="this.form.submit()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+        <option value="all" {% if tf_filters.status == "all" %}selected{% endif %}>全部</option>
+        {% for item in tf_options.statuses %}
+        <option value="{{ item.value }}" {% if tf_filters.status == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div>
+    <label><b>阶段</b></label>
+    <select name="phase" onchange="this.form.submit()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+        <option value="all" {% if tf_filters.phase == "all" %}selected{% endif %}>全部</option>
+        {% for item in tf_options.phases %}
+        <option value="{{ item.value }}" {% if tf_filters.phase == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div>
+    <label><b>负责人</b></label>
+    <select name="owner" onchange="this.form.submit()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+        <option value="all" {% if tf_filters.owner == "all" %}selected{% endif %}>全部</option>
+        {% for item in tf_options.owners %}
+        <option value="{{ item.value }}" {% if tf_filters.owner == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div style="display:flex;gap:8px;">
+    <button type="submit"
+            style="padding:9px 14px;border-radius:8px;border:none;background:#7c3aed;color:white;cursor:pointer;">
+        应用筛选
+    </button>
+
+    <a href="/tasks"
+       style="padding:9px 14px;border-radius:8px;background:#f3f4f6;color:#374151;text-decoration:none;">
+        重置
+    </a>
+</div>
+
+</form>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin-top:18px;
+">
+
+<div class="stat-card">
+    <div>匹配任务</div>
+    <h2>{{ tf_stats.total }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>待反馈</div>
+    <h2>{{ tf_stats.pending }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>已反馈</div>
+    <h2>{{ tf_stats.done }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>P1匹配</div>
+    <h2>{{ tf_stats.p1_total }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>正向</div>
+    <h2>{{ tf_stats.positive }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>异常</div>
+    <h2>{{ tf_stats.abnormal }}</h2>
+</div>
+
+</div>
+
+</div>
+
 <div style="
 display:grid;
 grid-template-columns:1.4fr 1fr;
@@ -129,7 +251,7 @@ max-height:650px;
 overflow-y:auto;
 ">
 
-{% if fb.pending_tasks %}
+{% if tf.pending_tasks %}
 <table class="task-table" style="width:100%;border-collapse:collapse;font-size:14px;">
 <thead>
 <tr>
@@ -143,13 +265,13 @@ overflow-y:auto;
 </tr>
 </thead>
 <tbody>
-{% for task in fb.pending_tasks %}
+{% for task in tf.pending_tasks %}
 <tr style="border-bottom:1px solid #e5e7eb;">
-    <td style="padding:8px;">{{ task.phase }}</td>
-    <td style="padding:8px;"><b>{{ task.priority }}</b></td>
+    <td style="padding:8px;">{{ task.phase_label }}</td>
+    <td style="padding:8px;"><b>{{ task.priority_label }}</b></td>
     <td style="padding:8px;">{{ task.title }}</td>
     <td style="padding:8px;">{{ task.target }}</td>
-    <td style="padding:8px;">{{ task.owner }}</td>
+    <td style="padding:8px;">{{ task.owner_label }}</td>
     <td style="padding:8px;color:#dc2626;">{{ task.feedback_label }}</td>
     <td style="padding:8px;">
         <form method="post"
@@ -224,8 +346,18 @@ border:1px solid #bbf7d0;
 
 <ul style="line-height:1.8;padding-left:18px;">
 {% for phase, item in fb.phase_stats.items() %}
+{% set phase_name = phase %}
+{% if phase == "today" %}
+    {% set phase_name = "今天" %}
+{% elif phase == "tomorrow" %}
+    {% set phase_name = "明天" %}
+{% elif phase == "this_week" %}
+    {% set phase_name = "本周" %}
+{% elif phase == "season" %}
+    {% set phase_name = "赛季" %}
+{% endif %}
 <li>
-    <b>{{ phase }}：</b>
+    <b>{{ phase_name }}：</b>
     总 {{ item.total }}，
     已反馈 {{ item.done }}，
     待反馈 {{ item.pending }}，
@@ -257,7 +389,7 @@ max-height:520px;
 overflow-y:auto;
 ">
 
-{% if fb.confirmed_tasks %}
+{% if tf.done_tasks %}
 <table class="task-table" style="width:100%;border-collapse:collapse;font-size:14px;">
 <thead>
 <tr>
@@ -270,9 +402,9 @@ overflow-y:auto;
 </tr>
 </thead>
 <tbody>
-{% for task in fb.confirmed_tasks %}
+{% for task in tf.done_tasks %}
 <tr style="border-bottom:1px solid #e5e7eb;">
-    <td style="padding:8px;">{{ task.phase }}</td>
+    <td style="padding:8px;">{{ task.phase_label }}</td>
     <td style="padding:8px;">{{ task.title }}</td>
     <td style="padding:8px;"><b>{{ task.target }}</b></td>
     <td style="padding:8px;font-weight:bold;

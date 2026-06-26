@@ -6811,9 +6811,28 @@ def strategic_center():
 
 @app.route("/tasks")
 def task_center():
+    from flask import request
+    from services.engines.task_filter_engine import (
+        build_task_filter_report
+    )
+
     conn = sqlite3.connect("data/snapshots.db")
     report = build_staff_report(conn)
     conn.close()
+
+    task_filters = {
+        "priority": request.args.get("priority", "all"),
+        "status": request.args.get("status", "all"),
+        "phase": request.args.get("phase", "all"),
+        "owner": request.args.get("owner", "all"),
+    }
+
+    report["v13_task_filter"] = (
+        build_task_filter_report(
+            report,
+            task_filters
+        )
+    )
 
     return render_template(
         "task_center.html",
