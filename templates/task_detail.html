@@ -179,6 +179,33 @@ border-top:1px solid #d1fae5;
     <input type="hidden" name="task_key" value="{{ task.task_key }}">
     <input type="hidden" name="next" value="/tasks/detail/{{ task.task_key }}">
 
+    <div style="width:100%;margin-bottom:8px;">
+        <label style="display:block;font-weight:bold;margin-bottom:6px;">
+            反馈备注
+        </label>
+
+        <textarea name="feedback_note"
+                  rows="3"
+                  placeholder="可填写处理原因，例如：组长已确认请假 / 确认为门神号 / 联系不上 / 数据异常暂缓处理"
+                  style="
+                  width:100%;
+                  padding:10px;
+                  border-radius:8px;
+                  border:1px solid #d1d5db;
+                  resize:vertical;
+                  font-size:14px;
+                  "></textarea>
+
+        <div style="
+        margin-top:6px;
+        color:#6b7280;
+        font-size:13px;
+        line-height:1.6;
+        ">
+            建议填写原因，后续复盘与学习引擎会优先参考备注，避免只根据状态误判。
+        </div>
+    </div>
+
     <button type="submit" name="status" value="confirmed"
             style="padding:6px 10px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#2563eb;cursor:pointer;">
         确认
@@ -249,7 +276,13 @@ background:#ecfdf5;
     <td style="padding:8px;">
         {{ log.old_label }} → <b>{{ log.new_label }}</b>
     </td>
-    <td style="padding:8px;color:#666;">{{ log.feedback_note }}</td>
+    <td style="padding:8px;color:#666;">
+        {% if log.feedback_note %}
+            {{ log.feedback_note }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
 </tr>
 {% endfor %}
 </tbody>
