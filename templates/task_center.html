@@ -169,7 +169,7 @@ color:#4b5563;
       id="taskFilterForm"
       style="
       display:grid;
-      grid-template-columns:repeat(5,1fr);
+      grid-template-columns:repeat(6,1fr);
       gap:15px;
       align-items:end;
       ">
@@ -212,6 +212,15 @@ color:#4b5563;
         <option value="all" {% if tf_filters.owner == "all" %}selected{% endif %}>全部</option>
         {% for item in tf_options.owners %}
         <option value="{{ item.value }}" {% if tf_filters.owner == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div>
+    <label><b>排序方式</b></label>
+    <select name="sort" onchange="this.form.submit()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;">
+        {% for item in tf_options.sorts %}
+        <option value="{{ item.value }}" {% if tf_filters.sort == item.value %}selected{% endif %}>{{ item.label }}</option>
         {% endfor %}
     </select>
 </div>
