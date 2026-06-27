@@ -365,7 +365,7 @@ border-left:6px solid #16a34a;
 background:#f0fdf4;
 ">
 
-<h2>② 负责人压力</h2>
+<h2>② 当前筛选下的负责人压力</h2>
 
 <div style="
 background:#fff;
@@ -375,7 +375,7 @@ border:1px solid #bbf7d0;
 ">
 
 <ul style="line-height:1.8;padding-left:18px;">
-{% for item in fb.owner_stats %}
+{% for item in tf.filtered_owner_stats %}
 <li>
     <b>{{ item.owner }}：</b>
     总 {{ item.total }}，
@@ -387,7 +387,7 @@ border:1px solid #bbf7d0;
 
 </div>
 
-<h2 style="margin-top:20px;">③ 阶段统计</h2>
+<h2 style="margin-top:20px;">③ 当前筛选下的阶段统计</h2>
 
 <div style="
 background:#fff;
@@ -397,19 +397,9 @@ border:1px solid #bbf7d0;
 ">
 
 <ul style="line-height:1.8;padding-left:18px;">
-{% for phase, item in fb.phase_stats.items() %}
-{% set phase_name = phase %}
-{% if phase == "today" %}
-    {% set phase_name = "今天" %}
-{% elif phase == "tomorrow" %}
-    {% set phase_name = "明天" %}
-{% elif phase == "this_week" %}
-    {% set phase_name = "本周" %}
-{% elif phase == "season" %}
-    {% set phase_name = "赛季" %}
-{% endif %}
+{% for item in tf.filtered_phase_stats %}
 <li>
-    <b>{{ phase_name }}：</b>
+    <b>{{ item.phase_label }}：</b>
     总 {{ item.total }}，
     已反馈 {{ item.done }}，
     待反馈 {{ item.pending }}，

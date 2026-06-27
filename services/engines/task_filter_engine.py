@@ -107,6 +107,9 @@ def build_task_filter_report(
     options = _build_filter_options(tasks)
     stats = _build_filtered_stats(sorted_tasks)
 
+    filtered_owner_stats = _build_owner_stats(sorted_tasks)
+    filtered_phase_stats = _build_phase_stats(sorted_tasks)
+
     return {
         "filters": normalized_filters,
         "options": options,
@@ -114,6 +117,8 @@ def build_task_filter_report(
         "pending_tasks": pending_tasks,
         "done_tasks": done_tasks,
         "stats": stats,
+        "filtered_owner_stats": filtered_owner_stats,
+        "filtered_phase_stats": filtered_phase_stats,
         "summary": _build_summary(
             sorted_tasks,
             pending_tasks,
@@ -366,6 +371,88 @@ def _build_filtered_stats(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         "feedback_rate": round(done / total, 2) if total else 0,
         "p1_feedback_rate": round(p1_done / p1_total, 2) if p1_total else 0,
     }
+
+
+def _build_owner_stats(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    bucket: Dict[str, Dict[str, Any]] = {}
+
+    for task in tasks:
+        owner_key = task.get("owner") or "未指定"
+        owner_name = task.get("owner_label") or owner_key
+
+        if owner_key not in bucket:
+            bucket[owner_key] = {
+                "owner": owner_name,
+                "total": 0,
+                "done": 0,
+                "pending": 0,
+                "feedback_rate": 0,
+            }
+
+        item = bucket[owner_key]
+        item["total"] += 1
+
+        if task.get("feedback_status") == "pending":
+            item["pending"] += 1
+        else:
+            item["done"] += 1
+
+    for item in bucket.values():
+        total = item["total"]
+        item["feedback_rate"] = round(
+            item["done"] / total,
+            2
+        ) if total else 0
+
+    return sorted(
+        bucket.values(),
+        key=lambda x: (
+            -x["pending"],
+            -x["total"],
+            x["owner"],
+        )
+    )
+
+
+def _build_phase_stats(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    bucket: Dict[str, Dict[str, Any]] = {}
+
+    for task in tasks:
+        phase_key = task.get("phase") or "unknown"
+        phase_name = task.get("phase_label") or phase_key
+
+        if phase_key not in bucket:
+            bucket[phase_key] = {
+                "phase": phase_key,
+                "phase_label": phase_name,
+                "total": 0,
+                "done": 0,
+                "pending": 0,
+                "feedback_rate": 0,
+            }
+
+        item = bucket[phase_key]
+        item["total"] += 1
+
+        if task.get("feedback_status") == "pending":
+            item["pending"] += 1
+        else:
+            item["done"] += 1
+
+    for item in bucket.values():
+        total = item["total"]
+        item["feedback_rate"] = round(
+            item["done"] / total,
+            2
+        ) if total else 0
+
+    return sorted(
+        bucket.values(),
+        key=lambda x: (
+            PHASE_ORDER.get(x["phase"], 99),
+            x["phase_label"],
+        )
+    )
 
 
 def _build_summary(
