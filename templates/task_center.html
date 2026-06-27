@@ -324,7 +324,7 @@ overflow-y:auto;
     <td style="padding:8px;">{{ task.title }}</td>
     <td style="padding:8px;">{{ task.target }}</td>
     <td style="padding:8px;">{{ task.owner_label }}</td>
-    <td style="padding:8px;color:#dc2626;">{{ task.feedback_label }}</td>
+    <td data-current-status="{{ task.feedback_status }}" data-current-status-label="{{ task.feedback_label }}" style="padding:8px;color:#dc2626;">{{ task.feedback_label }}</td>
     <td style="padding:8px;">
         <form method="post"
               action="/strategic/feedback"
@@ -454,7 +454,7 @@ overflow-y:auto;
     <td style="padding:8px;">{{ task.phase_label }}</td>
     <td style="padding:8px;">{{ task.title }}</td>
     <td style="padding:8px;"><b>{{ task.target }}</b></td>
-    <td style="padding:8px;font-weight:bold;
+    <td data-current-status="{{ task.feedback_status }}" data-current-status-label="{{ task.feedback_label }}" style="padding:8px;font-weight:bold;
     {% if task.feedback_status in ["confirmed", "completed"] %}
         color:#16a34a;
     {% elif task.feedback_status == "protected" %}
@@ -605,5 +605,70 @@ border:1px solid #e5e7eb;
 </div>
 
 </div>
+
+
+<script>
+function preventTaskListEmptyRepeatFeedback() {
+    const forms = document.querySelectorAll('form[action="/strategic/feedback"]');
+
+    forms.forEach(function (form) {
+        const buttons = form.querySelectorAll('button[name="status"]');
+
+        let currentStatus = "";
+        let currentStatusLabel = "";
+
+        const row = form.closest("tr");
+        if (row) {
+            const statusCell = row.querySelector("[data-current-status]");
+            if (statusCell) {
+                currentStatus = statusCell.getAttribute("data-current-status") || "";
+                currentStatusLabel = statusCell.getAttribute("data-current-status-label") || "当前状态";
+            }
+        }
+
+        if (!currentStatus) {
+            const hiddenStatus = form.querySelector('input[name="current_status"]');
+            const hiddenStatusLabel = form.querySelector('input[name="current_status_label"]');
+
+            if (hiddenStatus) {
+                currentStatus = hiddenStatus.value || "";
+            }
+
+            if (hiddenStatusLabel) {
+                currentStatusLabel = hiddenStatusLabel.value || "当前状态";
+            }
+        }
+
+        buttons.forEach(function (btn) {
+            if (btn.value === currentStatus) {
+                btn.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.25)";
+                btn.title = "当前状态，列表页不建议重复提交。";
+            }
+        });
+
+        form.addEventListener("submit", function (event) {
+            const submitter = event.submitter;
+
+            if (!submitter || submitter.name !== "status") {
+                return;
+            }
+
+            const selectedStatus = submitter.value || "";
+
+            if (selectedStatus === currentStatus) {
+                event.preventDefault();
+
+                alert(
+                    "当前任务已经是「" + currentStatusLabel + "」。\n\n" +
+                    "列表页不支持备注补充，避免产生无意义重复日志。\n" +
+                    "如需补充说明，请进入任务详情页填写备注。"
+                );
+            }
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", preventTaskListEmptyRepeatFeedback);
+</script>
 
 {% endblock %}
