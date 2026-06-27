@@ -184,7 +184,60 @@ border-top:1px solid #d1fae5;
             反馈备注
         </label>
 
-        <textarea name="feedback_note"
+        <div style="
+        margin-bottom:10px;
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+        ">
+
+            <span style="
+            font-weight:bold;
+            color:#374151;
+            line-height:30px;
+            ">
+            快捷备注模板：
+            </span>
+
+            <button type="button" class="note-template-btn"
+                    data-note="组长已确认请假，暂缓清理"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #bfdbfe;background:#eff6ff;color:#2563eb;cursor:pointer;">
+                请假保留
+            </button>
+
+            <button type="button" class="note-template-btn"
+                    data-note="确认为门神号或战略号，建议转保护"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #c4b5fd;background:#f5f3ff;color:#7c3aed;cursor:pointer;">
+                门神/战略号
+            </button>
+
+            <button type="button" class="note-template-btn"
+                    data-note="联系不上，建议继续观察或二次确认"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #fcd34d;background:#fffbeb;color:#b45309;cursor:pointer;">
+                联系不上
+            </button>
+
+            <button type="button" class="note-template-btn"
+                    data-note="成员已退盟或长期无回应，建议清理"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">
+                建议清理
+            </button>
+
+            <button type="button" class="note-template-btn"
+                    data-note="数据可能异常，等待下一次快照复核"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;">
+                数据异常
+            </button>
+
+            <button type="button" class="note-template-btn"
+                    data-note="该号为管理小号或特殊用途账号，暂不处理"
+                    style="padding:5px 9px;border-radius:999px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;cursor:pointer;">
+                管理小号
+            </button>
+
+        </div>
+
+        <textarea id="feedbackNoteInput" name="feedback_note"
                   rows="3"
                   placeholder="可填写处理原因，例如：组长已确认请假 / 确认为门神号 / 联系不上 / 数据异常暂缓处理"
                   style="
@@ -308,5 +361,24 @@ background:#fffbeb;
 </div>
 
 {% endif %}
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("feedbackNoteInput");
+    const buttons = document.querySelectorAll(".note-template-btn");
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (!input) {
+                return;
+            }
+
+            input.value = btn.getAttribute("data-note") || "";
+            input.focus();
+        });
+    });
+});
+</script>
 
 {% endblock %}
