@@ -84,8 +84,67 @@ def _normalize_log(log: Dict[str, Any]) -> Dict[str, Any]:
             new_status,
             feedback_note
         ),
+        "change_level": _build_change_level(
+            old_status,
+            new_status,
+            feedback_note
+        ),
+        "change_level_label": _build_change_level_label(
+            old_status,
+            new_status,
+            feedback_note
+        ),
         "feedback_note": feedback_note,
     }
+
+
+def _build_change_level(
+    old_status: str,
+    new_status: str,
+    feedback_note: str = "",
+) -> str:
+    if old_status == new_status:
+        if feedback_note:
+            return "note"
+        return "repeat"
+
+    if new_status in ("confirmed", "completed"):
+        return "positive"
+
+    if new_status == "protected":
+        return "protected"
+
+    if new_status in ("failed", "ignored"):
+        return "abnormal"
+
+    if new_status == "pending":
+        return "pending"
+
+    return "normal"
+
+
+def _build_change_level_label(
+    old_status: str,
+    new_status: str,
+    feedback_note: str = "",
+) -> str:
+    level = _build_change_level(
+        old_status,
+        new_status,
+        feedback_note
+    )
+
+    labels = {
+        "note": "备注",
+        "repeat": "重复",
+        "positive": "正向",
+        "protected": "保护",
+        "abnormal": "异常",
+        "pending": "待处理",
+        "normal": "变化",
+    }
+
+    return labels.get(level, "变化")
 
 
 def _build_change_label(

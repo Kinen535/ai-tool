@@ -327,7 +327,36 @@ background:#ecfdf5;
     <td style="padding:8px;"><b>{{ log.target }}</b></td>
     <td style="padding:8px;">{{ log.task_title }}</td>
     <td style="padding:8px;">
-        <b>{{ log.change_label }}</b>
+        <span style="
+        display:inline-block;
+        padding:4px 8px;
+        border-radius:999px;
+        font-size:13px;
+        font-weight:bold;
+        {% if log.change_level == 'positive' %}
+            background:#dcfce7;color:#16a34a;border:1px solid #86efac;
+        {% elif log.change_level == 'protected' %}
+            background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;
+        {% elif log.change_level == 'abnormal' %}
+            background:#fef2f2;color:#dc2626;border:1px solid #fecaca;
+        {% elif log.change_level == 'pending' %}
+            background:#fffbeb;color:#b45309;border:1px solid #fcd34d;
+        {% elif log.change_level == 'note' %}
+            background:#f3f4f6;color:#374151;border:1px solid #d1d5db;
+        {% else %}
+            background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;
+        {% endif %}
+        ">
+            {{ log.change_label }}
+        </span>
+
+        <span style="
+        margin-left:6px;
+        color:#6b7280;
+        font-size:12px;
+        ">
+            {{ log.change_level_label }}
+        </span>
     </td>
     <td style="padding:8px;color:#666;">
         {% if log.feedback_note %}
