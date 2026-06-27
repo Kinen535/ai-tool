@@ -6809,6 +6809,43 @@ def strategic_center():
     )
 
 
+@app.route("/tasks/detail/<path:task_key>")
+def task_detail(task_key):
+    from urllib.parse import unquote
+    from services.v12_feedback_store import (
+        load_feedback_logs_by_task_key
+    )
+    from services.engines.task_detail_engine import (
+        build_task_detail_report
+    )
+
+    decoded_task_key = unquote(task_key)
+
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+
+    logs = load_feedback_logs_by_task_key(
+        conn,
+        decoded_task_key
+    )
+
+    conn.close()
+
+    report["v13_task_detail"] = (
+        build_task_detail_report(
+            report,
+            decoded_task_key,
+            logs
+        )
+    )
+
+    return render_template(
+        "task_detail.html",
+        report=report,
+        title="任务详情"
+    )
+
+
 @app.route("/tasks")
 def task_center():
     from flask import request

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set detail = report.v13_task_detail %}
+{% set task = detail.task %}
+
+<h1>📌 任务详情</h1>
+
+<div style="margin-bottom:16px;">
+    <a href="/tasks"
+       style="
+       display:inline-block;
+       padding:8px 14px;
+       border-radius:8px;
+       background:#f3f4f6;
+       color:#374151;
+       text-decoration:none;
+       ">
+       ← 返回战场任务协同中心
+    </a>
+</div>
+
+{% if not detail.found %}
+
+<div class="card" style="
+border-left:6px solid #dc2626;
+background:#fef2f2;
+">
+
+<h2>任务不存在</h2>
+
+<p>{{ detail.summary }}</p>
+
+</div>
+
+{% else %}
+
+<div class="card" style="
+border-left:6px solid #2563eb;
+background:#eff6ff;
+">
+
+<h2>① 任务总览</h2>
+
+<p style="font-size:15px;line-height:1.8;">
+<b>摘要：</b>
+{{ detail.summary }}
+</p>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:15px;
+margin:15px 0;
+">
+
+<div class="stat-card">
+    <div>优先级</div>
+    <h2>{{ task.priority_label }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>阶段</div>
+    <h2>{{ task.phase_label }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>负责人</div>
+    <h2>{{ task.owner_label }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>反馈状态</div>
+    <h2>{{ task.feedback_status_label }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>日志次数</div>
+    <h2>{{ detail.logs | length }}</h2>
+</div>
+
+<div class="stat-card">
+    <div>任务对象</div>
+    <h2>{{ task.target }}</h2>
+</div>
+
+</div>
+
+</div>
+
+<div style="
+display:grid;
+grid-template-columns:1.2fr 1fr;
+gap:20px;
+align-items:start;
+">
+
+<div class="card" style="
+border-left:6px solid #7c3aed;
+background:#faf5ff;
+">
+
+<h2>② 任务事实</h2>
+
+<p><b>任务标题：</b>{{ task.title }}</p>
+<p><b>任务对象：</b>{{ task.target }}</p>
+<p><b>负责人：</b>{{ task.owner_label }}</p>
+<p><b>阶段：</b>{{ task.phase_label }}</p>
+<p><b>优先级：</b>{{ task.priority_label }}</p>
+<p><b>当前状态：</b>{{ task.feedback_status_label }}</p>
+
+{% if task.action %}
+<p><b>执行动作：</b>{{ task.action }}</p>
+{% endif %}
+
+{% if task.deadline %}
+<p><b>截止：</b>{{ task.deadline }}</p>
+{% endif %}
+
+{% if task.review_metric %}
+<p><b>复盘指标：</b>{{ task.review_metric }}</p>
+{% endif %}
+
+</div>
+
+<div class="card" style="
+border-left:6px solid #16a34a;
+background:#f0fdf4;
+">
+
+<h2>③ 当前判断</h2>
+
+<p>
+<b>结论：</b>
+<span style="
+{% if detail.decision.level == 'danger' %}
+color:#dc2626;
+{% elif detail.decision.level == 'warning' %}
+color:#b45309;
+{% elif detail.decision.level == 'safe' %}
+color:#16a34a;
+{% else %}
+color:#2563eb;
+{% endif %}
+font-weight:bold;
+">
+{{ detail.decision.label }}
+</span>
+</p>
+
+<p><b>原因：</b>{{ detail.decision.reason }}</p>
+
+<h3>建议动作</h3>
+
+<ul style="line-height:1.8;padding-left:18px;">
+{% for item in detail.execution %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #0f766e;
+background:#ecfdf5;
+">
+
+<h2>④ 反馈历史日志</h2>
+
+{% if detail.logs %}
+<table style="width:100%;border-collapse:collapse;font-size:14px;">
+<thead>
+<tr style="background:#f3f4f6;">
+    <th style="padding:8px;text-align:left;">时间</th>
+    <th style="padding:8px;text-align:left;">对象</th>
+    <th style="padding:8px;text-align:left;">任务</th>
+    <th style="padding:8px;text-align:left;">变化</th>
+    <th style="padding:8px;text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+{% for log in detail.logs %}
+<tr style="border-bottom:1px solid #e5e7eb;">
+    <td style="padding:8px;color:#666;font-size:12px;">{{ log.created_at }}</td>
+    <td style="padding:8px;"><b>{{ log.target }}</b></td>
+    <td style="padding:8px;">{{ log.task_title }}</td>
+    <td style="padding:8px;">
+        {{ log.old_label }} → <b>{{ log.new_label }}</b>
+    </td>
+    <td style="padding:8px;color:#666;">{{ log.feedback_note }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p style="color:#666;">该任务暂无反馈变更日志。</p>
+{% endif %}
+
+</div>
+
+<div class="card" style="
+margin-top:20px;
+border-left:6px solid #f59e0b;
+background:#fffbeb;
+">
+
+<h2>⑤ 复盘标准</h2>
+
+<p><b>下次检查：</b>{{ detail.review.next_check }}</p>
+<p><b>成功条件：</b>{{ detail.review.success_condition }}</p>
+<p><b>失败条件：</b>{{ detail.review.failure_condition }}</p>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

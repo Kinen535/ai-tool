@@ -301,3 +301,57 @@ def _first_value(row: Any) -> Any:
         return row[0]
     except Exception:
         return None
+
+
+def load_feedback_logs_by_task_key(conn, task_key, limit=50):
+    """
+    V13 Task Detail 使用：
+    按 task_key 读取单个任务的反馈变更日志。
+
+    注意：
+    1. 这里只做数据读取。
+    2. 不参与决策。
+    3. 不修改反馈状态。
+    4. 兼容 app.py 未设置 row_factory 的 sqlite 连接。
+    """
+
+    if not task_key:
+        return []
+
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT *
+            FROM v12_feedback_logs
+            WHERE task_key = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (
+                task_key,
+                limit,
+            )
+        )
+
+        rows = cursor.fetchall()
+        columns = [
+            item[0]
+            for item in cursor.description
+        ]
+
+        result = []
+
+        for row in rows:
+            item = {}
+
+            for index, column in enumerate(columns):
+                item[column] = row[index]
+
+            result.append(item)
+
+        return result
+
+    except Exception:
+        return []

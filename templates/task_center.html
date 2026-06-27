@@ -346,6 +346,11 @@ overflow-y:auto;
 
             <button type="submit" name="status" value="failed"
                     style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">失败</button>
+
+            <a href="/tasks/detail/{{ task.task_key }}"
+               style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;text-decoration:none;">
+               详情
+            </a>
         </form>
     </td>
 </tr>
@@ -489,6 +494,11 @@ overflow-y:auto;
 
             <button type="submit" name="status" value="pending"
                     style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;">撤回</button>
+
+            <a href="/tasks/detail/{{ task.task_key }}"
+               style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;text-decoration:none;">
+               详情
+            </a>
         </form>
     </td>
 </tr>
