@@ -327,7 +327,7 @@ background:#ecfdf5;
     <td style="padding:8px;"><b>{{ log.target }}</b></td>
     <td style="padding:8px;">{{ log.task_title }}</td>
     <td style="padding:8px;">
-        {{ log.old_label }} → <b>{{ log.new_label }}</b>
+        <b>{{ log.change_label }}</b>
     </td>
     <td style="padding:8px;color:#666;">
         {% if log.feedback_note %}

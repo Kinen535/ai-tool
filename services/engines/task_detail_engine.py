@@ -69,6 +69,8 @@ def _normalize_log(log: Dict[str, Any]) -> Dict[str, Any]:
     old_status = log.get("old_status") or ""
     new_status = log.get("new_status") or ""
 
+    feedback_note = log.get("feedback_note") or ""
+
     return {
         "created_at": log.get("created_at") or "",
         "target": log.get("target") or "",
@@ -77,8 +79,30 @@ def _normalize_log(log: Dict[str, Any]) -> Dict[str, Any]:
         "new_status": new_status,
         "old_label": _status_label(old_status),
         "new_label": _status_label(new_status),
-        "feedback_note": log.get("feedback_note") or "",
+        "change_label": _build_change_label(
+            old_status,
+            new_status,
+            feedback_note
+        ),
+        "feedback_note": feedback_note,
     }
+
+
+def _build_change_label(
+    old_status: str,
+    new_status: str,
+    feedback_note: str = "",
+) -> str:
+    old_label = _status_label(old_status)
+    new_label = _status_label(new_status)
+
+    if old_status == new_status:
+        if feedback_note:
+            return f"备注补充（{new_label}）"
+
+        return f"重复反馈（{new_label}）"
+
+    return f"{old_label} → {new_label}"
 
 
 def _build_summary(
