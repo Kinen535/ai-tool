@@ -6899,7 +6899,10 @@ def strategic_feedback():
     feedback_note = request.form.get("feedback_note", "").strip()
     next_url = request.form.get("next", "/strategic").strip()
 
-    if next_url not in ("/strategic", "/tasks"):
+    if (
+        next_url not in ("/strategic", "/tasks")
+        and not next_url.startswith("/tasks/detail/")
+    ):
         next_url = "/strategic"
 
     if status not in allowed_status:

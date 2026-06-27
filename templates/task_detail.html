@@ -159,6 +159,64 @@ font-weight:bold;
 {% endfor %}
 </ul>
 
+<div style="
+margin-top:18px;
+padding-top:14px;
+border-top:1px solid #d1fae5;
+">
+
+<h3>⑥ 详情页反馈操作</h3>
+
+<form method="post"
+      action="/strategic/feedback"
+      style="
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      ">
+
+    <input type="hidden" name="task_key" value="{{ task.task_key }}">
+    <input type="hidden" name="next" value="/tasks/detail/{{ task.task_key }}">
+
+    <button type="submit" name="status" value="confirmed"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #93c5fd;background:#eff6ff;color:#2563eb;cursor:pointer;">
+        确认
+    </button>
+
+    <button type="submit" name="status" value="completed"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #86efac;background:#f0fdf4;color:#16a34a;cursor:pointer;">
+        完成
+    </button>
+
+    <button type="submit" name="status" value="protected"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#7c3aed;cursor:pointer;">
+        转保护
+    </button>
+
+    <button type="submit" name="status" value="ignored"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #fcd34d;background:#fffbeb;color:#b45309;cursor:pointer;">
+        忽略
+    </button>
+
+    <button type="submit" name="status" value="failed"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;cursor:pointer;">
+        失败
+    </button>
+
+    <button type="submit" name="status" value="pending"
+            style="padding:6px 10px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;">
+        撤回
+    </button>
+
+</form>
+
+<p style="margin-top:10px;color:#666;font-size:13px;">
+说明：这里复用 V12 执行反馈闭环，提交后会保留在当前任务详情页，并写入反馈审计日志。
+</p>
+
+</div>
+
 </div>
 
 </div>
