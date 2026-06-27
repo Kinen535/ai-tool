@@ -6825,6 +6825,7 @@ def task_center():
         "status": request.args.get("status", "all"),
         "phase": request.args.get("phase", "all"),
         "owner": request.args.get("owner", "all"),
+        "preset": request.args.get("preset", "all"),
     }
 
     report["v13_task_filter"] = (

@@ -123,6 +123,47 @@ background:#faf5ff;
 {{ tf.summary }}
 </p>
 
+<div style="
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin:14px 0 18px 0;
+">
+
+<span style="
+font-weight:bold;
+line-height:34px;
+color:#4b5563;
+">
+快捷筛选：
+</span>
+
+{% for item in tf.quick_filters %}
+
+<a href="{{ item.url }}"
+   style="
+   padding:8px 12px;
+   border-radius:999px;
+   text-decoration:none;
+   border:1px solid #ddd;
+   font-size:14px;
+   {% if tf_filters.preset == item.key %}
+       background:#7c3aed;
+       color:white;
+       border-color:#7c3aed;
+       font-weight:bold;
+   {% else %}
+       background:white;
+       color:#374151;
+   {% endif %}
+   ">
+   {{ item.label }}
+</a>
+
+{% endfor %}
+
+</div>
+
 <form method="get"
       action="/tasks"
       id="taskFilterForm"
@@ -132,6 +173,8 @@ background:#faf5ff;
       gap:15px;
       align-items:end;
       ">
+
+<input type="hidden" name="preset" value="{{ tf_filters.preset }}">
 
 <div>
     <label><b>优先级</b></label>
