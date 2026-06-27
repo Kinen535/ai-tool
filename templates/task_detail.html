@@ -178,6 +178,8 @@ border-top:1px solid #d1fae5;
 
     <input type="hidden" name="task_key" value="{{ task.task_key }}">
     <input type="hidden" name="next" value="/tasks/detail/{{ task.task_key }}">
+    <input type="hidden" id="currentFeedbackStatus" value="{{ task.feedback_status }}">
+    <input type="hidden" id="currentFeedbackStatusLabel" value="{{ task.feedback_status_label }}">
 
     <div style="width:100%;margin-bottom:8px;">
         <label style="display:block;font-weight:bold;margin-bottom:6px;">
@@ -408,6 +410,54 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+</script>
+
+
+<script>
+function preventEmptyRepeatFeedback() {
+    const form = document.querySelector('form[action="/strategic/feedback"]');
+    const noteInput = document.getElementById("feedbackNoteInput");
+    const currentStatusInput = document.getElementById("currentFeedbackStatus");
+    const currentStatusLabelInput = document.getElementById("currentFeedbackStatusLabel");
+
+    if (!form || !currentStatusInput) {
+        return;
+    }
+
+    const currentStatus = currentStatusInput.value || "";
+    const currentStatusLabel = currentStatusLabelInput ? currentStatusLabelInput.value : "当前状态";
+    const buttons = form.querySelectorAll('button[name="status"]');
+
+    buttons.forEach(function (btn) {
+        const btnStatus = btn.value || "";
+
+        if (btnStatus === currentStatus) {
+            btn.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.25)";
+            btn.title = "当前状态。如需重复提交，请填写备注作为补充说明。";
+        }
+    });
+
+    form.addEventListener("submit", function (event) {
+        const submitter = event.submitter;
+        if (!submitter || submitter.name !== "status") {
+            return;
+        }
+
+        const selectedStatus = submitter.value || "";
+        const note = noteInput ? noteInput.value.trim() : "";
+
+        if (selectedStatus === currentStatus && !note) {
+            event.preventDefault();
+            alert(
+                "当前任务已经是「" + currentStatusLabel + "」。\n\n" +
+                "如果只是重复点击，不需要再次提交。\n" +
+                "如果要补充说明，请先填写反馈备注。"
+            );
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", preventEmptyRepeatFeedback);
 </script>
 
 {% endblock %}
