@@ -671,4 +671,64 @@ function preventTaskListEmptyRepeatFeedback() {
 document.addEventListener("DOMContentLoaded", preventTaskListEmptyRepeatFeedback);
 </script>
 
+
+<script>
+function compactTaskListActionButtons() {
+    const forms = document.querySelectorAll('form[action="/strategic/feedback"]');
+
+    forms.forEach(function (form) {
+        const row = form.closest("tr");
+        if (!row) {
+            return;
+        }
+
+        const statusCell = row.querySelector("[data-current-status]");
+        if (!statusCell) {
+            return;
+        }
+
+        const currentStatus = statusCell.getAttribute("data-current-status") || "";
+        const currentStatusLabel = statusCell.getAttribute("data-current-status-label") || "当前状态";
+        const buttons = form.querySelectorAll('button[name="status"]');
+        const detailLink = row.querySelector('a[href^="/tasks/detail/"]');
+
+        const isAlreadyFeedback = currentStatus && currentStatus !== "pending";
+
+        buttons.forEach(function (btn) {
+            const value = btn.value || "";
+
+            if (value === currentStatus) {
+                btn.textContent = "当前";
+                btn.disabled = true;
+                btn.title = "当前状态：" + currentStatusLabel;
+                btn.style.opacity = "1";
+                btn.style.cursor = "not-allowed";
+                btn.style.fontWeight = "bold";
+                btn.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.22)";
+                return;
+            }
+
+            if (isAlreadyFeedback) {
+                if (value === "pending") {
+                    btn.style.fontWeight = "bold";
+                    btn.style.boxShadow = "0 0 0 2px rgba(245, 158, 11, 0.18)";
+                    btn.title = "撤回到待反馈";
+                } else {
+                    btn.style.opacity = "0.55";
+                    btn.title = "变更当前反馈状态";
+                }
+            }
+        });
+
+        if (detailLink) {
+            detailLink.style.fontWeight = "bold";
+            detailLink.style.boxShadow = "0 0 0 2px rgba(37, 99, 235, 0.12)";
+            detailLink.title = "进入任务详情页，可补充备注和查看反馈历史";
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", compactTaskListActionButtons);
+</script>
+
 {% endblock %}
