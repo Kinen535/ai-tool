@@ -6809,6 +6809,32 @@ def strategic_center():
     )
 
 
+
+@app.route("/leaders")
+def leader_center():
+    from services.engines.leader_center_engine import (
+        build_leader_center_report
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+
+    report["v14_leader_center"] = (
+        build_leader_center_report(
+            conn,
+            report
+        )
+    )
+
+    conn.close()
+
+    return render_template(
+        "leader_center.html",
+        report=report,
+        title="组长协同驾驶舱"
+    )
+
+
 @app.route("/tasks/detail/<path:task_key>")
 def task_detail(task_key):
     from flask import request

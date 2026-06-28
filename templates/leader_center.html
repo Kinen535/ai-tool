@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set lc = report.v14_leader_center %}
+
+<h1>🧭 组长协同驾驶舱</h1>
+
+<div style="
+background:#eef6ff;
+border-left:6px solid #2563eb;
+border-radius:18px;
+padding:24px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.08);
+">
+
+    <h2>① 分组责任总览</h2>
+
+    <p>
+        <b>摘要：</b>{{ lc.summary }}
+    </p>
+
+    <div style="
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:14px;
+    margin-top:18px;
+    ">
+
+        <div class="stat-card">
+            <div>分组数</div>
+            <h2>{{ lc.stats.group_count }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>成员数</div>
+            <h2>{{ lc.stats.member_count }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>关联任务</div>
+            <h2>{{ lc.stats.task_count }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>高压分组</div>
+            <h2>{{ lc.stats.high_pressure_group_count }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>待反馈</div>
+            <h2>{{ lc.stats.pending_task_count }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>异常反馈</div>
+            <h2>{{ lc.stats.abnormal_task_count }}</h2>
+        </div>
+
+    </div>
+
+    <div style="
+    margin-top:18px;
+    background:#fff;
+    border:1px solid #bfdbfe;
+    border-radius:14px;
+    padding:16px;
+    ">
+        <h3>🎯 当前判断</h3>
+        <p>
+            <b>结论：</b>
+            {% if lc.decision.level == "warning" %}
+                <span style="color:#dc2626;font-weight:bold;">{{ lc.decision.label }}</span>
+            {% elif lc.decision.level == "safe" %}
+                <span style="color:#16a34a;font-weight:bold;">{{ lc.decision.label }}</span>
+            {% else %}
+                <span style="color:#2563eb;font-weight:bold;">{{ lc.decision.label }}</span>
+            {% endif %}
+        </p>
+        <p><b>可信度：</b>{{ (lc.decision.confidence * 100)|round(1) }}%</p>
+        <p><b>原因：</b>{{ lc.decision.reason }}</p>
+    </div>
+
+</div>
+
+
+<div style="
+display:grid;
+grid-template-columns:1.2fr 1fr;
+gap:24px;
+margin-bottom:24px;
+">
+
+    <div style="
+    background:#fff7ed;
+    border-left:6px solid #f97316;
+    border-radius:18px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>② 高压分组 TOP</h2>
+
+        {% if lc.high_pressure_groups %}
+
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:8px;text-align:left;">分组</th>
+                    <th style="padding:8px;text-align:left;">压力</th>
+                    <th style="padding:8px;text-align:left;">风险</th>
+                    <th style="padding:8px;text-align:left;">待反馈</th>
+                    <th style="padding:8px;text-align:left;">建议</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in lc.high_pressure_groups %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:8px;">
+                        {% if g.pressure_level == "high" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% else %}
+                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:8px;">
+                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}
+                    </td>
+                    <td style="padding:8px;">{{ g.pending_tasks }}</td>
+                    <td style="padding:8px;color:#374151;">{{ g.suggestion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+
+        <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+            当前没有明显高压分组。
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <div style="
+    background:#ecfdf5;
+    border-left:6px solid #16a34a;
+    border-radius:18px;
+    padding:20px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>③ 负责人压力</h2>
+
+        {% if lc.owner_pressure %}
+
+            {% for item in lc.owner_pressure[:8] %}
+            <div style="
+            background:#fff;
+            border:1px solid #bbf7d0;
+            border-radius:12px;
+            padding:12px;
+            margin-bottom:10px;
+            ">
+                <b>{{ item.owner }}</b>
+                <div style="margin-top:6px;color:#374151;line-height:1.7;">
+                    总任务 {{ item.task_count }}，
+                    待反馈 {{ item.pending_tasks }}，
+                    P1 {{ item.p1_tasks }}，
+                    异常 {{ item.abnormal_tasks }}，
+                    反馈率 {{ item.feedback_rate }}%
+                </div>
+            </div>
+            {% endfor %}
+
+        {% else %}
+
+            <div style="background:#fff;border:1px solid #bbf7d0;border-radius:12px;padding:14px;">
+                暂无负责人任务压力。
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<div style="
+background:#f8fafc;
+border-left:6px solid #64748b;
+border-radius:18px;
+padding:22px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>④ 分组责任明细</h2>
+
+    <div style="max-height:620px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">分组</th>
+                    <th style="padding:9px;text-align:left;">成员</th>
+                    <th style="padding:9px;text-align:left;">活跃</th>
+                    <th style="padding:9px;text-align:left;">稳定</th>
+                    <th style="padding:9px;text-align:left;">风险</th>
+                    <th style="padding:9px;text-align:left;">任务</th>
+                    <th style="padding:9px;text-align:left;">反馈率</th>
+                    <th style="padding:9px;text-align:left;">压力</th>
+                    <th style="padding:9px;text-align:left;">建议</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for g in lc.group_cards %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:9px;">{{ g.member_count }}</td>
+                    <td style="padding:9px;">{{ g.avg_av }}</td>
+                    <td style="padding:9px;">{{ g.avg_bs }}</td>
+                    <td style="padding:9px;">
+                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }} / 保护 {{ g.protected_count }}
+                    </td>
+                    <td style="padding:9px;">
+                        总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}
+                    </td>
+                    <td style="padding:9px;">{{ g.feedback_rate }}%</td>
+                    <td style="padding:9px;">
+                        {% if g.pressure_level == "high" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% elif g.pressure_level == "medium" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% else %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:9px;color:#374151;">{{ g.suggestion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="
+    margin-top:16px;
+    background:#fff;
+    border-left:4px solid #64748b;
+    border-radius:12px;
+    padding:12px;
+    color:#475569;
+    ">
+        <b>说明：</b>{{ lc.explain }}
+    </div>
+
+</div>
+
+{% endblock %}
