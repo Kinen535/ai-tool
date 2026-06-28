@@ -27,8 +27,8 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px;">
         <div class="stat-card"><div>动作</div><h2>{{ detail.card.title }}</h2></div>
         <div class="stat-card"><div>对象</div><h2>{{ detail.card.target }}</h2></div>
-        <div class="stat-card"><div>级别</div><h2>{{ detail.card.level }}</h2></div>
-        <div class="stat-card"><div>动作ID</div><h2 style="font-size:16px;">{{ detail.action_key }}</h2></div>
+        <div class="stat-card"><div>等级</div><h2>{{ detail.card.level_label or "待判断" }}</h2></div>
+        <div class="stat-card"><div>动作类型</div><h2>{{ detail.card.key_label or detail.card.title }}</h2></div>
     </div>
 
     <div style="margin-top:18px;background:#fff;border:1px solid #bfdbfe;border-radius:14px;padding:16px;">

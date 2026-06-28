@@ -152,9 +152,11 @@ def _extract_reflection_context(staff_report: Dict[str, Any]) -> Dict[str, Any]:
     ref = staff_report.get("v11_reflection_report", {}) or {}
     decision = ref.get("decision", {}) or {}
     execution_feedback = ref.get("execution_feedback", {}) or {}
+    raw_status = ref.get("status") or "unknown"
 
     return {
-        "status": ref.get("status") or "unknown",
+        "status": raw_status,
+        "status_label": _reflection_status_label(raw_status),
         "summary": ref.get("summary") or "",
         "decision_label": decision.get("label") or "",
         "decision_reason": decision.get("reason") or "",
@@ -166,9 +168,11 @@ def _extract_reflection_context(staff_report: Dict[str, Any]) -> Dict[str, Any]:
 def _extract_learning_context(staff_report: Dict[str, Any]) -> Dict[str, Any]:
     learning = staff_report.get("v11_learning_report", {}) or {}
     decision = learning.get("decision", {}) or {}
+    raw_status = learning.get("status") or "unknown"
 
     return {
-        "status": learning.get("status") or "unknown",
+        "status": raw_status,
+        "status_label": _learning_status_label(raw_status),
         "summary": learning.get("summary") or "",
         "decision_label": decision.get("label") or "",
         "decision_reason": decision.get("reason") or "",
@@ -195,6 +199,13 @@ def _decorate_action_progress(
         )
 
         item.update(progress)
+
+        item["key_label"] = _command_action_label(key)
+        item["level_label"] = _command_level_label(item.get("level"))
+        item["progress_status_label"] = _command_progress_status_label(
+            item.get("progress_status")
+        )
+
         result.append(item)
 
     return result
@@ -510,6 +521,67 @@ def _build_summary(stats: Dict[str, Any], decision: Dict[str, Any]) -> str:
         f"待指定负责人分组 {stats.get('unassigned_groups', 0)} 个。"
         f"当前总判断：{decision.get('label', '继续观察')}。"
     )
+
+
+
+def _command_action_label(key: Any) -> str:
+    labels = {
+        "fill_leader_owner": "补齐负责人",
+        "handle_high_pressure_groups": "处理高压分组",
+        "complete_task_feedback": "补齐任务反馈",
+        "review_abnormal_feedback": "复核异常反馈",
+        "improve_learning_sample": "提升学习样本",
+        "routine_patrol": "常规巡检",
+    }
+
+    return labels.get(str(key or ""), "未知动作")
+
+
+def _command_level_label(level: Any) -> str:
+    labels = {
+        "danger": "紧急",
+        "warning": "重要",
+        "info": "关注",
+        "safe": "正常",
+    }
+
+    return labels.get(str(level or ""), "待判断")
+
+
+def _command_progress_status_label(status: Any) -> str:
+    labels = {
+        "done": "已闭环",
+        "active": "处理中",
+        "blocked": "被阻断",
+        "unknown": "待判断",
+    }
+
+    return labels.get(str(status or ""), "待判断")
+
+
+def _reflection_status_label(status: Any) -> str:
+    labels = {
+        "no_history": "暂无历史复盘",
+        "baseline_created": "已建立复盘基线",
+        "collecting_samples": "样本积累中",
+        "blocked_by_execution_feedback": "反馈不足阻断",
+        "unknown": "未知状态",
+    }
+
+    return labels.get(str(status or ""), "未知状态")
+
+
+def _learning_status_label(status: Any) -> str:
+    labels = {
+        "no_history": "暂无学习历史",
+        "collecting_samples": "样本积累中",
+        "blocked_by_execution_feedback": "反馈不足阻断",
+        "ready": "可学习",
+        "learning": "学习中",
+        "unknown": "未知状态",
+    }
+
+    return labels.get(str(status or ""), "未知状态")
 
 
 def _safe_percent(part: int, total: int) -> float:

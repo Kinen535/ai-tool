@@ -173,9 +173,9 @@ margin-bottom:24px;
         <div style="background:#fff;border:1px solid #bbf7d0;border-radius:14px;padding:16px;line-height:1.8;">
 
             <div><b>复盘判断：</b>{{ cc.reflection_context.decision_label or "暂无" }}</div>
-            <div><b>复盘状态：</b>{{ cc.reflection_context.status }}</div>
+            <div><b>复盘状态：</b>{{ cc.reflection_context.status_label or cc.reflection_context.status }}</div>
             <div><b>学习判断：</b>{{ cc.learning_context.decision_label or "暂无" }}</div>
-            <div><b>学习状态：</b>{{ cc.learning_context.status }}</div>
+            <div><b>学习状态：</b>{{ cc.learning_context.status_label or cc.learning_context.status }}</div>
 
         </div>
 
