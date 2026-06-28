@@ -460,4 +460,45 @@ function preventEmptyRepeatFeedback() {
 document.addEventListener("DOMContentLoaded", preventEmptyRepeatFeedback);
 </script>
 
+
+<script>
+function keepTaskDetailScrollBeforeFeedback() {
+    const forms = document.querySelectorAll('form[action="/strategic/feedback"]');
+
+    forms.forEach(function (form) {
+        form.addEventListener("submit", function () {
+            sessionStorage.setItem("taskDetailShouldRestoreScroll", "1");
+            sessionStorage.setItem("taskDetailScrollY", String(window.scrollY || 0));
+        });
+    });
+}
+
+function restoreTaskDetailScrollPosition() {
+    const shouldRestore = sessionStorage.getItem("taskDetailShouldRestoreScroll");
+
+    if (shouldRestore !== "1") {
+        return;
+    }
+
+    const rawY = sessionStorage.getItem("taskDetailScrollY") || "0";
+    const y = parseInt(rawY, 10) || 0;
+
+    sessionStorage.removeItem("taskDetailShouldRestoreScroll");
+    sessionStorage.removeItem("taskDetailScrollY");
+
+    setTimeout(function () {
+        window.scrollTo({
+            top: y,
+            left: 0,
+            behavior: "instant"
+        });
+    }, 80);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    keepTaskDetailScrollBeforeFeedback();
+    restoreTaskDetailScrollPosition();
+});
+</script>
+
 {% endblock %}
