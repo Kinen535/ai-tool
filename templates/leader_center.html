@@ -58,6 +58,11 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
             <h2>{{ lc.stats.abnormal_task_count }}</h2>
         </div>
 
+        <div class="stat-card">
+            <div>待指定组长</div>
+            <h2>{{ lc.stats.unassigned_group_count }}</h2>
+        </div>
+
     </div>
 
     <div style="
@@ -108,6 +113,7 @@ margin-bottom:24px;
             <thead>
                 <tr style="background:#f3f4f6;">
                     <th style="padding:8px;text-align:left;">分组</th>
+                    <th style="padding:8px;text-align:left;">责任人</th>
                     <th style="padding:8px;text-align:left;">压力</th>
                     <th style="padding:8px;text-align:left;">风险</th>
                     <th style="padding:8px;text-align:left;">待反馈</th>
@@ -118,6 +124,16 @@ margin-bottom:24px;
                 {% for g in lc.high_pressure_groups %}
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:8px;">
+                        {% if g.responsibility_status == "mapped" %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% elif g.responsibility_status == "admin_proxy" %}
+                            <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% else %}
+                            <span style="color:#dc2626;font-weight:bold;">待指定</span>
+                        {% endif %}
+                        <div style="font-size:12px;color:#6b7280;">{{ g.responsibility_label }}</div>
+                    </td>
                     <td style="padding:8px;">
                         {% if g.pressure_level == "high" %}
                             <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
@@ -205,6 +221,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
             <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
                 <tr>
                     <th style="padding:9px;text-align:left;">分组</th>
+                    <th style="padding:9px;text-align:left;">责任人</th>
                     <th style="padding:9px;text-align:left;">成员</th>
                     <th style="padding:9px;text-align:left;">活跃</th>
                     <th style="padding:9px;text-align:left;">稳定</th>
@@ -220,6 +237,16 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                 {% for g in lc.group_cards %}
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:9px;">
+                        {% if g.responsibility_status == "mapped" %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% elif g.responsibility_status == "admin_proxy" %}
+                            <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% else %}
+                            <span style="color:#dc2626;font-weight:bold;">待指定</span>
+                        {% endif %}
+                        <div style="font-size:12px;color:#6b7280;">{{ g.responsibility_label }}</div>
+                    </td>
                     <td style="padding:9px;">{{ g.member_count }}</td>
                     <td style="padding:9px;">{{ g.avg_av }}</td>
                     <td style="padding:9px;">{{ g.avg_bs }}</td>

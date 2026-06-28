@@ -43,6 +43,10 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
         ]),
         "pending_task_count": sum(item.get("pending_tasks", 0) for item in group_cards),
         "abnormal_task_count": sum(item.get("abnormal_tasks", 0) for item in group_cards),
+        "unassigned_group_count": len([
+            item for item in group_cards
+            if item.get("responsibility_status") == "unassigned"
+        ]),
     }
 
     decision = _build_decision(stats, high_pressure_groups)
@@ -75,6 +79,7 @@ def _fetch_latest_members(conn) -> List[Dict[str, Any]]:
         "risk_level",
         "trend",
         "identity_score",
+        "role_tag",
     ]
 
     available_fields = [field for field in select_fields if field in columns]
@@ -168,6 +173,14 @@ def _build_group_member_stats(members: List[Dict[str, Any]]) -> Dict[str, Dict[s
         if trend in ("down", "dead"):
             stat["down_trend_count"] += 1
 
+        role_tag = str(row.get("role_tag") or "").strip()
+        member_name = str(row.get("member") or "").strip()
+
+        if member_name and role_tag == "leader":
+            stat["leader_candidates"].append(member_name)
+        elif member_name and role_tag == "admin":
+            stat["admin_candidates"].append(member_name)
+
     return groups
 
 
@@ -185,6 +198,8 @@ def _new_group_stat(group_name: str) -> Dict[str, Any]:
         "done_tasks": 0,
         "abnormal_tasks": 0,
         "p1_tasks": 0,
+        "leader_candidates": [],
+        "admin_candidates": [],
         "_av_total": 0.0,
         "_bs_total": 0.0,
     }
@@ -259,8 +274,14 @@ def _finalize_group_cards(group_stats: Dict[str, Dict[str, Any]]) -> List[Dict[s
         pressure_score = _calc_pressure_score(stat, avg_av, avg_bs)
         pressure_level, pressure_label = _pressure_level(pressure_score)
 
+        leader_info = _build_leader_info(stat)
+
         card = {
             "group_name": group_name,
+            "leader_display": leader_info.get("leader_display"),
+            "leader_names": leader_info.get("leader_names"),
+            "responsibility_status": leader_info.get("responsibility_status"),
+            "responsibility_label": leader_info.get("responsibility_label"),
             "member_count": stat.get("member_count", 0),
             "avg_av": round(avg_av, 1),
             "avg_bs": round(avg_bs, 1),
@@ -293,6 +314,49 @@ def _finalize_group_cards(group_stats: Dict[str, Dict[str, Any]]) -> List[Dict[s
     )
 
     return cards
+
+
+def _build_leader_info(stat: Dict[str, Any]) -> Dict[str, Any]:
+    leaders = _unique_names(stat.get("leader_candidates", []))
+    admins = _unique_names(stat.get("admin_candidates", []))
+
+    if leaders:
+        return {
+            "leader_names": leaders,
+            "leader_display": "、".join(leaders[:3]),
+            "responsibility_status": "mapped",
+            "responsibility_label": "已识别组长",
+        }
+
+    if admins:
+        return {
+            "leader_names": admins,
+            "leader_display": "、".join(admins[:3]),
+            "responsibility_status": "admin_proxy",
+            "responsibility_label": "管理代管",
+        }
+
+    return {
+        "leader_names": [],
+        "leader_display": "待指定",
+        "responsibility_status": "unassigned",
+        "responsibility_label": "待指定组长",
+    }
+
+
+def _unique_names(names: List[str]) -> List[str]:
+    result = []
+    seen = set()
+
+    for name in names:
+        clean = str(name or "").strip()
+        if not clean or clean in seen:
+            continue
+
+        seen.add(clean)
+        result.append(clean)
+
+    return result
 
 
 def _calc_pressure_score(stat: Dict[str, Any], avg_av: float, avg_bs: float) -> float:
@@ -418,6 +482,7 @@ def _build_summary(stats: Dict[str, Any], decision: Dict[str, Any]) -> str:
         f"V14 组长协同驾驶舱已启动：当前识别 {stats.get('group_count', 0)} 个分组，"
         f"{stats.get('member_count', 0)} 名成员，关联任务 {stats.get('task_count', 0)} 项，"
         f"高压分组 {stats.get('high_pressure_group_count', 0)} 个，"
+        f"待指定组长分组 {stats.get('unassigned_group_count', 0)} 个，"
         f"待反馈任务 {stats.get('pending_task_count', 0)} 项。"
         f"当前建议：{decision.get('label', '继续观察')}。"
     )
