@@ -63,6 +63,11 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
             <h2>{{ lc.stats.unassigned_group_count }}</h2>
         </div>
 
+        <div class="stat-card">
+            <div>手动指定</div>
+            <h2>{{ lc.stats.manual_mapping_count }}</h2>
+        </div>
+
     </div>
 
     <div style="
@@ -125,7 +130,9 @@ margin-bottom:24px;
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
                     <td style="padding:8px;">
-                        {% if g.responsibility_status == "mapped" %}
+                        {% if g.responsibility_status == "manual" %}
+                            <span style="color:#7c3aed;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% elif g.responsibility_status == "mapped" %}
                             <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
                         {% elif g.responsibility_status == "admin_proxy" %}
                             <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>
@@ -238,7 +245,9 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
                     <td style="padding:9px;">
-                        {% if g.responsibility_status == "mapped" %}
+                        {% if g.responsibility_status == "manual" %}
+                            <span style="color:#7c3aed;font-weight:bold;">{{ g.leader_display }}</span>
+                        {% elif g.responsibility_status == "mapped" %}
                             <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
                         {% elif g.responsibility_status == "admin_proxy" %}
                             <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>

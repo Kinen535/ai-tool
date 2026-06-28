@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from services.v14_leader_mapping_store import (
+    load_leader_mappings,
+)
+
 
 def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -19,10 +23,15 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
     task_report = staff_report.get("v12_execution_feedback", {}) or {}
     tasks = task_report.get("tasks", []) or []
 
+    manual_mappings = load_leader_mappings(conn)
+
     group_stats = _build_group_member_stats(members)
     _merge_task_stats(group_stats, tasks, member_map)
 
-    group_cards = _finalize_group_cards(group_stats)
+    group_cards = _finalize_group_cards(
+        group_stats,
+        manual_mappings
+    )
     owner_pressure = _build_owner_pressure(tasks)
     high_pressure_groups = [
         item for item in group_cards
@@ -46,6 +55,10 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
         "unassigned_group_count": len([
             item for item in group_cards
             if item.get("responsibility_status") == "unassigned"
+        ]),
+        "manual_mapping_count": len([
+            item for item in group_cards
+            if item.get("responsibility_status") == "manual"
         ]),
     }
 
@@ -258,7 +271,10 @@ def _resolve_task_group(target: str, member_map: Dict[str, Dict[str, Any]]) -> s
     return "未识别分组"
 
 
-def _finalize_group_cards(group_stats: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _finalize_group_cards(
+    group_stats: Dict[str, Dict[str, Any]],
+    manual_mappings: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     cards = []
 
     for group_name, stat in group_stats.items():
@@ -274,7 +290,11 @@ def _finalize_group_cards(group_stats: Dict[str, Dict[str, Any]]) -> List[Dict[s
         pressure_score = _calc_pressure_score(stat, avg_av, avg_bs)
         pressure_level, pressure_label = _pressure_level(pressure_score)
 
-        leader_info = _build_leader_info(stat)
+        leader_info = _build_leader_info(
+            stat,
+            group_name,
+            manual_mappings
+        )
 
         card = {
             "group_name": group_name,
@@ -316,7 +336,27 @@ def _finalize_group_cards(group_stats: Dict[str, Dict[str, Any]]) -> List[Dict[s
     return cards
 
 
-def _build_leader_info(stat: Dict[str, Any]) -> Dict[str, Any]:
+def _build_leader_info(
+    stat: Dict[str, Any],
+    group_name: str,
+    manual_mappings: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    manual = manual_mappings.get(group_name)
+
+    if manual:
+        leader_name = str(manual.get("leader_name") or "").strip()
+        leader_role = str(manual.get("leader_role") or "组长").strip()
+        note = str(manual.get("note") or "").strip()
+
+        if leader_name:
+            return {
+                "leader_names": [leader_name],
+                "leader_display": leader_name,
+                "responsibility_status": "manual",
+                "responsibility_label": f"手动指定：{leader_role}",
+                "responsibility_note": note,
+            }
+
     leaders = _unique_names(stat.get("leader_candidates", []))
     admins = _unique_names(stat.get("admin_candidates", []))
 
@@ -325,7 +365,8 @@ def _build_leader_info(stat: Dict[str, Any]) -> Dict[str, Any]:
             "leader_names": leaders,
             "leader_display": "、".join(leaders[:3]),
             "responsibility_status": "mapped",
-            "responsibility_label": "已识别组长",
+            "responsibility_label": "自动识别组长",
+            "responsibility_note": "",
         }
 
     if admins:
@@ -334,6 +375,7 @@ def _build_leader_info(stat: Dict[str, Any]) -> Dict[str, Any]:
             "leader_display": "、".join(admins[:3]),
             "responsibility_status": "admin_proxy",
             "responsibility_label": "管理代管",
+            "responsibility_note": "",
         }
 
     return {
@@ -341,8 +383,8 @@ def _build_leader_info(stat: Dict[str, Any]) -> Dict[str, Any]:
         "leader_display": "待指定",
         "responsibility_status": "unassigned",
         "responsibility_label": "待指定组长",
+        "responsibility_note": "",
     }
-
 
 def _unique_names(names: List[str]) -> List[str]:
     result = []
