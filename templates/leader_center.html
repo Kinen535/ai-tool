@@ -178,11 +178,11 @@ margin-bottom:24px;
     box-shadow:0 8px 24px rgba(15,23,42,0.06);
     ">
 
-        <h2>③ 负责人压力</h2>
+        <h2>③ 真实负责人压力</h2>
 
-        {% if lc.owner_pressure %}
+        {% if lc.leader_pressure %}
 
-            {% for item in lc.owner_pressure[:8] %}
+            {% for item in lc.leader_pressure[:8] %}
             <div style="
             background:#fff;
             border:1px solid #bbf7d0;
@@ -192,11 +192,18 @@ margin-bottom:24px;
             ">
                 <b>{{ item.owner }}</b>
                 <div style="margin-top:6px;color:#374151;line-height:1.7;">
-                    总任务 {{ item.task_count }}，
+                    负责分组 {{ item.group_count }}，
+                    高压 {{ item.high_group_count }}，
+                    风险 {{ item.danger_count }}，
+                    任务 {{ item.task_count }}，
                     待反馈 {{ item.pending_tasks }}，
-                    P1 {{ item.p1_tasks }}，
-                    异常 {{ item.abnormal_tasks }}，
                     反馈率 {{ item.feedback_rate }}%
+                    <div style="margin-top:4px;color:#6b7280;font-size:12px;">
+                        分组：{{ item.group_display }}
+                    </div>
+                    <div style="margin-top:4px;color:#374151;font-size:12px;">
+                        建议：{{ item.suggestion }}
+                    </div>
                 </div>
             </div>
             {% endfor %}

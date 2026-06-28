@@ -32,6 +32,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
         group_stats,
         manual_mappings
     )
+    leader_pressure = _build_leader_pressure(group_cards)
     owner_pressure = _build_owner_pressure(tasks)
     high_pressure_groups = [
         item for item in group_cards
@@ -60,6 +61,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
             item for item in group_cards
             if item.get("responsibility_status") == "manual"
         ]),
+        "leader_pressure_count": len(leader_pressure),
     }
 
     decision = _build_decision(stats, high_pressure_groups)
@@ -70,6 +72,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
         "decision": decision,
         "group_cards": group_cards,
         "high_pressure_groups": high_pressure_groups,
+        "leader_pressure": leader_pressure,
         "owner_pressure": owner_pressure,
         "explain": (
             "V14 Phase A 按最新成员快照与 V12 任务反馈结果进行分组聚合。"
@@ -440,6 +443,106 @@ def _group_suggestion(stat: Dict[str, Any], pressure_level: str) -> str:
         return "建议复核该组风险成员，避免误清理保护对象。"
 
     return "当前分组压力可控，维持常规观察。"
+
+
+def _build_leader_pressure(group_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    leaders: Dict[str, Dict[str, Any]] = {}
+
+    for group in group_cards:
+        owner = str(group.get("leader_display") or "待指定").strip()
+
+        if not owner:
+            owner = "待指定"
+
+        status = str(group.get("responsibility_status") or "unassigned").strip()
+        label = str(group.get("responsibility_label") or "").strip()
+
+        item = leaders.setdefault(
+            owner,
+            {
+                "owner": owner,
+                "responsibility_status": status,
+                "responsibility_label": label,
+                "group_names": [],
+                "group_count": 0,
+                "high_group_count": 0,
+                "medium_group_count": 0,
+                "member_count": 0,
+                "danger_count": 0,
+                "warning_count": 0,
+                "task_count": 0,
+                "pending_tasks": 0,
+                "done_tasks": 0,
+                "abnormal_tasks": 0,
+                "p1_tasks": 0,
+                "pressure_score": 0.0,
+            }
+        )
+
+        group_name = str(group.get("group_name") or "").strip()
+
+        if group_name:
+            item["group_names"].append(group_name)
+
+        item["group_count"] += 1
+
+        if group.get("pressure_level") == "high":
+            item["high_group_count"] += 1
+        elif group.get("pressure_level") == "medium":
+            item["medium_group_count"] += 1
+
+        item["member_count"] += int(group.get("member_count") or 0)
+        item["danger_count"] += int(group.get("danger_count") or 0)
+        item["warning_count"] += int(group.get("warning_count") or 0)
+        item["task_count"] += int(group.get("task_count") or 0)
+        item["pending_tasks"] += int(group.get("pending_tasks") or 0)
+        item["done_tasks"] += int(group.get("done_tasks") or 0)
+        item["abnormal_tasks"] += int(group.get("abnormal_tasks") or 0)
+        item["p1_tasks"] += int(group.get("p1_tasks") or 0)
+        item["pressure_score"] += float(group.get("pressure_score") or 0)
+
+    result = []
+
+    for item in leaders.values():
+        task_count = max(item.get("task_count", 0), 1)
+        item["feedback_rate"] = round(item.get("done_tasks", 0) / task_count * 100, 1)
+        item["pressure_score"] = round(item.get("pressure_score", 0.0), 1)
+        item["group_display"] = "、".join(item.get("group_names", [])[:5])
+
+        if len(item.get("group_names", [])) > 5:
+            item["group_display"] += f" 等{len(item.get('group_names', []))}组"
+
+        item["suggestion"] = _leader_pressure_suggestion(item)
+
+        result.append(item)
+
+    result.sort(
+        key=lambda x: (
+            x.get("pressure_score", 0),
+            x.get("high_group_count", 0),
+            x.get("danger_count", 0),
+            x.get("pending_tasks", 0),
+        ),
+        reverse=True
+    )
+
+    return result
+
+
+def _leader_pressure_suggestion(item: Dict[str, Any]) -> str:
+    if item.get("responsibility_status") == "unassigned":
+        return "该分组尚未指定负责人，建议优先补齐责任人。"
+
+    if item.get("high_group_count", 0) > 0:
+        return "负责分组存在高压状态，建议盟主直接点名跟进风险复核。"
+
+    if item.get("pending_tasks", 0) > 0:
+        return "负责分组仍有待反馈任务，建议催促补齐执行反馈。"
+
+    if item.get("abnormal_tasks", 0) > 0:
+        return "负责分组存在异常反馈，建议复核是否执行失败或误判。"
+
+    return "当前负责范围压力可控，维持常规跟进。"
 
 
 def _build_owner_pressure(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
