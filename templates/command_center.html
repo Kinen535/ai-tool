@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set cc = report.v15_command_center %}
+
+<h1>🧠 盟务指挥中枢</h1>
+
+<div style="
+background:#eef6ff;
+border-left:6px solid #2563eb;
+border-radius:18px;
+padding:24px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.08);
+">
+
+    <h2>① 总指挥态势</h2>
+
+    <p><b>摘要：</b>{{ cc.summary }}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:18px;">
+
+        <div class="stat-card"><div>任务总数</div><h2>{{ cc.stats.task_total }}</h2></div>
+        <div class="stat-card"><div>待反馈</div><h2>{{ cc.stats.task_pending }}</h2></div>
+        <div class="stat-card"><div>P1反馈率</div><h2>{{ cc.stats.p1_feedback_rate }}%</h2></div>
+        <div class="stat-card"><div>高压分组</div><h2>{{ cc.stats.high_pressure_groups }}</h2></div>
+        <div class="stat-card"><div>待指定负责人</div><h2>{{ cc.stats.unassigned_groups }}</h2></div>
+        <div class="stat-card"><div>异常任务</div><h2>{{ cc.stats.abnormal_tasks }}</h2></div>
+
+    </div>
+
+    <div style="
+    margin-top:18px;
+    background:#fff;
+    border:1px solid #bfdbfe;
+    border-radius:14px;
+    padding:16px;
+    ">
+
+        <h3>🎯 当前总判断</h3>
+
+        <p>
+            <b>结论：</b>
+            {% if cc.decision.level == "danger" %}
+                <span style="color:#dc2626;font-weight:bold;">{{ cc.decision.label }}</span>
+            {% elif cc.decision.level == "warning" %}
+                <span style="color:#f97316;font-weight:bold;">{{ cc.decision.label }}</span>
+            {% elif cc.decision.level == "safe" %}
+                <span style="color:#16a34a;font-weight:bold;">{{ cc.decision.label }}</span>
+            {% else %}
+                <span style="color:#2563eb;font-weight:bold;">{{ cc.decision.label }}</span>
+            {% endif %}
+        </p>
+
+        <p><b>可信度：</b>{{ (cc.decision.confidence * 100)|round(1) }}%</p>
+        <p><b>原因：</b>{{ cc.decision.reason }}</p>
+
+    </div>
+
+</div>
+
+
+<div style="
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:24px;
+margin-bottom:24px;
+">
+
+    <div style="
+    background:#fff7ed;
+    border-left:6px solid #f97316;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>② 今日优先处理</h2>
+
+        {% for item in cc.action_cards %}
+        <div style="
+        background:#fff;
+        border:1px solid #fed7aa;
+        border-radius:14px;
+        padding:14px;
+        margin-bottom:12px;
+        ">
+
+            <div>
+                {% if item.level == "danger" %}
+                    <span style="color:#dc2626;font-weight:bold;">🔴 {{ item.title }}</span>
+                {% elif item.level == "warning" %}
+                    <span style="color:#f97316;font-weight:bold;">🟠 {{ item.title }}</span>
+                {% elif item.level == "safe" %}
+                    <span style="color:#16a34a;font-weight:bold;">🟢 {{ item.title }}</span>
+                {% else %}
+                    <span style="color:#2563eb;font-weight:bold;">🔵 {{ item.title }}</span>
+                {% endif %}
+            </div>
+
+            <div style="margin-top:8px;line-height:1.7;color:#374151;">
+                <b>对象：</b>{{ item.target }}<br>
+                <b>原因：</b>{{ item.reason }}<br>
+                <b>动作：</b>{{ item.action }}
+            </div>
+
+            <a href="{{ item.url }}"
+               style="display:inline-block;margin-top:10px;padding:7px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
+                去处理 →
+            </a>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+
+    <div style="
+    background:#ecfdf5;
+    border-left:6px solid #16a34a;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>③ 今日指挥重点</h2>
+
+        <div style="background:#fff;border:1px solid #bbf7d0;border-radius:14px;padding:16px;line-height:1.8;">
+
+            {% for item in cc.today_focus %}
+                <div>✅ {{ item }}</div>
+            {% endfor %}
+
+        </div>
+
+        <h3 style="margin-top:20px;">复盘 / 学习状态</h3>
+
+        <div style="background:#fff;border:1px solid #bbf7d0;border-radius:14px;padding:16px;line-height:1.8;">
+
+            <div><b>复盘判断：</b>{{ cc.reflection_context.decision_label or "暂无" }}</div>
+            <div><b>复盘状态：</b>{{ cc.reflection_context.status }}</div>
+            <div><b>学习判断：</b>{{ cc.learning_context.decision_label or "暂无" }}</div>
+            <div><b>学习状态：</b>{{ cc.learning_context.status }}</div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div style="
+display:grid;
+grid-template-columns:1.2fr 1fr;
+gap:24px;
+margin-bottom:24px;
+">
+
+    <div style="
+    background:#fef2f2;
+    border-left:6px solid #dc2626;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>④ 高压分组速览</h2>
+
+        {% if cc.high_pressure_groups %}
+
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:8px;text-align:left;">分组</th>
+                    <th style="padding:8px;text-align:left;">负责人</th>
+                    <th style="padding:8px;text-align:left;">风险</th>
+                    <th style="padding:8px;text-align:left;">压力</th>
+                    <th style="padding:8px;text-align:left;">入口</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in cc.high_pressure_groups %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:8px;">{{ g.leader_display }}</td>
+                    <td style="padding:8px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}</td>
+                    <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</td>
+                    <td style="padding:8px;">
+                        <a href="/leaders?pressure=high"
+                           style="color:#2563eb;text-decoration:none;">查看</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+
+        <div style="background:#fff;border:1px solid #fecaca;border-radius:12px;padding:14px;">
+            当前没有高压分组。
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <div style="
+    background:#f5f3ff;
+    border-left:6px solid #8b5cf6;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.06);
+    ">
+
+        <h2>⑤ 负责人压力速览</h2>
+
+        {% if cc.leader_pressure %}
+
+            {% for item in cc.leader_pressure %}
+            <div style="background:#fff;border:1px solid #ddd6fe;border-radius:14px;padding:12px;margin-bottom:10px;">
+                <b>{{ item.owner }}</b>
+                <a href="/leaders/owner/{{ item.owner|urlencode }}"
+                   style="float:right;font-size:12px;color:#7c3aed;text-decoration:none;">
+                    详情 →
+                </a>
+                <div style="margin-top:6px;color:#374151;line-height:1.7;">
+                    负责分组 {{ item.group_count }}，
+                    高压 {{ item.high_group_count }}，
+                    危险 {{ item.danger_count }}，
+                    压力 {{ item.pressure_score }}
+                </div>
+            </div>
+            {% endfor %}
+
+        {% else %}
+
+            <div style="background:#fff;border:1px solid #ddd6fe;border-radius:12px;padding:14px;">
+                暂无负责人压力数据。
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<div style="
+background:#f8fafc;
+border-left:6px solid #64748b;
+border-radius:18px;
+padding:18px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+    <b>说明：</b>{{ cc.explain }}
+</div>
+
+{% endblock %}

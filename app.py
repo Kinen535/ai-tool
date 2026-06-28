@@ -6907,6 +6907,42 @@ def leader_owner_detail(owner_name):
     )
 
 
+
+@app.route("/command")
+def command_center():
+    from services.engines.leader_center_engine import (
+        build_leader_center_report
+    )
+    from services.engines.command_center_engine import (
+        build_command_center_report
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+
+    report["v14_leader_center"] = (
+        build_leader_center_report(
+            conn,
+            report
+        )
+    )
+
+    report["v15_command_center"] = (
+        build_command_center_report(
+            report,
+            report["v14_leader_center"]
+        )
+    )
+
+    conn.close()
+
+    return render_template(
+        "command_center.html",
+        report=report,
+        title="盟务指挥中枢"
+    )
+
+
 @app.route("/leaders")
 def leader_center():
     from flask import request
