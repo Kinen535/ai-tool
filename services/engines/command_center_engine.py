@@ -28,6 +28,15 @@ def build_command_center_report(
         learning_ctx,
     )
 
+    action_cards = _decorate_action_progress(
+        action_cards,
+        task_ctx,
+        leader_ctx,
+        learning_ctx,
+    )
+
+    action_progress = _build_action_progress_stats(action_cards)
+
     today_focus = _build_today_focus(
         task_ctx,
         leader_ctx,
@@ -51,6 +60,11 @@ def build_command_center_report(
         "unassigned_groups": leader_ctx.get("unassigned_group_count", 0),
         "leader_pressure_count": leader_ctx.get("leader_pressure_count", 0),
         "abnormal_tasks": task_ctx.get("abnormal_count", 0),
+        "action_total": action_progress.get("total", 0),
+        "action_done": action_progress.get("done", 0),
+        "action_active": action_progress.get("active", 0),
+        "action_blocked": action_progress.get("blocked", 0),
+        "action_progress_rate": action_progress.get("progress_rate", 0),
     }
 
     return {
@@ -63,6 +77,7 @@ def build_command_center_report(
         "learning_context": learning_ctx,
         "today_focus": today_focus,
         "action_cards": action_cards,
+        "action_progress": action_progress,
         "high_pressure_groups": leader_report.get("high_pressure_groups", [])[:8],
         "leader_pressure": leader_report.get("leader_pressure", [])[:8],
         "explain": (
@@ -160,6 +175,181 @@ def _extract_learning_context(staff_report: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _decorate_action_progress(
+    cards: List[Dict[str, Any]],
+    task_ctx: Dict[str, Any],
+    leader_ctx: Dict[str, Any],
+    learning_ctx: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    result = []
+
+    for card in cards:
+        item = dict(card)
+        key = str(item.get("key") or "").strip()
+
+        progress = _build_single_action_progress(
+            key,
+            task_ctx,
+            leader_ctx,
+            learning_ctx,
+        )
+
+        item.update(progress)
+        result.append(item)
+
+    return result
+
+
+def _build_single_action_progress(
+    key: str,
+    task_ctx: Dict[str, Any],
+    leader_ctx: Dict[str, Any],
+    learning_ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    if key == "fill_leader_owner":
+        remaining = int(leader_ctx.get("unassigned_group_count") or 0)
+
+        if remaining <= 0:
+            return _progress_done("负责人已补齐", "当前没有待指定负责人分组。")
+
+        return _progress_active(
+            rate=0,
+            label="待补负责人",
+            reason=f"仍有 {remaining} 个分组缺少明确负责人。",
+        )
+
+    if key == "handle_high_pressure_groups":
+        remaining = int(leader_ctx.get("high_pressure_group_count") or 0)
+
+        if remaining <= 0:
+            return _progress_done("高压分组已清零", "当前没有高压分组。")
+
+        return _progress_active(
+            rate=20,
+            label="高压处理中",
+            reason=f"仍有 {remaining} 个高压分组需要负责人确认。",
+        )
+
+    if key == "complete_task_feedback":
+        pending = int(task_ctx.get("pending_count") or 0)
+        p1_rate = float(task_ctx.get("p1_feedback_rate") or 0)
+
+        if pending <= 0:
+            return _progress_done("任务反馈已补齐", "当前没有待反馈任务。")
+
+        if p1_rate < 50:
+            return _progress_active(
+                rate=round(p1_rate, 1),
+                label="P1反馈不足",
+                reason=f"P1反馈率 {round(p1_rate, 1)}%，仍需优先补齐关键任务反馈。",
+            )
+
+        return _progress_active(
+            rate=round(p1_rate, 1),
+            label="反馈补齐中",
+            reason=f"待反馈 {pending} 项，P1反馈率 {round(p1_rate, 1)}%。",
+        )
+
+    if key == "review_abnormal_feedback":
+        abnormal = int(task_ctx.get("abnormal_count") or 0)
+
+        if abnormal <= 0:
+            return _progress_done("异常已清零", "当前没有异常反馈任务。")
+
+        return _progress_active(
+            rate=30,
+            label="异常待复核",
+            reason=f"仍有 {abnormal} 项失败、忽略或异常反馈需要备注说明。",
+        )
+
+    if key == "improve_learning_sample":
+        status = str(learning_ctx.get("status") or "").strip()
+
+        if status == "blocked_by_execution_feedback":
+            return _progress_blocked(
+                label="学习被阻断",
+                reason="执行反馈质量不足，Learning 暂不自动调整策略。",
+            )
+
+        if status in ("collecting_samples", "no_history"):
+            return _progress_active(
+                rate=40,
+                label="样本积累中",
+                reason="Learning 正在等待更多复盘样本。",
+            )
+
+        return _progress_done("学习状态正常", "Learning 当前没有明显阻断。")
+
+    if key == "routine_patrol":
+        return _progress_done("常规巡检", "当前没有紧急阻断事项。")
+
+    return {
+        "progress_status": "unknown",
+        "progress_label": "待判断",
+        "progress_rate": 0,
+        "progress_reason": "当前动作无法识别闭环状态。",
+    }
+
+
+def _build_action_progress_stats(cards: List[Dict[str, Any]]) -> Dict[str, Any]:
+    total = len(cards)
+
+    done = len([
+        item for item in cards
+        if item.get("progress_status") == "done"
+    ])
+
+    active = len([
+        item for item in cards
+        if item.get("progress_status") == "active"
+    ])
+
+    blocked = len([
+        item for item in cards
+        if item.get("progress_status") == "blocked"
+    ])
+
+    if total <= 0:
+        progress_rate = 0
+    else:
+        progress_rate = round(done / total * 100, 1)
+
+    return {
+        "total": total,
+        "done": done,
+        "active": active,
+        "blocked": blocked,
+        "progress_rate": progress_rate,
+    }
+
+
+def _progress_done(label: str, reason: str) -> Dict[str, Any]:
+    return {
+        "progress_status": "done",
+        "progress_label": label,
+        "progress_rate": 100,
+        "progress_reason": reason,
+    }
+
+
+def _progress_active(rate: float, label: str, reason: str) -> Dict[str, Any]:
+    return {
+        "progress_status": "active",
+        "progress_label": label,
+        "progress_rate": max(0, min(float(rate), 99)),
+        "progress_reason": reason,
+    }
+
+
+def _progress_blocked(label: str, reason: str) -> Dict[str, Any]:
+    return {
+        "progress_status": "blocked",
+        "progress_label": label,
+        "progress_rate": 0,
+        "progress_reason": reason,
+    }
+
+
 def _build_action_cards(
     task_ctx: Dict[str, Any],
     leader_ctx: Dict[str, Any],
@@ -170,6 +360,7 @@ def _build_action_cards(
 
     if leader_ctx.get("unassigned_group_count", 0) > 0:
         cards.append({
+            "key": "fill_leader_owner",
             "level": "danger",
             "title": "补齐分组负责人",
             "target": f"{leader_ctx.get('unassigned_group_count')} 个分组待指定",
@@ -180,6 +371,7 @@ def _build_action_cards(
 
     if leader_ctx.get("high_pressure_group_count", 0) > 0:
         cards.append({
+            "key": "handle_high_pressure_groups",
             "level": "warning",
             "title": "处理高压分组",
             "target": f"{leader_ctx.get('high_pressure_group_count')} 个高压分组",
@@ -190,6 +382,7 @@ def _build_action_cards(
 
     if task_ctx.get("pending_count", 0) > 0:
         cards.append({
+            "key": "complete_task_feedback",
             "level": "warning",
             "title": "补齐任务反馈",
             "target": f"{task_ctx.get('pending_count')} 项待反馈",
@@ -200,6 +393,7 @@ def _build_action_cards(
 
     if task_ctx.get("abnormal_count", 0) > 0:
         cards.append({
+            "key": "review_abnormal_feedback",
             "level": "info",
             "title": "复核异常反馈",
             "target": f"{task_ctx.get('abnormal_count')} 项异常反馈",
@@ -210,6 +404,7 @@ def _build_action_cards(
 
     if learning_ctx.get("status") == "blocked_by_execution_feedback":
         cards.append({
+            "key": "improve_learning_sample",
             "level": "info",
             "title": "提升学习样本质量",
             "target": "Learning 暂停自动调整",
@@ -220,6 +415,7 @@ def _build_action_cards(
 
     if not cards:
         cards.append({
+            "key": "routine_patrol",
             "level": "safe",
             "title": "维持常规巡检",
             "target": "暂无紧急事项",

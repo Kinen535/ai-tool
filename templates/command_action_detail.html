@@ -53,6 +53,48 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
 </div>
 
 
+
+<div style="
+background:#f0fdfa;
+border-left:6px solid #0f766e;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>② 闭环状态</h2>
+
+    <div style="background:#fff;border:1px solid #99f6e4;border-radius:14px;padding:16px;">
+
+        <p>
+            <b>当前状态：</b>
+            {% if detail.card.progress_status == "done" %}
+                <span style="color:#16a34a;font-weight:bold;">{{ detail.card.progress_label }}</span>
+            {% elif detail.card.progress_status == "blocked" %}
+                <span style="color:#dc2626;font-weight:bold;">{{ detail.card.progress_label }}</span>
+            {% else %}
+                <span style="color:#f97316;font-weight:bold;">{{ detail.card.progress_label }}</span>
+            {% endif %}
+        </p>
+
+        <p><b>进度：</b>{{ detail.card.progress_rate or 0 }}%</p>
+
+        <div style="height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:10px 0;">
+            <div style="
+                width:{{ detail.card.progress_rate or 0 }}%;
+                height:10px;
+                background:{% if detail.card.progress_status == 'done' %}#16a34a{% elif detail.card.progress_status == 'blocked' %}#dc2626{% else %}#f97316{% endif %};
+            "></div>
+        </div>
+
+        <p><b>说明：</b>{{ detail.card.progress_reason or "暂无闭环判断。" }}</p>
+
+    </div>
+
+</div>
+
+
 <div style="
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -68,7 +110,7 @@ margin-bottom:24px;
     box-shadow:0 8px 24px rgba(15,23,42,0.06);
     ">
 
-        <h2>② 执行步骤</h2>
+        <h2>③ 执行步骤</h2>
 
         <div style="background:#fff;border:1px solid #fed7aa;border-radius:14px;padding:16px;line-height:1.9;">
             {% for step in detail.steps %}
@@ -87,7 +129,7 @@ margin-bottom:24px;
     box-shadow:0 8px 24px rgba(15,23,42,0.06);
     ">
 
-        <h2>③ 验收标准</h2>
+        <h2>④ 验收标准</h2>
 
         <div style="background:#fff;border:1px solid #bbf7d0;border-radius:14px;padding:16px;line-height:1.9;">
             {% for check in detail.checks %}
@@ -121,7 +163,7 @@ margin-bottom:24px;
 box-shadow:0 8px 24px rgba(15,23,42,0.06);
 ">
 
-    <h2>④ 重点对象</h2>
+    <h2>⑤ 重点对象</h2>
 
     {% if detail.targets %}
 

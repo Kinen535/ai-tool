@@ -27,6 +27,8 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
         <div class="stat-card"><div>高压分组</div><h2>{{ cc.stats.high_pressure_groups }}</h2></div>
         <div class="stat-card"><div>待指定负责人</div><h2>{{ cc.stats.unassigned_groups }}</h2></div>
         <div class="stat-card"><div>异常任务</div><h2>{{ cc.stats.abnormal_tasks }}</h2></div>
+        <div class="stat-card"><div>动作闭环率</div><h2>{{ cc.stats.action_progress_rate }}%</h2></div>
+        <div class="stat-card"><div>被阻断动作</div><h2>{{ cc.stats.action_blocked }}</h2></div>
 
     </div>
 
@@ -97,6 +99,30 @@ margin-bottom:24px;
                 {% else %}
                     <span style="color:#2563eb;font-weight:bold;">🔵 {{ item.title }}</span>
                 {% endif %}
+            </div>
+
+            <div style="margin-top:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;">
+                <b>闭环状态：</b>
+                {% if item.progress_status == "done" %}
+                    <span style="color:#16a34a;font-weight:bold;">{{ item.progress_label }}</span>
+                {% elif item.progress_status == "blocked" %}
+                    <span style="color:#dc2626;font-weight:bold;">{{ item.progress_label }}</span>
+                {% else %}
+                    <span style="color:#f97316;font-weight:bold;">{{ item.progress_label }}</span>
+                {% endif %}
+                <span style="color:#6b7280;">｜{{ item.progress_rate }}%</span>
+
+                <div style="margin-top:7px;height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
+                    <div style="
+                        width:{{ item.progress_rate }}%;
+                        height:8px;
+                        background:{% if item.progress_status == 'done' %}#16a34a{% elif item.progress_status == 'blocked' %}#dc2626{% else %}#f97316{% endif %};
+                    "></div>
+                </div>
+
+                <div style="margin-top:6px;color:#6b7280;font-size:13px;">
+                    {{ item.progress_reason }}
+                </div>
             </div>
 
             <div style="margin-top:8px;line-height:1.7;color:#374151;">
