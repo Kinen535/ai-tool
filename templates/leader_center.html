@@ -258,6 +258,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 
                         <form method="post"
                               action="/leaders/mapping/save"
+                              onsubmit="return rememberLeaderMappingActionInline(this)"
                               style="margin-top:8px;display:grid;grid-template-columns:1fr 86px 58px;gap:6px;align-items:center;">
 
                             <input type="hidden"
@@ -297,6 +298,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                         {% if g.responsibility_status == "manual" %}
                         <form method="post"
                               action="/leaders/mapping/delete"
+                              onsubmit="return rememberLeaderMappingActionInline(this)"
                               style="margin-top:6px;">
 
                             <input type="hidden"
@@ -353,5 +355,97 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
     </div>
 
 </div>
+
+
+<script>
+function rememberLeaderMappingActionInline(form) {
+    if (!form) {
+        return true;
+    }
+
+    const groupInput = form.querySelector('input[name="group_name"]');
+
+    if (groupInput && groupInput.value) {
+        sessionStorage.setItem("leaderCenterLastGroupName", groupInput.value);
+    }
+
+    sessionStorage.setItem("leaderCenterShouldRestoreScroll", "1");
+    sessionStorage.setItem("leaderCenterScrollY", String(window.scrollY || 0));
+
+    return true;
+}
+
+function rememberLeaderMappingActionBeforeSubmit() {
+    const forms = document.querySelectorAll(
+        'form[action="/leaders/mapping/save"], form[action="/leaders/mapping/delete"]'
+    );
+
+    forms.forEach(function (form) {
+        form.addEventListener("submit", function () {
+            rememberLeaderMappingActionInline(form);
+        });
+    });
+}
+
+function restoreLeaderCenterScrollPosition() {
+    const shouldRestore = sessionStorage.getItem("leaderCenterShouldRestoreScroll");
+
+    if (shouldRestore !== "1") {
+        return;
+    }
+
+    const rawY = sessionStorage.getItem("leaderCenterScrollY") || "0";
+    const y = parseInt(rawY, 10) || 0;
+
+    sessionStorage.removeItem("leaderCenterShouldRestoreScroll");
+    sessionStorage.removeItem("leaderCenterScrollY");
+
+    setTimeout(function () {
+        window.scrollTo(0, y);
+    }, 80);
+}
+
+function highlightLastLeaderMappingRow() {
+    const groupName = sessionStorage.getItem("leaderCenterLastGroupName");
+
+    if (!groupName) {
+        return;
+    }
+
+    sessionStorage.removeItem("leaderCenterLastGroupName");
+
+    const inputs = document.querySelectorAll('input[name="group_name"]');
+    let targetRow = null;
+
+    inputs.forEach(function (input) {
+        if (targetRow) {
+            return;
+        }
+
+        if (input.value === groupName) {
+            targetRow = input.closest("tr");
+        }
+    });
+
+    if (!targetRow) {
+        return;
+    }
+
+    targetRow.style.transition = "background 0.4s ease, box-shadow 0.4s ease";
+    targetRow.style.background = "#fef3c7";
+    targetRow.style.boxShadow = "inset 5px 0 0 #f59e0b";
+
+    setTimeout(function () {
+        targetRow.style.background = "";
+        targetRow.style.boxShadow = "";
+    }, 2400);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    rememberLeaderMappingActionBeforeSubmit();
+    restoreLeaderCenterScrollPosition();
+    highlightLastLeaderMappingRow();
+});
+</script>
 
 {% endblock %}
