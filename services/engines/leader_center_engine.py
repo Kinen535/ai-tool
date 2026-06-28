@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from services.v14_leader_mapping_store import (
     load_leader_mappings,
+    load_leader_mapping_logs,
 )
 
 
@@ -24,6 +25,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
     tasks = task_report.get("tasks", []) or []
 
     manual_mappings = load_leader_mappings(conn)
+    mapping_logs = load_leader_mapping_logs(conn, limit=20)
 
     group_stats = _build_group_member_stats(members)
     _merge_task_stats(group_stats, tasks, member_map)
@@ -74,6 +76,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
         "high_pressure_groups": high_pressure_groups,
         "leader_pressure": leader_pressure,
         "owner_pressure": owner_pressure,
+        "mapping_logs": mapping_logs,
         "explain": (
             "V14 Phase A 按最新成员快照与 V12 任务反馈结果进行分组聚合。"
             "当前版本先按分组识别责任压力，后续再接入真实组长责任关系。"
