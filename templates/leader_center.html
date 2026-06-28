@@ -255,6 +255,44 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                             <span style="color:#dc2626;font-weight:bold;">待指定</span>
                         {% endif %}
                         <div style="font-size:12px;color:#6b7280;">{{ g.responsibility_label }}</div>
+
+                        <form method="post"
+                              action="/leaders/mapping/save"
+                              style="margin-top:8px;display:grid;grid-template-columns:1fr 86px 58px;gap:6px;align-items:center;">
+
+                            <input type="hidden"
+                                   name="group_name"
+                                   value="{{ g.group_name }}">
+
+                            <input type="hidden"
+                                   name="next"
+                                   value="{{ request.full_path.rstrip('?') }}">
+
+                            <input type="text"
+                                   name="leader_name"
+                                   value="{% if g.responsibility_status != 'unassigned' %}{{ g.leader_display }}{% endif %}"
+                                   placeholder="负责人"
+                                   style="padding:5px 7px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
+
+                            <select name="leader_role"
+                                    style="padding:5px 6px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
+                                <option value="组长">组长</option>
+                                <option value="副组长">副组长</option>
+                                <option value="管理代管">管理代管</option>
+                                <option value="临时负责人">临时负责人</option>
+                            </select>
+
+                            <button type="submit"
+                                    style="padding:5px 8px;border:1px solid #8b5cf6;background:#8b5cf6;color:white;border-radius:8px;font-size:12px;cursor:pointer;">
+                                保存
+                            </button>
+
+                            <input type="text"
+                                   name="note"
+                                   value="{{ g.responsibility_note or '' }}"
+                                   placeholder="备注，可选"
+                                   style="grid-column:1 / span 3;padding:5px 7px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
+                        </form>
                     </td>
                     <td style="padding:9px;">{{ g.member_count }}</td>
                     <td style="padding:9px;">{{ g.avg_av }}</td>
