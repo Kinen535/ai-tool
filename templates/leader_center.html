@@ -191,6 +191,12 @@ margin-bottom:24px;
             margin-bottom:10px;
             ">
                 <b>{{ item.owner }}</b>
+
+                <a href="/leaders/owner/{{ item.owner|urlencode }}"
+                   style="float:right;font-size:12px;padding:4px 8px;border:1px solid #86efac;border-radius:8px;color:#16a34a;text-decoration:none;">
+                    查看详情
+                </a>
+
                 <div style="margin-top:6px;color:#374151;line-height:1.7;">
                     负责分组 {{ item.group_count }}，
                     高压 {{ item.high_group_count }}，

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set detail = report.v14_leader_owner_detail %}
+
+<h1>👤 负责人详情</h1>
+
+<a href="/leaders"
+   style="display:inline-block;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
+    ← 返回组长协同驾驶舱
+</a>
+
+<div style="
+background:#eef6ff;
+border-left:6px solid #2563eb;
+border-radius:18px;
+padding:24px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.08);
+">
+
+    <h2>① 负责人总览</h2>
+
+    <p><b>摘要：</b>{{ detail.summary }}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:18px;">
+
+        <div class="stat-card"><div>负责人</div><h2>{{ detail.owner_name }}</h2></div>
+        <div class="stat-card"><div>负责分组</div><h2>{{ detail.stats.group_count }}</h2></div>
+        <div class="stat-card"><div>成员数</div><h2>{{ detail.stats.member_count }}</h2></div>
+        <div class="stat-card"><div>高压分组</div><h2>{{ detail.stats.high_group_count }}</h2></div>
+        <div class="stat-card"><div>危险成员</div><h2>{{ detail.stats.danger_count }}</h2></div>
+        <div class="stat-card"><div>待反馈</div><h2>{{ detail.stats.pending_tasks }}</h2></div>
+
+    </div>
+
+    <div style="margin-top:18px;background:#fff;border:1px solid #bfdbfe;border-radius:14px;padding:16px;">
+        <h3>🎯 当前判断</h3>
+
+        <p>
+            <b>结论：</b>
+            {% if detail.decision.level == "danger" %}
+                <span style="color:#dc2626;font-weight:bold;">{{ detail.decision.label }}</span>
+            {% elif detail.decision.level == "warning" %}
+                <span style="color:#f97316;font-weight:bold;">{{ detail.decision.label }}</span>
+            {% elif detail.decision.level == "safe" %}
+                <span style="color:#16a34a;font-weight:bold;">{{ detail.decision.label }}</span>
+            {% else %}
+                <span style="color:#2563eb;font-weight:bold;">{{ detail.decision.label }}</span>
+            {% endif %}
+        </p>
+
+        <p><b>原因：</b>{{ detail.decision.reason }}</p>
+
+        <p><b>建议动作：</b></p>
+        <ul>
+            {% for action in detail.decision.actions %}
+                <li>{{ action }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+
+<div style="
+background:#fff7ed;
+border-left:6px solid #f97316;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>② 高压分组</h2>
+
+    {% if detail.high_groups %}
+
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr style="background:#f3f4f6;">
+                <th style="padding:9px;text-align:left;">分组</th>
+                <th style="padding:9px;text-align:left;">成员</th>
+                <th style="padding:9px;text-align:left;">风险</th>
+                <th style="padding:9px;text-align:left;">任务</th>
+                <th style="padding:9px;text-align:left;">压力</th>
+                <th style="padding:9px;text-align:left;">建议</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in detail.high_groups %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
+                <td style="padding:9px;">{{ g.member_count }}</td>
+                <td style="padding:9px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}</td>
+                <td style="padding:9px;">总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}</td>
+                <td style="padding:9px;color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</td>
+                <td style="padding:9px;">{{ g.suggestion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+        当前负责人名下没有高压分组。
+    </div>
+
+    {% endif %}
+
+</div>
+
+
+<div style="
+background:#f8fafc;
+border-left:6px solid #64748b;
+border-radius:18px;
+padding:22px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>③ 负责分组明细</h2>
+
+    {% if detail.groups %}
+
+    <div style="max-height:620px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">分组</th>
+                    <th style="padding:9px;text-align:left;">成员</th>
+                    <th style="padding:9px;text-align:left;">活跃</th>
+                    <th style="padding:9px;text-align:left;">稳定</th>
+                    <th style="padding:9px;text-align:left;">风险</th>
+                    <th style="padding:9px;text-align:left;">任务</th>
+                    <th style="padding:9px;text-align:left;">反馈率</th>
+                    <th style="padding:9px;text-align:left;">压力</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in detail.groups %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
+                    <td style="padding:9px;">{{ g.member_count }}</td>
+                    <td style="padding:9px;">{{ g.avg_av }}</td>
+                    <td style="padding:9px;">{{ g.avg_bs }}</td>
+                    <td style="padding:9px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }} / 保护 {{ g.protected_count }}</td>
+                    <td style="padding:9px;">总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}</td>
+                    <td style="padding:9px;">{{ g.feedback_rate }}%</td>
+                    <td style="padding:9px;">
+                        {% if g.pressure_level == "high" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% elif g.pressure_level == "medium" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% else %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+        未找到该负责人的分组记录。
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

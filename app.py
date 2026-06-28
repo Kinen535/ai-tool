@@ -6868,6 +6868,45 @@ def delete_leader_mapping():
     return redirect(next_url)
 
 
+
+@app.route("/leaders/owner/<path:owner_name>")
+def leader_owner_detail(owner_name):
+    from urllib.parse import unquote
+    from services.engines.leader_center_engine import (
+        build_leader_center_report
+    )
+    from services.engines.leader_owner_detail_engine import (
+        build_leader_owner_detail_report
+    )
+
+    decoded_owner_name = unquote(owner_name)
+
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+
+    report["v14_leader_center"] = (
+        build_leader_center_report(
+            conn,
+            report
+        )
+    )
+
+    report["v14_leader_owner_detail"] = (
+        build_leader_owner_detail_report(
+            report["v14_leader_center"],
+            decoded_owner_name
+        )
+    )
+
+    conn.close()
+
+    return render_template(
+        "leader_owner_detail.html",
+        report=report,
+        title="负责人详情"
+    )
+
+
 @app.route("/leaders")
 def leader_center():
     from flask import request
