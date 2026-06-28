@@ -6870,8 +6870,12 @@ def delete_leader_mapping():
 
 @app.route("/leaders")
 def leader_center():
+    from flask import request
     from services.engines.leader_center_engine import (
         build_leader_center_report
+    )
+    from services.engines.leader_filter_engine import (
+        build_leader_filter_report
     )
 
     conn = sqlite3.connect("data/snapshots.db")
@@ -6881,6 +6885,20 @@ def leader_center():
         build_leader_center_report(
             conn,
             report
+        )
+    )
+
+    leader_filters = {
+        "pressure": request.args.get("pressure", "all"),
+        "responsibility": request.args.get("responsibility", "all"),
+        "sort": request.args.get("sort", "pressure_desc"),
+        "keyword": request.args.get("keyword", ""),
+    }
+
+    report["v14_leader_filter"] = (
+        build_leader_filter_report(
+            report["v14_leader_center"],
+            leader_filters
         )
     )
 

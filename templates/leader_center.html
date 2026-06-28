@@ -3,6 +3,7 @@
 {% block content %}
 
 {% set lc = report.v14_leader_center %}
+{% set lf = report.v14_leader_filter %}
 
 <h1>🧭 组长协同驾驶舱</h1>
 
@@ -221,6 +222,111 @@ padding:22px;
 box-shadow:0 8px 24px rgba(15,23,42,0.06);
 ">
 
+    
+<div style="
+background:#f5f3ff;
+border-left:6px solid #8b5cf6;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>⑤ 分组筛选器</h2>
+
+    <p><b>筛选摘要：</b>{{ lf.summary }}</p>
+
+    <div style="margin:14px 0;">
+        <b>快捷筛选：</b>
+        {% for item in lf.quick_filters %}
+            <a href="{{ item.url }}"
+               style="display:inline-block;margin:4px 6px 4px 0;padding:7px 12px;border:1px solid #ddd;border-radius:999px;background:#fff;text-decoration:none;color:#374151;">
+                {{ item.label }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <form method="get"
+          action="/leaders"
+          style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto auto;gap:12px;align-items:end;">
+
+        <div>
+            <label><b>压力状态</b></label>
+            <select name="pressure"
+                    style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+                {% for item in lf.pressure_options %}
+                    <option value="{{ item.value }}"
+                            {% if lf.filters.pressure == item.value %}selected{% endif %}>
+                        {{ item.label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label><b>责任状态</b></label>
+            <select name="responsibility"
+                    style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+                {% for item in lf.responsibility_options %}
+                    <option value="{{ item.value }}"
+                            {% if lf.filters.responsibility == item.value %}selected{% endif %}>
+                        {{ item.label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label><b>排序方式</b></label>
+            <select name="sort"
+                    style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+                {% for item in lf.sort_options %}
+                    <option value="{{ item.value }}"
+                            {% if lf.filters.sort == item.value %}selected{% endif %}>
+                        {{ item.label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label><b>搜索</b></label>
+            <input type="text"
+                   name="keyword"
+                   value="{{ lf.filters.keyword }}"
+                   placeholder="分组 / 负责人"
+                   style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+        </div>
+
+        <button type="submit"
+                style="padding:10px 16px;border:0;background:#8b5cf6;color:#fff;border-radius:10px;font-weight:bold;cursor:pointer;">
+            应用筛选
+        </button>
+
+        <a href="/leaders"
+           style="padding:10px 16px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;text-align:center;">
+            重置
+        </a>
+
+    </form>
+
+    <div style="
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:12px;
+    margin-top:16px;
+    ">
+        <div class="stat-card"><div>匹配分组</div><h2>{{ lf.stats.matched_count }}</h2></div>
+        <div class="stat-card"><div>高压</div><h2>{{ lf.stats.high_count }}</h2></div>
+        <div class="stat-card"><div>关注</div><h2>{{ lf.stats.medium_count }}</h2></div>
+        <div class="stat-card"><div>正常</div><h2>{{ lf.stats.normal_count }}</h2></div>
+        <div class="stat-card"><div>待指定</div><h2>{{ lf.stats.unassigned_count }}</h2></div>
+        <div class="stat-card"><div>手动指定</div><h2>{{ lf.stats.manual_count }}</h2></div>
+    </div>
+
+</div>
+
+
     <h2>④ 分组责任明细</h2>
 
     <div style="max-height:620px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
@@ -241,7 +347,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
             </thead>
 
             <tbody>
-                {% for g in lc.group_cards %}
+                {% for g in lf.group_cards %}
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
                     <td style="padding:9px;">
