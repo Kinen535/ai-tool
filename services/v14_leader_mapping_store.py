@@ -97,3 +97,24 @@ def upsert_leader_mapping(
         )
     )
     conn.commit()
+
+
+def deactivate_leader_mapping(conn, group_name: str) -> None:
+    ensure_leader_mapping_table(conn)
+
+    group_name = str(group_name or "").strip()
+
+    if not group_name:
+        return
+
+    conn.execute(
+        """
+        UPDATE v14_leader_mappings
+        SET
+            is_active = 0,
+            updated_at = datetime('now', 'localtime')
+        WHERE group_name = ?
+        """,
+        (group_name,)
+    )
+    conn.commit()

@@ -6842,6 +6842,32 @@ def save_leader_mapping():
     return redirect(next_url)
 
 
+
+@app.route("/leaders/mapping/delete", methods=["POST"])
+def delete_leader_mapping():
+    from flask import request, redirect
+    from services.v14_leader_mapping_store import (
+        deactivate_leader_mapping
+    )
+
+    group_name = request.form.get("group_name", "").strip()
+    next_url = request.form.get("next", "/leaders").strip()
+
+    if not next_url.startswith("/leaders"):
+        next_url = "/leaders"
+
+    conn = sqlite3.connect("data/snapshots.db")
+
+    deactivate_leader_mapping(
+        conn,
+        group_name=group_name
+    )
+
+    conn.close()
+
+    return redirect(next_url)
+
+
 @app.route("/leaders")
 def leader_center():
     from services.engines.leader_center_engine import (
