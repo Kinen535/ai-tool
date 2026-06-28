@@ -6908,6 +6908,102 @@ def leader_owner_detail(owner_name):
 
 
 
+
+
+@app.route("/command/action/log", methods=["POST"])
+def command_action_log():
+    from flask import request, redirect
+    from services.v15_command_store import (
+        save_command_action_log
+    )
+
+    action_key = request.form.get("action_key", "").strip()
+    action_label = request.form.get("action_label", "").strip()
+    status = request.form.get("status", "").strip()
+    note = request.form.get("note", "").strip()
+    next_url = request.form.get("next", "/command").strip()
+
+    if (
+        next_url != "/command"
+        and not next_url.startswith("/command/action/")
+    ):
+        next_url = "/command"
+
+    conn = sqlite3.connect("data/snapshots.db")
+
+    save_command_action_log(
+        conn,
+        action_key=action_key,
+        action_label=action_label,
+        status=status,
+        note=note
+    )
+
+    conn.close()
+
+    return redirect(next_url)
+
+
+@app.route("/command/action/<path:action_key>")
+def command_action_detail(action_key):
+    from urllib.parse import unquote
+    from services.engines.leader_center_engine import (
+        build_leader_center_report
+    )
+    from services.engines.command_center_engine import (
+        build_command_center_report
+    )
+    from services.v15_command_store import (
+        load_command_action_logs
+    )
+    from services.engines.command_action_engine import (
+        build_command_action_report
+    )
+    from services.v15_command_store import (
+        load_command_action_logs_by_key
+    )
+
+    decoded_action_key = unquote(action_key)
+
+    conn = sqlite3.connect("data/snapshots.db")
+    report = build_staff_report(conn)
+
+    report["v14_leader_center"] = (
+        build_leader_center_report(
+            conn,
+            report
+        )
+    )
+
+    report["v15_command_center"] = (
+        build_command_center_report(
+            report,
+            report["v14_leader_center"]
+        )
+    )
+
+    report["v15_command_action"] = (
+        build_command_action_report(
+            report["v15_command_center"],
+            decoded_action_key
+        )
+    )
+
+    report["v15_command_action_logs"] = load_command_action_logs_by_key(
+        conn,
+        decoded_action_key,
+        limit=20
+    )
+
+    conn.close()
+
+    return render_template(
+        "command_action_detail.html",
+        report=report,
+        title="指挥动作详情"
+    )
+
+
 @app.route("/command")
 def command_center():
     from services.engines.leader_center_engine import (
@@ -6915,6 +7011,9 @@ def command_center():
     )
     from services.engines.command_center_engine import (
         build_command_center_report
+    )
+    from services.v15_command_store import (
+        load_command_action_logs
     )
 
     conn = sqlite3.connect("data/snapshots.db")
@@ -6932,6 +7031,11 @@ def command_center():
             report,
             report["v14_leader_center"]
         )
+    )
+
+    report["v15_command_logs"] = load_command_action_logs(
+        conn,
+        limit=12
     )
 
     conn.close()

@@ -200,6 +200,100 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 </div>
 
 
+
+<div style="
+background:#fff7ed;
+border-left:6px solid #f97316;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>⑥ 处置记录</h2>
+
+    <form method="post"
+          action="/command/action/log"
+          style="background:#fff;border:1px solid #fed7aa;border-radius:14px;padding:16px;margin-bottom:16px;">
+
+        <input type="hidden" name="action_key" value="{{ detail.action_key }}">
+        <input type="hidden" name="action_label" value="{{ detail.card.key_label or detail.card.title }}">
+        <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+
+        <div style="display:grid;grid-template-columns:180px 1fr auto;gap:12px;align-items:end;">
+
+            <div>
+                <label><b>处置状态</b></label>
+                <select name="status"
+                        style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+                    <option value="started">开始处理</option>
+                    <option value="done">已完成</option>
+                    <option value="paused">暂缓处理</option>
+                    <option value="blocked">被阻断</option>
+                </select>
+            </div>
+
+            <div>
+                <label><b>备注</b></label>
+                <input type="text"
+                       name="note"
+                       placeholder="例如：已通知武藏跟进惜晨二组，等待下一轮快照验证"
+                       style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+            </div>
+
+            <button type="submit"
+                    style="padding:10px 16px;border:0;background:#f97316;color:white;border-radius:10px;font-weight:bold;cursor:pointer;">
+                记录
+            </button>
+
+        </div>
+
+    </form>
+
+    {% if report.v15_command_action_logs %}
+
+    <div style="max-height:360px;overflow:auto;border:1px solid #fed7aa;border-radius:14px;background:#fff;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">时间</th>
+                    <th style="padding:9px;text-align:left;">状态</th>
+                    <th style="padding:9px;text-align:left;">备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in report.v15_command_action_logs %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;color:#6b7280;">{{ log.created_at }}</td>
+                    <td style="padding:9px;">
+                        {% if log.status == "done" %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ log.status_label }}</span>
+                        {% elif log.status == "blocked" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ log.status_label }}</span>
+                        {% elif log.status == "paused" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ log.status_label }}</span>
+                        {% else %}
+                            <span style="color:#2563eb;font-weight:bold;">{{ log.status_label }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:9px;">{{ log.note or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+        当前动作暂无处置记录。
+    </div>
+
+    {% endif %}
+
+</div>
+
+
 <div style="
 background:#f8fafc;
 border-left:6px solid #64748b;

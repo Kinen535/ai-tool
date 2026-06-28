@@ -281,6 +281,69 @@ margin-bottom:24px;
 </div>
 
 
+
+<div style="
+background:#f0fdfa;
+border-left:6px solid #0f766e;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>⑥ 最近指挥记录</h2>
+
+    {% if report.v15_command_logs %}
+
+    <div style="max-height:420px;overflow:auto;border:1px solid #99f6e4;border-radius:14px;background:#fff;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">时间</th>
+                    <th style="padding:9px;text-align:left;">动作</th>
+                    <th style="padding:9px;text-align:left;">状态</th>
+                    <th style="padding:9px;text-align:left;">备注</th>
+                    <th style="padding:9px;text-align:left;">入口</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in report.v15_command_logs %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;color:#6b7280;">{{ log.created_at }}</td>
+                    <td style="padding:9px;font-weight:bold;">{{ log.action_label }}</td>
+                    <td style="padding:9px;">
+                        {% if log.status == "done" %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ log.status_label }}</span>
+                        {% elif log.status == "blocked" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ log.status_label }}</span>
+                        {% elif log.status == "paused" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ log.status_label }}</span>
+                        {% else %}
+                            <span style="color:#2563eb;font-weight:bold;">{{ log.status_label }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:9px;">{{ log.note or "-" }}</td>
+                    <td style="padding:9px;">
+                        <a href="/command/action/{{ log.action_key }}"
+                           style="color:#2563eb;text-decoration:none;">查看 →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #99f6e4;border-radius:12px;padding:14px;">
+        暂无指挥处置记录。进入动作详情页记录后，这里会自动显示。
+    </div>
+
+    {% endif %}
+
+</div>
+
+
 <div style="
 background:#f8fafc;
 border-left:6px solid #64748b;
