@@ -329,7 +329,7 @@ overflow-y:auto;
         <form method="post"
               action="/strategic/feedback"
               style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
-            <input type="hidden" name="next" value="/tasks">
+            <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
             <input type="hidden" name="task_key" value="{{ task.task_key }}">
 
             <button type="submit" name="status" value="confirmed"
@@ -474,7 +474,7 @@ overflow-y:auto;
         <form method="post"
               action="/strategic/feedback"
               style="display:flex;gap:6px;flex-wrap:wrap;margin:0;">
-            <input type="hidden" name="next" value="/tasks">
+            <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
             <input type="hidden" name="task_key" value="{{ task.task_key }}">
 
             <button type="submit" name="status" value="confirmed"
@@ -729,6 +729,53 @@ function compactTaskListActionButtons() {
 }
 
 document.addEventListener("DOMContentLoaded", compactTaskListActionButtons);
+</script>
+
+
+<script>
+function keepTaskCenterFilterAndScroll() {
+    const forms = document.querySelectorAll('form[action="/strategic/feedback"]');
+
+    forms.forEach(function (form) {
+        form.addEventListener("submit", function () {
+            const nextInput = form.querySelector('input[name="next"]');
+
+            if (nextInput) {
+                nextInput.value = window.location.pathname + window.location.search;
+            }
+
+            sessionStorage.setItem("taskCenterShouldRestoreScroll", "1");
+            sessionStorage.setItem("taskCenterScrollY", String(window.scrollY || 0));
+        });
+    });
+}
+
+function restoreTaskCenterScrollPosition() {
+    const shouldRestore = sessionStorage.getItem("taskCenterShouldRestoreScroll");
+
+    if (shouldRestore !== "1") {
+        return;
+    }
+
+    const rawY = sessionStorage.getItem("taskCenterScrollY") || "0";
+    const y = parseInt(rawY, 10) || 0;
+
+    sessionStorage.removeItem("taskCenterShouldRestoreScroll");
+    sessionStorage.removeItem("taskCenterScrollY");
+
+    setTimeout(function () {
+        window.scrollTo({
+            top: y,
+            left: 0,
+            behavior: "instant"
+        });
+    }, 80);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    keepTaskCenterFilterAndScroll();
+    restoreTaskCenterScrollPosition();
+});
 </script>
 
 {% endblock %}

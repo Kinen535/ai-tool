@@ -6901,6 +6901,8 @@ def strategic_feedback():
 
     if (
         next_url not in ("/strategic", "/tasks")
+        and not next_url.startswith("/tasks?")
+        and not next_url.startswith("/tasks#")
         and not next_url.startswith("/tasks/detail/")
     ):
         next_url = "/strategic"
