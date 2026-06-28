@@ -794,4 +794,62 @@ function keepTaskCenterScrollBeforeDetailClick() {
 document.addEventListener("DOMContentLoaded", keepTaskCenterScrollBeforeDetailClick);
 </script>
 
+
+<script>
+function rememberLastTaskActionBeforeSubmit() {
+    const forms = document.querySelectorAll('form[action="/strategic/feedback"]');
+
+    forms.forEach(function (form) {
+        form.addEventListener("submit", function () {
+            const taskKeyInput = form.querySelector('input[name="task_key"]');
+
+            if (taskKeyInput && taskKeyInput.value) {
+                sessionStorage.setItem("taskCenterLastActionTaskKey", taskKeyInput.value);
+            }
+        });
+    });
+}
+
+function highlightLastTaskActionRow() {
+    const taskKey = sessionStorage.getItem("taskCenterLastActionTaskKey");
+
+    if (!taskKey) {
+        return;
+    }
+
+    sessionStorage.removeItem("taskCenterLastActionTaskKey");
+
+    const links = document.querySelectorAll('a[href^="/tasks/detail/"]');
+    let targetRow = null;
+
+    links.forEach(function (link) {
+        if (targetRow) {
+            return;
+        }
+
+        if (link.getAttribute("href").includes(taskKey)) {
+            targetRow = link.closest("tr");
+        }
+    });
+
+    if (!targetRow) {
+        return;
+    }
+
+    targetRow.style.transition = "background 0.4s ease, box-shadow 0.4s ease";
+    targetRow.style.background = "#fef3c7";
+    targetRow.style.boxShadow = "inset 4px 0 0 #f59e0b";
+
+    setTimeout(function () {
+        targetRow.style.background = "";
+        targetRow.style.boxShadow = "";
+    }, 2200);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    rememberLastTaskActionBeforeSubmit();
+    highlightLastTaskActionRow();
+});
+</script>
+
 {% endblock %}
