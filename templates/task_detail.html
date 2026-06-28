@@ -8,7 +8,7 @@
 <h1>📌 任务详情</h1>
 
 <div style="margin-bottom:16px;">
-    <a href="/tasks"
+    <a href="{{ report.v13_task_return_url }}"
        style="
        display:inline-block;
        padding:8px 14px;
@@ -177,7 +177,7 @@ border-top:1px solid #d1fae5;
       ">
 
     <input type="hidden" name="task_key" value="{{ task.task_key }}">
-    <input type="hidden" name="next" value="/tasks/detail/{{ task.task_key }}">
+    <input type="hidden" name="next" value="/tasks/detail/{{ task.task_key }}?next={{ report.v13_task_return_url|urlencode }}">
     <input type="hidden" id="currentFeedbackStatus" value="{{ task.feedback_status }}">
     <input type="hidden" id="currentFeedbackStatusLabel" value="{{ task.feedback_status_label }}">
 

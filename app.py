@@ -6811,6 +6811,7 @@ def strategic_center():
 
 @app.route("/tasks/detail/<path:task_key>")
 def task_detail(task_key):
+    from flask import request
     from urllib.parse import unquote
     from services.v12_feedback_store import (
         load_feedback_logs_by_task_key
@@ -6838,6 +6839,17 @@ def task_detail(task_key):
             logs
         )
     )
+
+    return_url = request.args.get("next", "/tasks").strip()
+
+    if (
+        return_url != "/tasks"
+        and not return_url.startswith("/tasks?")
+        and not return_url.startswith("/tasks#")
+    ):
+        return_url = "/tasks"
+
+    report["v13_task_return_url"] = return_url
 
     return render_template(
         "task_detail.html",
