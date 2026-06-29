@@ -2,6 +2,35 @@
 
 {% block content %}
 
+<script id="v15-command-leaders-return-e52">
+document.addEventListener("DOMContentLoaded", function () {
+    const currentBackUrl = "{{ request.full_path.rstrip('?')|urlencode }}";
+
+    document.querySelectorAll('a[href^="/leaders"], a[href^="/archives/group"]').forEach(function (a) {
+        const raw = a.getAttribute("href");
+
+        if (!raw || raw.includes("next=")) return;
+
+        let base = raw;
+        let hash = "";
+
+        if (raw.includes("#")) {
+            const parts = raw.split("#");
+            base = parts[0];
+            hash = "#" + parts.slice(1).join("#");
+        }
+
+        const sep = base.includes("?") ? "&" : "?";
+        a.setAttribute("href", base + sep + "next=" + currentBackUrl + hash);
+    });
+});
+</script>
+
+{% set v15_command_back_url_e51 = request.full_path.rstrip("?") %}
+
+{% set v15_command_return_url = request.full_path.rstrip("?") %}
+
+
 {% set cc = report.v15_command_center %}
 
 <h1>🧠 盟务指挥中枢</h1>
@@ -229,7 +258,53 @@ margin-bottom:24px;
             </tbody>
         </table>
 
-        {% else %}
+
+        
+        <div style="
+        margin-top:16px;
+        background:#fff;
+        border:1px solid #fecaca;
+        border-radius:14px;
+        padding:14px;
+        ">
+
+            <h3>高压分组异常摘要</h3>
+
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+            {% for g in cc.high_pressure_groups %}
+                <div style="
+                border:1px solid #fee2e2;
+                border-radius:12px;
+                padding:12px;
+                background:#fffafa;
+                ">
+
+                    <div style="font-weight:bold;margin-bottom:6px;">
+                        {{ g.group_name }}
+                    </div>
+
+                    <div style="font-size:13px;color:#475569;line-height:1.7;">
+                        负责人：{{ g.leader_display }}<br>
+                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}<br>
+                        已识别异常人员：{{ g.risk_member_count or 0 }} 人
+                    </div>
+
+                    <a href="/leaders/group/{{ g.group_name|urlencode }}?from_command=1&next={{ v15_command_back_url_e51|urlencode }}"
+                       style="display:inline-block;margin-top:8px;padding:6px 10px;background:#fee2e2;border-radius:10px;color:#dc2626;text-decoration:none;font-size:13px;">
+                        查看异常人员 →
+                    </a>
+
+                </div>
+            {% endfor %}
+            </div>
+
+            <div style="font-size:12px;color:#6b7280;margin-top:10px;">
+                总控页只显示摘要，点击分组进入详情页查看具体异常人员。
+            </div>
+
+        </div>
+
+{% else %}
 
         <div style="background:#fff;border:1px solid #fecaca;border-radius:12px;padding:14px;">
             当前没有高压分组。
@@ -255,7 +330,7 @@ margin-bottom:24px;
             {% for item in cc.leader_pressure %}
             <div style="background:#fff;border:1px solid #ddd6fe;border-radius:14px;padding:12px;margin-bottom:10px;">
                 <b>{{ item.owner }}</b>
-                <a href="/leaders/owner/{{ item.owner|urlencode }}"
+                <a href="/leaders/owner/{{ item.owner|urlencode }}?next={{ v15_command_back_url_e51|urlencode }}"
                    style="float:right;font-size:12px;color:#7c3aed;text-decoration:none;">
                     详情 →
                 </a>

@@ -2,6 +2,81 @@
 
 {% block content %}
 
+{% set v15_leaders_back_url_e52 = request.args.get("next") or "" %}
+{% set v15_leaders_has_back_e52 = v15_leaders_back_url_e52 and v15_leaders_back_url_e52.startswith("/") and not v15_leaders_back_url_e52.startswith("//") %}
+
+<style id="v15-leaders-page-return-e52-style">
+    .v15-leaders-back-btn-e52 {
+        display:inline-block;
+        margin:8px 0 14px 0;
+        padding:8px 12px;
+        background:#f3f4f6;
+        color:#374151;
+        border-radius:10px;
+        text-decoration:none;
+        font-weight:600;
+    }
+
+    .v15-leaders-back-btn-e52:hover {
+        background:#e5e7eb;
+    }
+</style>
+
+<script id="v15-leaders-page-return-e52">
+document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+
+    if (!next) return;
+
+    const encodedNext = encodeURIComponent(next);
+
+    // 让 /leaders 页面里的筛选、详情、重置继续保留上级来源
+    document.querySelectorAll('a[href^="/leaders"]').forEach(function (a) {
+        const raw = a.getAttribute("href");
+
+        if (!raw || raw.includes("next=") || raw.startsWith("/leaders/mapping")) return;
+
+        let base = raw;
+        let hash = "";
+
+        if (raw.includes("#")) {
+            const parts = raw.split("#");
+            base = parts[0];
+            hash = "#" + parts.slice(1).join("#");
+        }
+
+        const sep = base.includes("?") ? "&" : "?";
+        a.setAttribute("href", base + sep + "next=" + encodedNext + hash);
+    });
+
+    // GET 筛选表单也保留 next
+    document.querySelectorAll('form').forEach(function (form) {
+        const method = (form.getAttribute("method") || "get").toLowerCase();
+        const action = form.getAttribute("action") || "";
+
+        if (method !== "get") return;
+        if (action && !action.startsWith("/leaders")) return;
+        if (form.querySelector('input[name="next"]')) return;
+
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "next";
+        input.value = next;
+        form.appendChild(input);
+    });
+});
+</script>
+
+{% if v15_leaders_has_back_e52 %}
+<a id="v15-leaders-main-back-btn-e52"
+   class="v15-leaders-back-btn-e52"
+   href="{{ v15_leaders_back_url_e52 }}">
+   ← 返回上级页面
+</a>
+{% endif %}
+
+
 <style id="v15-leader-noise-control-e44">
     .v15-e44-soft-btn {
         display:inline-block;
