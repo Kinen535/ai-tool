@@ -2,13 +2,21 @@
 
 {% block content %}
 
+{% set v15_context_back_url_e51 = request.args.get("next") or "" %}
+{% if not v15_context_back_url_e51 or not v15_context_back_url_e51.startswith("/") or v15_context_back_url_e51.startswith("//") %}
+    {% set v15_context_back_url_e51 = "/leaders" %}
+{% endif %}
+
+{% set v15_back_url = report.v15_return_url or "/leaders" %}
+
+
 {% set detail = report.v14_leader_owner_detail %}
 
 <h1>👤 负责人详情</h1>
 
-<a href="/leaders"
+<a href="{{ v15_context_back_url_e51 }}"
    style="display:inline-block;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
-    ← 返回组长协同驾驶舱
+    ← 返回上级页面
 </a>
 
 <div style="

@@ -6869,6 +6869,48 @@ def delete_leader_mapping():
 
 
 
+
+@app.route("/leaders/group/<path:group_name>")
+def leader_group_risk_detail(group_name):
+    from urllib.parse import unquote
+    from services.engines.risk_drilldown_engine import (
+        build_group_risk_detail_report
+    )
+
+    decoded_group_name = unquote(group_name)
+
+    conn = sqlite3.connect("data/snapshots.db")
+
+    report = {
+        "v15_group_risk_detail": build_group_risk_detail_report(
+            conn,
+            decoded_group_name
+        )
+    }
+
+    conn.close()
+
+
+    # v15_leader_group_return_url
+    return_url = request.args.get("next", "/leaders").strip()
+
+    if (
+        not return_url.startswith("/")
+        or return_url.startswith("//")
+        or return_url.startswith("/logout")
+    ):
+        return_url = "/leaders"
+
+    report["v15_return_url"] = return_url
+
+
+    return render_template(
+        "leader_group_risk_detail.html",
+        report=report,
+        title="分组异常人员详情"
+    )
+
+
 @app.route("/leaders/owner/<path:owner_name>")
 def leader_owner_detail(owner_name):
     from urllib.parse import unquote
@@ -6899,6 +6941,20 @@ def leader_owner_detail(owner_name):
     )
 
     conn.close()
+
+
+    # v15_leader_owner_return_url
+    return_url = request.args.get("next", "/leaders").strip()
+
+    if (
+        not return_url.startswith("/")
+        or return_url.startswith("//")
+        or return_url.startswith("/logout")
+    ):
+        return_url = "/leaders"
+
+    report["v15_return_url"] = return_url
+
 
     return render_template(
         "leader_owner_detail.html",
@@ -7015,6 +7071,10 @@ def command_center():
     from services.v15_command_store import (
         load_command_action_logs
     )
+    from services.engines.risk_drilldown_engine import (
+        build_risk_drilldown_report,
+        attach_risk_members_to_groups
+    )
 
     conn = sqlite3.connect("data/snapshots.db")
     report = build_staff_report(conn)
@@ -7033,6 +7093,15 @@ def command_center():
         )
     )
 
+    report["v15_risk_drilldown"] = build_risk_drilldown_report(conn)
+
+    attach_risk_members_to_groups(
+        report["v15_command_center"].get("high_pressure_groups", []),
+        report["v15_risk_drilldown"],
+        limit_per_group=5
+    )
+
+
     report["v15_command_logs"] = load_command_action_logs(
         conn,
         limit=12
@@ -7049,6 +7118,10 @@ def command_center():
 
 @app.route("/leaders")
 def leader_center():
+    from services.engines.risk_drilldown_engine import (
+        build_risk_drilldown_report,
+        attach_risk_members_to_groups
+    )
     from flask import request
     from services.engines.leader_center_engine import (
         build_leader_center_report
@@ -7067,6 +7140,15 @@ def leader_center():
         )
     )
 
+    report["v15_risk_drilldown"] = build_risk_drilldown_report(conn)
+
+    attach_risk_members_to_groups(
+        report["v14_leader_center"].get("high_pressure_groups", []),
+        report["v15_risk_drilldown"],
+        limit_per_group=5
+    )
+
+
     leader_filters = {
         "pressure": request.args.get("pressure", "all"),
         "responsibility": request.args.get("responsibility", "all"),
@@ -7080,6 +7162,199 @@ def leader_center():
             leader_filters
         )
     )
+
+
+    # v15_leader_filter_cards_sync
+    # 统一筛选统计与卡片明细使用的数据源，避免“筛选显示有结果，但卡片为空”
+    _leader_filter = report.get("v14_leader_filter", {}) or {}
+    _leader_center = report.get("v14_leader_center", {}) or {}
+
+    _filter_cards = (
+        _leader_filter.get("filtered_groups")
+        or _leader_filter.get("groups")
+        or _leader_filter.get("items")
+        or _leader_center.get("filtered_groups")
+        or _leader_center.get("groups")
+        or []
+    )
+
+    if "v14_leader_center" in report:
+        report["v14_leader_center"]["filter_cards"] = _filter_cards
+        report["v14_leader_center"]["filtered_groups"] = _filter_cards
+
+
+
+    # v15_leader_filter_cards_sync_v2
+    # 统一筛选统计与卡片明细数据源：
+    # leader_center_engine 当前真实分组卡片来源是 group_cards，
+    # 不是 filtered_groups / groups。
+    from flask import request as _v15_request
+
+    _leader_center = report.get("v14_leader_center", {}) or {}
+    _leader_filter = report.get("v14_leader_filter", {}) or {}
+
+    def _is_group_card_list(value):
+        if not isinstance(value, list):
+            return False
+        if not value:
+            return True
+        first = value[0]
+        return isinstance(first, dict) and (
+            "group_name" in first
+            or "leader_display" in first
+            or "pressure_score" in first
+        )
+
+    _cards = []
+
+    # 优先使用筛选引擎已经算好的结果
+    for _key in [
+        "filtered_groups",
+        "filtered_cards",
+        "filter_cards",
+        "matched_groups",
+        "result_groups",
+        "group_cards",
+        "cards",
+        "results",
+        "items",
+        "groups",
+    ]:
+        _value = _leader_filter.get(_key)
+        if _is_group_card_list(_value):
+            _cards = list(_value)
+            break
+
+    # 如果筛选引擎没有返回卡片，就使用组长中心真实卡片源
+    if not _cards:
+        _cards = list(
+            _leader_center.get("group_cards")
+            or _leader_center.get("filtered_groups")
+            or _leader_center.get("groups")
+            or []
+        )
+
+    # 兜底手动筛选，确保页面卡片与筛选条件一致
+    _pressure = (
+        _v15_request.args.get("pressure")
+        or _v15_request.args.get("pressure_status")
+        or _v15_request.args.get("pressure_level")
+        or "all"
+    )
+
+    _responsibility = (
+        _v15_request.args.get("responsibility")
+        or _v15_request.args.get("leader_status")
+        or _v15_request.args.get("owner_status")
+        or "all"
+    )
+
+    _sort = (
+        _v15_request.args.get("sort")
+        or _v15_request.args.get("sort_by")
+        or "pressure_desc"
+    )
+
+    _q = (
+        _v15_request.args.get("q")
+        or _v15_request.args.get("keyword")
+        or _v15_request.args.get("search")
+        or ""
+    ).strip()
+
+    def _text(value):
+        return str(value or "").strip()
+
+    def _is_unassigned(card):
+        leader = _text(
+            card.get("leader_display")
+            or card.get("leader_name")
+            or card.get("owner")
+        )
+        return leader in ("", "-", "待指定", "待指定组长")
+
+    def _is_manual(card):
+        source = _text(card.get("leader_source") or card.get("source"))
+        note = _text(card.get("leader_note") or card.get("note"))
+        return "手动" in source or "手动" in note or bool(card.get("leader_name"))
+
+    def _is_auto(card):
+        source = _text(card.get("leader_source") or card.get("source"))
+        return "自动" in source or "识别" in source
+
+    def _is_manager_proxy(card):
+        role = _text(card.get("leader_role") or card.get("role"))
+        return "代管" in role or "管理" in role
+
+    def _pressure_label(card):
+        return _text(card.get("pressure_label") or card.get("pressure_status"))
+
+    def _pressure_score(card):
+        try:
+            return float(card.get("pressure_score") or card.get("pressure") or 0)
+        except Exception:
+            return 0.0
+
+    def _danger_count(card):
+        try:
+            return int(card.get("danger_count") or card.get("danger_members") or 0)
+        except Exception:
+            return 0
+
+    def _pending_count(card):
+        try:
+            return int(card.get("pending_count") or card.get("pending_task_count") or 0)
+        except Exception:
+            return 0
+
+    if _pressure not in ("all", "全部", ""):
+        if _pressure in ("high", "high_pressure", "高压"):
+            _cards = [c for c in _cards if _pressure_label(c) == "高压"]
+        elif _pressure in ("normal", "正常"):
+            _cards = [c for c in _cards if _pressure_label(c) == "正常"]
+        elif _pressure in ("watch", "attention", "关注"):
+            _cards = [c for c in _cards if _pressure_label(c) == "关注"]
+
+    if _responsibility not in ("all", "全部", ""):
+        if _responsibility in ("unassigned", "pending", "待指定", "待指定组长"):
+            _cards = [c for c in _cards if _is_unassigned(c)]
+        elif _responsibility in ("manual", "manual_assigned", "手动指定"):
+            _cards = [c for c in _cards if _is_manual(c)]
+        elif _responsibility in ("auto", "auto_detected", "自动识别"):
+            _cards = [c for c in _cards if _is_auto(c)]
+        elif _responsibility in ("manager_proxy", "manager", "管理代管"):
+            _cards = [c for c in _cards if _is_manager_proxy(c)]
+
+    if _q:
+        _cards = [
+            c for c in _cards
+            if _q in _text(c.get("group_name"))
+            or _q in _text(c.get("leader_display"))
+            or _q in _text(c.get("leader_name"))
+        ]
+
+    if _sort in ("pressure_desc", "压力从高到低", "pressure_high"):
+        _cards = sorted(_cards, key=_pressure_score, reverse=True)
+    elif _sort in ("pressure_asc", "压力从低到高", "pressure_low"):
+        _cards = sorted(_cards, key=_pressure_score)
+    elif _sort in ("danger_desc", "危险最多"):
+        _cards = sorted(_cards, key=_danger_count, reverse=True)
+    elif _sort in ("pending_desc", "待反馈最多"):
+        _cards = sorted(_cards, key=_pending_count, reverse=True)
+
+    _leader_center["filter_cards"] = _cards
+    _leader_center["filtered_groups"] = _cards
+
+    if isinstance(_leader_filter, dict):
+        _leader_filter["filter_cards"] = _cards
+        _leader_filter["filtered_groups"] = _cards
+        _leader_filter["matched_count"] = len(_cards)
+        _leader_filter["matched_groups"] = len(_cards)
+        _leader_filter["total_matched"] = len(_cards)
+
+    report["v14_leader_center"] = _leader_center
+    report["v14_leader_filter"] = _leader_filter
+
 
     conn.close()
 

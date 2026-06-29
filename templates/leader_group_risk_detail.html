@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set v15_identity_next_url_e51 = request.full_path.rstrip("?") %}
+
+
+{% set v15_context_back_url_e51 = request.args.get("next") or "" %}
+{% if not v15_context_back_url_e51 or not v15_context_back_url_e51.startswith("/") or v15_context_back_url_e51.startswith("//") %}
+    {% set v15_context_back_url_e51 = "/leaders" %}
+{% endif %}
+
+{% set v15_back_url = report.v15_return_url or "/leaders" %}
+{% set identity_context_url = request.full_path.rstrip('?') %}
+
+
+{% set gd = report.v15_group_risk_detail %}
+
+<h1>🔎 分组异常人员详情</h1>
+
+<a href="{{ v15_context_back_url_e51 }}"
+   style="display:inline-block;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
+    ← 返回上级页面
+</a>
+
+<div style="
+background:#eef6ff;
+border-left:6px solid #2563eb;
+border-radius:18px;
+padding:24px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.08);
+">
+
+    <h2>① 分组异常总览</h2>
+
+    <p><b>摘要：</b>{{ gd.summary }}</p>
+    <p><b>数据快照：</b>{{ gd.latest_snapshot_time }}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px;">
+        <div class="stat-card"><div>分组</div><h2>{{ gd.group_name }}</h2></div>
+        <div class="stat-card"><div>异常成员</div><h2>{{ gd.stats.total }}</h2></div>
+        <div class="stat-card"><div>危险成员</div><h2>{{ gd.stats.danger }}</h2></div>
+        <div class="stat-card"><div>预警成员</div><h2>{{ gd.stats.warning }}</h2></div>
+    </div>
+
+    <div style="margin-top:18px;background:#fff;border:1px solid #bfdbfe;border-radius:14px;padding:16px;">
+        <h3>🎯 当前判断</h3>
+
+        <p>
+            <b>结论：</b>
+            {% if gd.decision.level == "danger" %}
+                <span style="color:#dc2626;font-weight:bold;">{{ gd.decision.label }}</span>
+            {% elif gd.decision.level == "warning" %}
+                <span style="color:#f97316;font-weight:bold;">{{ gd.decision.label }}</span>
+            {% elif gd.decision.level == "safe" %}
+                <span style="color:#16a34a;font-weight:bold;">{{ gd.decision.label }}</span>
+            {% else %}
+                <span style="color:#2563eb;font-weight:bold;">{{ gd.decision.label }}</span>
+            {% endif %}
+        </p>
+
+        <p><b>原因：</b>{{ gd.decision.reason }}</p>
+    </div>
+
+</div>
+
+
+<div style="
+background:#fff7ed;
+border-left:6px solid #f97316;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+
+    <h2>② 异常人员清单</h2>
+
+    {% if gd.members %}
+
+    <div style="max-height:620px;overflow:auto;border:1px solid #fed7aa;border-radius:14px;background:#fff;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">成员</th>
+                    <th style="padding:9px;text-align:left;">风险</th>
+                    <th style="padding:9px;text-align:left;">风险原因</th>
+                    <th style="padding:9px;text-align:left;">活跃度</th>
+                    <th style="padding:9px;text-align:left;">稳定度</th>
+                    <th style="padding:9px;text-align:left;">趋势</th>
+                    <th style="padding:9px;text-align:left;">建议动作</th>
+                    <th style="padding:9px;text-align:left;">档案</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in gd.members %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;font-weight:bold;">{{ m.member }}</td>
+
+                    <td style="padding:9px;">
+                        {% if m.risk_level == "danger" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ m.risk_label }}</span>
+                        {% else %}
+                            <span style="color:#f97316;font-weight:bold;">{{ m.risk_label }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:9px;color:#475569;">{{ m.risk_reason }}</td>
+                    <td style="padding:9px;">{{ m.av }}</td>
+                    <td style="padding:9px;">{{ m.bs }}</td>
+                    <td style="padding:9px;">{{ m.trend_label }}</td>
+                    <td style="padding:9px;color:#2563eb;">{{ m.suggest_action }}</td>
+                    <td style="padding:9px;">
+                        {% set identity_return_url = request.full_path.rstrip('?') %}
+                        <a href="/identity/view/{{ m.member|urlencode }}?next={{ identity_return_url|urlencode }}"
+                           style="color:#2563eb;text-decoration:none;">查看档案 →</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+        当前分组没有异常成员。
+    </div>
+
+    {% endif %}
+
+</div>
+
+<div style="
+background:#f8fafc;
+border-left:6px solid #64748b;
+border-radius:18px;
+padding:18px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+">
+    <b>说明：</b>本页只取 player_records 最新快照，并按成员去重，避免历史快照重复展示。
+</div>
+
+{% endblock %}

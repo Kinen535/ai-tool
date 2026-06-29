@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set v15_identity_next_url_e51 = request.full_path.rstrip("?") %}
+
+
+{% set v15_context_back_url_e51 = request.args.get("next") or "" %}
+{% if not v15_context_back_url_e51 or not v15_context_back_url_e51.startswith("/") or v15_context_back_url_e51.startswith("//") %}
+    {% set v15_context_back_url_e51 = "/leaders" %}
+{% endif %}
+
+
+<a href="/archives/alliances" class="btn btn-secondary">
+    ← 返回上级页面
+</a>
+
+<h1 class="page-title">
+
+<a id="v15-main-back-btn-e51"
+   href="{{ v15_context_back_url_e51 }}"
+   style="display:inline-block;margin:8px 0 14px 0;padding:8px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
+   ← 返回上级页面
+</a>
+
+    📊 分组详情：{{ group_name }}
+</h1>
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <div class="stat-title">成员总数</div>
+        <div class="stat-value">{{ member_count }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">平均身份评级</div>
+        <div class="stat-value">{{ avg_identity }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">风险成员</div>
+        <div class="stat-value">{{ risk_count }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">A级以上</div>
+        <div class="stat-value">{{ a_count }}</div>
+    </div>
+
+</div>
+
+<div class="card">
+
+    <div class="card-title">
+        👑 管理成员
+    </div>
+
+    {% if leaders %}
+
+        <div class="tag-list">
+            {% for m in leaders %}
+                <span class="tag tag-blue">
+                    {{ m["member"] }}
+                </span>
+            {% endfor %}
+        </div>
+
+    {% else %}
+
+        <p class="muted">暂无管理成员</p>
+
+    {% endif %}
+
+</div>
+
+<div class="card">
+
+    <div class="card-title">
+        ⚠ 风险成员
+    </div>
+
+    {% if risk_members %}
+
+        <div class="tag-list">
+            {% for m in risk_members %}
+                <span class="tag tag-red">
+                    {{ m["member"] }}
+                    {% if m["risk_level"] == "warning" %}
+                        ｜预警
+                    {% elif m["risk_level"] == "danger" %}
+                        ｜危险
+                    {% endif %}
+                </span>
+            {% endfor %}
+        </div>
+
+    {% else %}
+
+        <p class="muted">当前分组暂无风险成员</p>
+
+    {% endif %}
+
+</div>
+
+<div class="card">
+
+    <div class="card-title">
+        成员明细
+    </div>
+
+    <table class="table sticky-table">
+
+        <thead>
+            <tr>
+                <th>成员</th>
+                <th>身份</th>
+                <th>身份评级</th>
+                <th>活跃度</th>
+                <th>稳定度</th>
+                <th>风险状态</th>
+                <th>档案</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for m in members %}
+
+            <tr>
+
+                <td>{{ m["member"] }}</td>
+
+                <td>
+                    {% if m["role_tag"] == "admin" %}
+                        管理员
+                    {% elif m["role_tag"] == "warehouse" %}
+                        仓库号
+                    {% elif m["role_tag"] == "core" %}
+                        核心成员
+                    {% else %}
+                        普通成员
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% set score = m["identity_score"] or 0 %}
+
+                    {% if score >= 85 %}
+                        <span style="color:#16a34a;font-weight:bold;">{{ "%.1f"|format(score) }}</span>
+                    {% elif score >= 70 %}
+                        <span style="color:#2563eb;font-weight:bold;">{{ "%.1f"|format(score) }}</span>
+                    {% elif score >= 50 %}
+                        <span style="color:#f59e0b;font-weight:bold;">{{ "%.1f"|format(score) }}</span>
+                    {% else %}
+                        <span style="color:#ef4444;font-weight:bold;">{{ "%.1f"|format(score) }}</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ "%.1f"|format(m["av"] or 0) }}</td>
+
+                <td>{{ "%.1f"|format(m["bs"] or 0) }}</td>
+
+                <td>
+                    {% if m["risk_level"] == "safe" %}
+                        安全
+                    {% elif m["risk_level"] == "warning" %}
+                        预警
+                    {% elif m["risk_level"] == "danger" %}
+                        危险
+                    {% elif m["risk_level"] == "protected" %}
+                        保护
+                    {% else %}
+                        {{ m["risk_level"] }}
+                    {% endif %}
+                </td>
+
+                <td>
+                    <a href="/identity/view/{{ m['member'] }}?from=group&group={{ group_name }}&next={{ v15_identity_next_url_e51|urlencode }}">
+                        查看档案
+                    </a>
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
