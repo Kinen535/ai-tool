@@ -2,6 +2,183 @@
 
 {% block content %}
 
+<style id="v15-leader-noise-control-e44">
+    .v15-e44-soft-btn {
+        display:inline-block;
+        padding:8px 12px;
+        border:0;
+        border-radius:10px;
+        background:#eef2ff;
+        color:#4338ca;
+        font-weight:700;
+        cursor:pointer;
+        text-decoration:none;
+    }
+
+    .v15-e44-primary-btn {
+        display:inline-block;
+        padding:8px 12px;
+        border:0;
+        border-radius:10px;
+        background:#8b5cf6;
+        color:white;
+        font-weight:700;
+        cursor:pointer;
+        text-decoration:none;
+    }
+
+    .v15-e44-muted {
+        color:#64748b;
+        font-size:13px;
+        line-height:1.7;
+    }
+
+    .v15-e44-collapsed-note {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:14px;
+        padding:14px;
+        color:#475569;
+        margin-top:12px;
+    }
+</style>
+
+<script id="v15-leader-noise-control-e44-js">
+function toggleLeaderCardsPanel() {
+    const panel = document.getElementById("leader-card-detail-panel");
+    const note = document.getElementById("leader-card-detail-note");
+    const btn = document.getElementById("leader-card-detail-toggle");
+
+    if (!panel || !btn) return;
+
+    const isHidden = panel.style.display === "none" || panel.style.display === "";
+
+    if (isHidden) {
+        panel.style.display = "block";
+        if (note) note.style.display = "none";
+        btn.innerText = "收起负责人维护区";
+    } else {
+        panel.style.display = "none";
+        if (note) note.style.display = "block";
+        btn.innerText = "展开负责人维护区";
+    }
+}
+
+function toggleLeaderEdit(index) {
+    const panel = document.getElementById("leader-edit-panel-" + index);
+    const btn = document.getElementById("leader-edit-toggle-" + index);
+
+    if (!panel || !btn) return;
+
+    const isHidden = panel.style.display === "none" || panel.style.display === "";
+
+    if (isHidden) {
+        panel.style.display = "block";
+        btn.innerText = "收起编辑";
+    } else {
+        panel.style.display = "none";
+        btn.innerText = "编辑负责人";
+    }
+}
+
+function initLeaderAuditLimit() {
+    const headings = Array.from(document.querySelectorAll("h2"));
+    const heading = headings.find(h => h.innerText.includes("最近负责人变更"));
+
+    if (!heading) return;
+
+    const section = heading.closest("div");
+    if (!section) return;
+
+    const rows = Array.from(section.querySelectorAll("tbody tr"));
+    const btn = document.getElementById("leader-audit-toggle");
+
+    if (!rows.length || !btn) return;
+
+    rows.forEach((row, index) => {
+        if (index >= 3) {
+            row.style.display = "none";
+            row.setAttribute("data-e44-hidden", "1");
+        }
+    });
+
+    if (rows.length <= 3) {
+        btn.style.display = "none";
+    }
+}
+
+function toggleLeaderAuditLogs() {
+    const headings = Array.from(document.querySelectorAll("h2"));
+    const heading = headings.find(h => h.innerText.includes("最近负责人变更"));
+
+    if (!heading) return;
+
+    const section = heading.closest("div");
+    if (!section) return;
+
+    const rows = Array.from(section.querySelectorAll("tbody tr"));
+    const btn = document.getElementById("leader-audit-toggle");
+
+    if (!rows.length || !btn) return;
+
+    const hasHidden = rows.some(row => row.style.display === "none");
+
+    rows.forEach((row, index) => {
+        if (index >= 3) {
+            row.style.display = hasHidden ? "" : "none";
+        }
+    });
+
+    btn.innerText = hasHidden ? "收起记录" : "展开全部记录";
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    initLeaderAuditLimit();
+
+    const hasQuery = window.location.search && window.location.search.length > 1;
+    const hasLeaderAnchor = window.location.hash && window.location.hash.startsWith("#leader-group-");
+
+    if (hasQuery || hasLeaderAnchor) {
+        const panel = document.getElementById("leader-card-detail-panel");
+        const note = document.getElementById("leader-card-detail-note");
+        const btn = document.getElementById("leader-card-detail-toggle");
+
+        if (panel) panel.style.display = "block";
+        if (note) note.style.display = "none";
+        if (btn) btn.innerText = "收起负责人维护区";
+    }
+
+    if (hasLeaderAnchor) {
+        setTimeout(function () {
+            const target = document.querySelector(window.location.hash);
+            if (target) {
+                target.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }, 200);
+    }
+});
+</script>
+
+
+<style id="v15-leader-layout-fix-e41">
+    .leader-e41-nowrap {
+        white-space: nowrap;
+    }
+
+    .leader-e41-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    @media (max-width: 1400px) {
+        .leader-e41-force-wide {
+            grid-column: 1 / -1 !important;
+            width: 100% !important;
+        }
+    }
+</style>
+
+
 {% set lc = report.v14_leader_center %}
 {% set lf = report.v14_leader_filter %}
 
@@ -103,139 +280,150 @@ gap:24px;
 margin-bottom:24px;
 ">
 
-    <div style="
-    background:#fff7ed;
-    border-left:6px solid #f97316;
-    border-radius:18px;
-    padding:20px;
-    box-shadow:0 8px 24px rgba(15,23,42,0.06);
-    ">
+    
+<div style="
+background:#fff7ed;
+border-left:6px solid #f97316;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
 
-        <h2>② 高压分组 TOP</h2>
+grid-column: 1 / -1;
+width: 100%;">
 
-        {% if lc.high_pressure_groups %}
+    <h2>② 高压分组处置清单</h2>
 
-        <table style="width:100%;border-collapse:collapse;">
-            <thead>
-                <tr style="background:#f3f4f6;">
-                    <th style="padding:8px;text-align:left;">分组</th>
-                    <th style="padding:8px;text-align:left;">责任人</th>
-                    <th style="padding:8px;text-align:left;">压力</th>
-                    <th style="padding:8px;text-align:left;">风险</th>
-                    <th style="padding:8px;text-align:left;">待反馈</th>
-                    <th style="padding:8px;text-align:left;">建议</th>
+    <p style="color:#475569;line-height:1.7;margin-bottom:14px;">
+        说明：本模块已合并原「高压分组 TOP」「真实负责人压力」「异常摘要」信息。
+        首页只看分组处置优先级；具体异常人员下沉到分组详情页。
+    </p>
+
+    {% if lc.high_pressure_groups %}
+
+    <div style="max-height:620px;overflow:auto;border:1px solid #fed7aa;border-radius:14px;background:#fff;">
+        <table style="width:100%;min-width:1180px;border-collapse:collapse;table-layout:auto;">
+            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
+                <tr>
+                    <th style="padding:9px;text-align:left;">优先级</th>
+                    <th style="padding:9px;text-align:left;">分组</th>
+                    <th style="padding:9px;text-align:left;">负责人</th>
+                    <th style="padding:9px;text-align:left;">压力</th>
+                    <th style="padding:9px;text-align:left;">风险成员</th>
+                    <th style="padding:9px;text-align:left;">待反馈</th>
+                    <th style="padding:9px;text-align:left;">建议</th>
+                    <th style="padding:9px;text-align:left;">操作</th>
                 </tr>
             </thead>
+
             <tbody>
                 {% for g in lc.high_pressure_groups %}
+                {% set danger_count = g.danger_count|default(0)|int %}
+                {% set warning_count = g.warning_count|default(0)|int %}
+                {% set pending_count = g.pending_count|default(0)|int %}
+                {% if pending_count == 0 %}
+                    {% set pending_count = g.pending_task_count|default(0)|int %}
+                {% endif %}
+
                 <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
-                    <td style="padding:8px;">
-                        {% if g.responsibility_status == "manual" %}
-                            <span style="color:#7c3aed;font-weight:bold;">{{ g.leader_display }}</span>
-                        {% elif g.responsibility_status == "mapped" %}
-                            <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
-                        {% elif g.responsibility_status == "admin_proxy" %}
-                            <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>
+                    <td style="padding:9px;white-space:nowrap;">
+                        {% if g.pressure_score|float >= 120 or g.danger_count|default(0)|int >= 8 %}
+                            <span style="display:inline-block;padding:5px 9px;background:#fee2e2;color:#dc2626;border-radius:999px;font-weight:bold;">
+                                P1｜紧急
+                            </span>
+                        {% elif g.pressure_score|float >= 90 or g.danger_count|default(0)|int > 0 %}
+                            <span style="display:inline-block;padding:5px 9px;background:#ffedd5;color:#f97316;border-radius:999px;font-weight:bold;">
+                                P2｜重要
+                            </span>
                         {% else %}
-                            <span style="color:#dc2626;font-weight:bold;">待指定</span>
-                        {% endif %}
-                        <div style="font-size:12px;color:#6b7280;">{{ g.responsibility_label }}</div>
-                    </td>
-                    <td style="padding:8px;">
-                        {% if g.pressure_level == "high" %}
-                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
-                        {% else %}
-                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
+                            <span style="display:inline-block;padding:5px 9px;background:#dcfce7;color:#16a34a;border-radius:999px;font-weight:bold;">
+                                P3｜观察
+                            </span>
                         {% endif %}
                     </td>
-                    <td style="padding:8px;">
-                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}
+
+                    <td style="padding:9px;font-weight:bold;">
+                        {{ g.group_name }}
                     </td>
-                    <td style="padding:8px;">{{ g.pending_tasks }}</td>
-                    <td style="padding:8px;color:#374151;">{{ g.suggestion }}</td>
+
+                    <td style="padding:9px;">
+                        <div style="font-weight:bold;color:#2563eb;">
+                            {{ g.leader_display or "待指定" }}
+                        </div>
+
+                        {% if g.leader_source %}
+                            <div style="font-size:12px;color:#6b7280;">
+                                {{ g.leader_source }}
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:9px;">
+                        {% if g.pressure_label == "高压" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }}</span>
+                        {% elif g.pressure_label == "关注" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }}</span>
+                        {% else %}
+                            <span style="color:#16a34a;font-weight:bold;">{{ g.pressure_label or "正常" }}</span>
+                        {% endif %}
+
+                        <div style="font-size:13px;color:#475569;">
+                            {{ g.pressure_score }}
+                        </div>
+                    </td>
+
+                    <td style="padding:9px;line-height:1.7;">
+                        <span style="color:#dc2626;font-weight:bold;">危险 {{ danger_count }}</span>
+                        /
+                        <span style="color:#f97316;font-weight:bold;">预警 {{ warning_count }}</span>
+
+                        <div style="font-size:12px;color:#6b7280;">
+                            合计 {{ danger_count + warning_count }} 人
+                        </div>
+                    </td>
+
+                    <td style="padding:9px;">
+                        {{ pending_count }}
+                    </td>
+
+                    <td style="padding:9px;line-height:1.7;color:#374151;">
+                        {{ g.suggestion or g.suggest or g.advice or "建议盟主优先点名该组，要求负责人确认风险成员与待反馈任务。" }}
+                    </td>
+
+                    <td style="padding:9px;white-space:nowrap;">
+                        <a href="/leaders/group/{{ g.group_name|urlencode }}"
+                           style="display:inline-block;margin:2px;padding:6px 10px;background:#ffedd5;border-radius:10px;color:#c2410c;text-decoration:none;font-size:13px;">
+                            查看异常人员
+                        </a>
+
+                        {% if g.leader_display and g.leader_display not in ["待指定", "-", ""] %}
+                            <a href="/leaders/owner/{{ g.leader_display|urlencode }}"
+                               style="display:inline-block;margin:2px;padding:6px 10px;background:#dcfce7;border-radius:10px;color:#15803d;text-decoration:none;font-size:13px;">
+                                负责人详情
+                            </a>
+                        {% else %}
+                            <a href="/leaders?responsibility=unassigned"
+                               style="display:inline-block;margin:2px;padding:6px 10px;background:#fee2e2;border-radius:10px;color:#dc2626;text-decoration:none;font-size:13px;">
+                                指定负责人
+                            </a>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-
-        {% else %}
-
-        <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
-            当前没有明显高压分组。
-        </div>
-
-        {% endif %}
-
     </div>
 
+    {% else %}
 
-    <div style="
-    background:#ecfdf5;
-    border-left:6px solid #16a34a;
-    border-radius:18px;
-    padding:20px;
-    box-shadow:0 8px 24px rgba(15,23,42,0.06);
-    ">
-
-        <h2>③ 真实负责人压力</h2>
-
-        {% if lc.leader_pressure %}
-
-            {% for item in lc.leader_pressure[:8] %}
-            <div style="
-            background:#fff;
-            border:1px solid #bbf7d0;
-            border-radius:12px;
-            padding:12px;
-            margin-bottom:10px;
-            ">
-                <b>{{ item.owner }}</b>
-
-                <a href="/leaders/owner/{{ item.owner|urlencode }}"
-                   style="float:right;font-size:12px;padding:4px 8px;border:1px solid #86efac;border-radius:8px;color:#16a34a;text-decoration:none;">
-                    查看详情
-                </a>
-
-                <div style="margin-top:6px;color:#374151;line-height:1.7;">
-                    负责分组 {{ item.group_count }}，
-                    高压 {{ item.high_group_count }}，
-                    风险 {{ item.danger_count }}，
-                    任务 {{ item.task_count }}，
-                    待反馈 {{ item.pending_tasks }}，
-                    反馈率 {{ item.feedback_rate }}%
-                    <div style="margin-top:4px;color:#6b7280;font-size:12px;">
-                        分组：{{ item.group_display }}
-                    </div>
-                    <div style="margin-top:4px;color:#374151;font-size:12px;">
-                        建议：{{ item.suggestion }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-
-        {% else %}
-
-            <div style="background:#fff;border:1px solid #bbf7d0;border-radius:12px;padding:14px;">
-                暂无负责人任务压力。
-            </div>
-
-        {% endif %}
-
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+        当前没有高压分组。
     </div>
+
+    {% endif %}
 
 </div>
 
-
-<div style="
-background:#f8fafc;
-border-left:6px solid #64748b;
-border-radius:18px;
-padding:22px;
-box-shadow:0 8px 24px rgba(15,23,42,0.06);
-">
-
-    
 <div style="
 background:#f5f3ff;
 border-left:6px solid #8b5cf6;
@@ -243,9 +431,11 @@ border-radius:18px;
 padding:22px;
 margin-bottom:24px;
 box-shadow:0 8px 24px rgba(15,23,42,0.06);
-">
 
-    <h2>⑤ 分组筛选器</h2>
+grid-column: 1 / -1;
+width: 100%;">
+
+    <h2>③ 分组筛选器</h2>
 
     <p><b>筛选摘要：</b>{{ lf.summary }}</p>
 
@@ -323,250 +513,266 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 
     </form>
 
+    
+<div style="
+background:#f8fafc;
+border-left:6px solid #64748b;
+border-radius:18px;
+padding:22px;
+margin-bottom:24px;
+box-shadow:0 8px 24px rgba(15,23,42,0.06);
+grid-column:1 / -1;
+width:100%;
+">
+
+    <h2>④ 分组责任卡片明细</h2>
+
+    <p style="color:#475569;line-height:1.7;margin-bottom:16px;">
+        说明：本模块用于查看和维护各分组负责人。已从横向大表格改为卡片布局，避免负责人表单和指标被压缩。
+    </p>
+
+    
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0;">
+        <div class="v15-e44-muted">
+            默认收起负责人维护区，避免页面信息过载。需要维护负责人时再展开。
+        </div>
+
+        <button type="button"
+                id="leader-card-detail-toggle"
+                class="v15-e44-primary-btn"
+                onclick="toggleLeaderCardsPanel()">
+            展开负责人维护区
+        </button>
+    </div>
+
+    <div id="leader-card-detail-note" class="v15-e44-collapsed-note">
+        负责人维护区已收起。这里包含各分组负责人编辑、风险摘要和快捷入口。
+    </div>
+
+    <div id="leader-card-detail-panel" style="display:none;">
+
+{% if lc.filter_cards %}
+
     <div style="
     display:grid;
-    grid-template-columns:repeat(6,1fr);
-    gap:12px;
-    margin-top:16px;
+    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    gap:16px;
     ">
-        <div class="stat-card"><div>匹配分组</div><h2>{{ lf.stats.matched_count }}</h2></div>
-        <div class="stat-card"><div>高压</div><h2>{{ lf.stats.high_count }}</h2></div>
-        <div class="stat-card"><div>关注</div><h2>{{ lf.stats.medium_count }}</h2></div>
-        <div class="stat-card"><div>正常</div><h2>{{ lf.stats.normal_count }}</h2></div>
-        <div class="stat-card"><div>待指定</div><h2>{{ lf.stats.unassigned_count }}</h2></div>
-        <div class="stat-card"><div>手动指定</div><h2>{{ lf.stats.manual_count }}</h2></div>
+
+        {% for g in lc.filter_cards %}
+
+        {% set danger_count = g.danger_count|default(0)|int %}
+        {% set warning_count = g.warning_count|default(0)|int %}
+        {% set pending_count = g.pending_count|default(0)|int %}
+        {% if pending_count == 0 %}
+            {% set pending_count = g.pending_task_count|default(0)|int %}
+        {% endif %}
+
+        <div style="
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:16px;
+        padding:16px;
+        box-shadow:0 6px 18px rgba(15,23,42,0.04);
+        ">
+
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px;">
+                <div>
+                    <div style="font-size:20px;font-weight:800;color:#111827;">
+                        {{ g.group_name }}
+                    </div>
+
+                    <div style="margin-top:4px;color:#6b7280;font-size:13px;">
+                        当前负责人：
+                        <span style="font-weight:bold;color:#2563eb;">
+                            {{ g.leader_display or "待指定" }}
+                        </span>
+                        {% if g.leader_source %}
+                            ｜{{ g.leader_source }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    {% if g.pressure_label == "高压" %}
+                        <span style="display:inline-block;padding:5px 10px;background:#fee2e2;color:#dc2626;border-radius:999px;font-weight:bold;">
+                            {{ g.pressure_label }}
+                        </span>
+                    {% elif g.pressure_label == "关注" %}
+                        <span style="display:inline-block;padding:5px 10px;background:#ffedd5;color:#f97316;border-radius:999px;font-weight:bold;">
+                            {{ g.pressure_label }}
+                        </span>
+                    {% else %}
+                        <span style="display:inline-block;padding:5px 10px;background:#dcfce7;color:#16a34a;border-radius:999px;font-weight:bold;">
+                            {{ g.pressure_label or "正常" }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            
+            <button type="button"
+                    id="leader-edit-toggle-{{ loop.index }}"
+                    class="v15-e44-soft-btn"
+                    onclick="toggleLeaderEdit('{{ loop.index }}')"
+                    style="margin-bottom:10px;">
+                编辑负责人
+            </button>
+
+            <div id="leader-edit-panel-{{ loop.index }}" style="display:none;">
+<form method="post"
+                  action="/leaders/mapping/save"
+                  style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px;">
+
+                <input type="hidden" name="group_name" value="{{ g.group_name }}">
+                <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}#leader-group-{{ loop.index }}">
+
+                <div id="leader-group-{{ loop.index }}"
+                     style="display:grid;grid-template-columns:1fr 120px auto;gap:8px;margin-bottom:8px;">
+                    <input type="text"
+                           name="leader_name"
+                           value="{{ g.leader_name or g.leader_display or '' }}"
+                           placeholder="负责人"
+                           style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+
+                    <select name="leader_role"
+                            style="padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+                        <option value="组长" {% if g.leader_role == "组长" %}selected{% endif %}>组长</option>
+                        <option value="副组长" {% if g.leader_role == "副组长" %}selected{% endif %}>副组长</option>
+                        <option value="管理代管" {% if g.leader_role == "管理代管" %}selected{% endif %}>管理代管</option>
+                    </select>
+
+                    <button type="submit"
+                            style="padding:8px 12px;border:0;background:#8b5cf6;color:white;border-radius:8px;font-weight:bold;cursor:pointer;">
+                        保存
+                    </button>
+                </div>
+
+                <input type="text"
+                       name="note"
+                       value="{{ g.leader_note or '' }}"
+                       placeholder="备注，可选"
+                       style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+
+                {% if g.leader_display and g.leader_display not in ["待指定", "-", ""] %}
+                <div style="margin-top:8px;">
+                    <button type="submit"
+                            name="delete_mapping"
+                            value="1"
+                            onclick="return confirm('确认清除该分组负责人手动指定？')"
+                            style="padding:7px 10px;border:1px solid #fecaca;background:#fff;color:#dc2626;border-radius:8px;cursor:pointer;">
+                        清除手动指定
+                    </button>
+                </div>
+                {% endif %}
+
+            </form>
+            </div>
+
+            <div style="
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:8px;
+            margin-bottom:12px;
+            ">
+
+                <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:12px;color:#6b7280;">成员</div>
+                    <b>{{ g.member_count or g.members or 0 }}</b>
+                </div>
+
+                <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:12px;color:#6b7280;">活跃</div>
+                    <b>{{ g.avg_av or g.av or 0 }}</b>
+                </div>
+
+                <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:12px;color:#6b7280;">稳定</div>
+                    <b>{{ g.avg_bs or g.bs or 0 }}</b>
+                </div>
+
+                <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:12px;color:#6b7280;">任务</div>
+                    <b>{{ g.total_tasks or g.task_count or 0 }}</b>
+                </div>
+
+                <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:12px;color:#6b7280;">反馈率</div>
+                    <b>{{ g.feedback_rate or 0 }}%</b>
+                </div>
+
+            </div>
+
+            <div style="
+            background:#fff7ed;
+            border:1px solid #fed7aa;
+            border-radius:12px;
+            padding:12px;
+            margin-bottom:12px;
+            line-height:1.8;
+            ">
+
+                <div>
+                    <b>风险成员：</b>
+                    <span style="color:#dc2626;font-weight:bold;">危险 {{ danger_count }}</span>
+                    /
+                    <span style="color:#f97316;font-weight:bold;">预警 {{ warning_count }}</span>
+                    {% if g.protected_count is defined %}
+                        / 保护 {{ g.protected_count }}
+                    {% endif %}
+                </div>
+
+                <div>
+                    <b>待反馈：</b>{{ pending_count }}
+                </div>
+
+                <div>
+                    <b>压力值：</b>
+                    {% if g.pressure_label == "高压" %}
+                        <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_score }}</span>
+                    {% else %}
+                        {{ g.pressure_score }}
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div style="color:#374151;line-height:1.7;margin-bottom:12px;">
+                <b>建议：</b>
+                {{ g.suggestion or g.suggest or g.advice or "建议盟主优先点名该组，要求负责人确认风险成员与待反馈任务。" }}
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="/leaders/group/{{ g.group_name|urlencode }}"
+                   style="display:inline-block;padding:7px 11px;background:#ffedd5;border-radius:10px;color:#c2410c;text-decoration:none;font-size:13px;">
+                    查看异常人员
+                </a>
+
+                {% if g.leader_display and g.leader_display not in ["待指定", "-", ""] %}
+                    <a href="/leaders/owner/{{ g.leader_display|urlencode }}"
+                       style="display:inline-block;padding:7px 11px;background:#dcfce7;border-radius:10px;color:#15803d;text-decoration:none;font-size:13px;">
+                        负责人详情
+                    </a>
+                {% endif %}
+            </div>
+
+        </div>
+
+        {% endfor %}
+
     </div>
 
+    {% else %}
+
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+        当前筛选条件下没有分组。
+    </div>
+
+    {% endif %}
+
+
+    </div>
 </div>
-
-
-    <h2>④ 分组责任明细</h2>
-
-    <div style="max-height:620px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
-        <table style="width:100%;border-collapse:collapse;">
-            <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
-                <tr>
-                    <th style="padding:9px;text-align:left;">分组</th>
-                    <th style="padding:9px;text-align:left;">责任人</th>
-                    <th style="padding:9px;text-align:left;">成员</th>
-                    <th style="padding:9px;text-align:left;">活跃</th>
-                    <th style="padding:9px;text-align:left;">稳定</th>
-                    <th style="padding:9px;text-align:left;">风险</th>
-                    <th style="padding:9px;text-align:left;">任务</th>
-                    <th style="padding:9px;text-align:left;">反馈率</th>
-                    <th style="padding:9px;text-align:left;">压力</th>
-                    <th style="padding:9px;text-align:left;">建议</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for g in lf.group_cards %}
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
-                    <td style="padding:9px;">
-                        {% if g.responsibility_status == "manual" %}
-                            <span style="color:#7c3aed;font-weight:bold;">{{ g.leader_display }}</span>
-                        {% elif g.responsibility_status == "mapped" %}
-                            <span style="color:#16a34a;font-weight:bold;">{{ g.leader_display }}</span>
-                        {% elif g.responsibility_status == "admin_proxy" %}
-                            <span style="color:#2563eb;font-weight:bold;">{{ g.leader_display }}</span>
-                        {% else %}
-                            <span style="color:#dc2626;font-weight:bold;">待指定</span>
-                        {% endif %}
-                        <div style="font-size:12px;color:#6b7280;">{{ g.responsibility_label }}</div>
-
-                        <form method="post"
-                              action="/leaders/mapping/save"
-                              onsubmit="return rememberLeaderMappingActionInline(this)"
-                              style="margin-top:8px;display:grid;grid-template-columns:1fr 86px 58px;gap:6px;align-items:center;">
-
-                            <input type="hidden"
-                                   name="group_name"
-                                   value="{{ g.group_name }}">
-
-                            <input type="hidden"
-                                   name="next"
-                                   value="{{ request.full_path.rstrip('?') }}">
-
-                            <input type="text"
-                                   name="leader_name"
-                                   value="{% if g.responsibility_status != 'unassigned' %}{{ g.leader_display }}{% endif %}"
-                                   placeholder="负责人"
-                                   style="padding:5px 7px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
-
-                            <select name="leader_role"
-                                    style="padding:5px 6px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
-                                <option value="组长">组长</option>
-                                <option value="副组长">副组长</option>
-                                <option value="管理代管">管理代管</option>
-                                <option value="临时负责人">临时负责人</option>
-                            </select>
-
-                            <button type="submit"
-                                    style="padding:5px 8px;border:1px solid #8b5cf6;background:#8b5cf6;color:white;border-radius:8px;font-size:12px;cursor:pointer;">
-                                保存
-                            </button>
-
-                            <input type="text"
-                                   name="note"
-                                   value="{{ g.responsibility_note or '' }}"
-                                   placeholder="备注，可选"
-                                   style="grid-column:1 / span 3;padding:5px 7px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;">
-                        </form>
-
-                        {% if g.responsibility_status == "manual" %}
-                        <form method="post"
-                              action="/leaders/mapping/delete"
-                              onsubmit="return rememberLeaderMappingActionInline(this)"
-                              style="margin-top:6px;">
-
-                            <input type="hidden"
-                                   name="group_name"
-                                   value="{{ g.group_name }}">
-
-                            <input type="hidden"
-                                   name="next"
-                                   value="{{ request.full_path.rstrip('?') }}">
-
-                            <button type="submit"
-                                    onclick="return confirm('确认清除 {{ g.group_name }} 的手动负责人映射？清除后将恢复自动识别或待指定。')"
-                                    style="padding:5px 8px;border:1px solid #ef4444;background:#fff;color:#dc2626;border-radius:8px;font-size:12px;cursor:pointer;">
-                                清除手动指定
-                            </button>
-                        </form>
-                        {% endif %}
-                    </td>
-                    <td style="padding:9px;">{{ g.member_count }}</td>
-                    <td style="padding:9px;">{{ g.avg_av }}</td>
-                    <td style="padding:9px;">{{ g.avg_bs }}</td>
-                    <td style="padding:9px;">
-                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }} / 保护 {{ g.protected_count }}
-                    </td>
-                    <td style="padding:9px;">
-                        总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}
-                    </td>
-                    <td style="padding:9px;">{{ g.feedback_rate }}%</td>
-                    <td style="padding:9px;">
-                        {% if g.pressure_level == "high" %}
-                            <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
-                        {% elif g.pressure_level == "medium" %}
-                            <span style="color:#f97316;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
-                        {% else %}
-                            <span style="color:#16a34a;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding:9px;color:#374151;">{{ g.suggestion }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div style="
-    margin-top:16px;
-    background:#fff;
-    border-left:4px solid #64748b;
-    border-radius:12px;
-    padding:12px;
-    color:#475569;
-    ">
-        <b>说明：</b>{{ lc.explain }}
-    </div>
-
-</div>
-
-
-<script>
-function rememberLeaderMappingActionInline(form) {
-    if (!form) {
-        return true;
-    }
-
-    const groupInput = form.querySelector('input[name="group_name"]');
-
-    if (groupInput && groupInput.value) {
-        sessionStorage.setItem("leaderCenterLastGroupName", groupInput.value);
-    }
-
-    sessionStorage.setItem("leaderCenterShouldRestoreScroll", "1");
-    sessionStorage.setItem("leaderCenterScrollY", String(window.scrollY || 0));
-
-    return true;
-}
-
-function rememberLeaderMappingActionBeforeSubmit() {
-    const forms = document.querySelectorAll(
-        'form[action="/leaders/mapping/save"], form[action="/leaders/mapping/delete"]'
-    );
-
-    forms.forEach(function (form) {
-        form.addEventListener("submit", function () {
-            rememberLeaderMappingActionInline(form);
-        });
-    });
-}
-
-function restoreLeaderCenterScrollPosition() {
-    const shouldRestore = sessionStorage.getItem("leaderCenterShouldRestoreScroll");
-
-    if (shouldRestore !== "1") {
-        return;
-    }
-
-    const rawY = sessionStorage.getItem("leaderCenterScrollY") || "0";
-    const y = parseInt(rawY, 10) || 0;
-
-    sessionStorage.removeItem("leaderCenterShouldRestoreScroll");
-    sessionStorage.removeItem("leaderCenterScrollY");
-
-    setTimeout(function () {
-        window.scrollTo(0, y);
-    }, 80);
-}
-
-function highlightLastLeaderMappingRow() {
-    const groupName = sessionStorage.getItem("leaderCenterLastGroupName");
-
-    if (!groupName) {
-        return;
-    }
-
-    sessionStorage.removeItem("leaderCenterLastGroupName");
-
-    const inputs = document.querySelectorAll('input[name="group_name"]');
-    let targetRow = null;
-
-    inputs.forEach(function (input) {
-        if (targetRow) {
-            return;
-        }
-
-        if (input.value === groupName) {
-            targetRow = input.closest("tr");
-        }
-    });
-
-    if (!targetRow) {
-        return;
-    }
-
-    targetRow.style.transition = "background 0.4s ease, box-shadow 0.4s ease";
-    targetRow.style.background = "#fef3c7";
-    targetRow.style.boxShadow = "inset 5px 0 0 #f59e0b";
-
-    setTimeout(function () {
-        targetRow.style.background = "";
-        targetRow.style.boxShadow = "";
-    }, 2400);
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    rememberLeaderMappingActionBeforeSubmit();
-    restoreLeaderCenterScrollPosition();
-    highlightLastLeaderMappingRow();
-});
-</script>
-
 
 <div style="
 background:#f0fdfa;
@@ -575,12 +781,14 @@ border-radius:18px;
 padding:22px;
 margin-top:24px;
 box-shadow:0 8px 24px rgba(15,23,42,0.06);
-">
 
-    <h2>⑥ 负责人映射审计日志</h2>
+grid-column: 1 / -1;
+width: 100%;">
+
+    <h2>⑤ 最近负责人变更</h2>
 
     <p style="color:#475569;">
-        记录负责人手动指定、修改、恢复、清除的历史轨迹，方便后续追溯责任关系变化。
+        默认只展示最近 3 条负责人变更记录，点击可展开完整记录。
     </p>
 
     {% if lc.mapping_logs %}
