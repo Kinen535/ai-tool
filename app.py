@@ -7739,3 +7739,64 @@ def v155_archive_enemy_save():
     conn.close()
 
     return redirect("/archives/enemies")
+
+
+
+# =========================
+# V15.5 档案库旧入口接管与显示修复 A1
+# =========================
+
+@app.route("/archive_enemies/save", methods=["POST"])
+def v155_archive_enemy_save_legacy_a1():
+    return v155_archive_enemy_save()
+
+
+@app.route("/archive_friends/save", methods=["POST"])
+@app.route("/archive_alliances/save", methods=["POST"])
+def v155_archive_friend_save_legacy_a1():
+    return v155_archive_friend_save()
+
+
+@app.route("/archive_events/save", methods=["POST"])
+def v155_archive_event_save_legacy_a1():
+    return v155_archive_event_save()
+
+
+def _v155_archive_route_takeover_a1():
+    """
+    接管历史旧入口，避免旧 route 渲染新模板但不传数据，
+    导致保存成功后页面仍显示为空。
+    """
+    route_targets = {
+        "/archives": v155_archive_home,
+
+        "/archives/players": v155_archive_players,
+        "/archive_players": v155_archive_players,
+
+        "/archives/events": v155_archive_events,
+        "/archive_events": v155_archive_events,
+        "/archives/events/save": v155_archive_event_save,
+        "/archive_events/save": v155_archive_event_save_legacy_a1,
+
+        "/archives/friends": v155_archive_friends,
+        "/archives/allies": v155_archive_friends,
+        "/archive_friends": v155_archive_friends,
+        "/archive_alliances": v155_archive_friends,
+        "/archives/friends/save": v155_archive_friend_save,
+        "/archives/allies/save": v155_archive_friend_save,
+        "/archive_friends/save": v155_archive_friend_save_legacy_a1,
+        "/archive_alliances/save": v155_archive_friend_save_legacy_a1,
+
+        "/archives/enemies": v155_archive_enemies,
+        "/archive_enemies": v155_archive_enemies,
+        "/archives/enemies/save": v155_archive_enemy_save,
+        "/archive_enemies/save": v155_archive_enemy_save_legacy_a1,
+    }
+
+    for rule in list(app.url_map.iter_rules()):
+        target = route_targets.get(rule.rule)
+        if target:
+            app.view_functions[rule.endpoint] = target
+
+
+_v155_archive_route_takeover_a1()
