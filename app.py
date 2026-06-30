@@ -8203,7 +8203,7 @@ def v155_security_logs():
     import sqlite3
     from pathlib import Path
     from flask import request, render_template, abort
-    from services.v155_security_store import get_security_report
+    from services.v155_security_store import get_security_report_paginated
 
     token_path = Path("data/security_admin_token.txt")
     saved_token = token_path.read_text().strip() if token_path.exists() else ""
@@ -8220,7 +8220,12 @@ def v155_security_logs():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    report = get_security_report(conn)
+    try:
+        page = int(request.args.get("page", "1") or 1)
+    except Exception:
+        page = 1
+
+    report = get_security_report_paginated(conn, page=page, per_page=30)
 
     conn.close()
 

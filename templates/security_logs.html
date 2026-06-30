@@ -3,7 +3,13 @@
 {% block content %}
 
 <div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <h1>🛡️ 安全日志与异常访问检测</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <h1>🛡️ 安全日志与异常访问检测</h1>
+        <a href="/security/logout"
+           style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+            退出安全后台
+        </a>
+    </div>
 
     <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
         <h2>① 24小时概况</h2>
@@ -14,22 +20,44 @@
                 <h2>{{ report.stats.total_24h }}</h2>
             </div>
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>异常访问</div>
-                <h2 style="color:#dc2626;">{{ report.stats.suspicious_24h }}</h2>
+                <div>真实异常</div>
+                <h2 style="color:#dc2626;">{{ report.stats.real_suspicious_24h }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>本机测试异常</div>
+                <h2 style="color:#64748b;">{{ report.stats.local_test_suspicious_24h }}</h2>
             </div>
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
                 <div>搜索访问</div>
                 <h2>{{ report.stats.search_24h }}</h2>
             </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
                 <div>提交访问</div>
                 <h2>{{ report.stats.post_24h }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>高风险IP</div>
+                <h2 style="color:#dc2626;">{{ report.stats.high_risk_ip_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>观察IP</div>
+                <h2 style="color:#f97316;">{{ report.stats.watch_ip_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>本机测试IP</div>
+                <h2 style="color:#64748b;">{{ report.stats.local_test_ip_count }}</h2>
             </div>
         </div>
     </div>
 
     <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>② 高频 IP</h2>
+        <h2>② 高频 IP 风险分级</h2>
+        <p style="color:#64748b;line-height:1.7;">
+            高风险通常代表高频扫描、异常 UA、批量搜索或大量 404 探测。本机测试 IP 不计入真实异常判断。
+        </p>
 
         {% if report.top_ips %}
             <table style="width:100%;border-collapse:collapse;">
@@ -37,14 +65,38 @@
                     <th style="padding:9px;text-align:left;">IP</th>
                     <th style="padding:9px;text-align:left;">访问次数</th>
                     <th style="padding:9px;text-align:left;">异常次数</th>
+                    <th style="padding:9px;text-align:left;">异常占比</th>
+                    <th style="padding:9px;text-align:left;">风险</th>
                     <th style="padding:9px;text-align:left;">最后访问</th>
+                    <th style="padding:9px;text-align:left;">明细</th>
                 </tr>
                 {% for item in report.top_ips %}
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;font-weight:bold;">{{ item.ip }}</td>
                     <td style="padding:9px;">{{ item.total_count }}</td>
                     <td style="padding:9px;color:#dc2626;font-weight:bold;">{{ item.suspicious_count }}</td>
+                    <td style="padding:9px;">{{ item.suspicious_ratio }}%</td>
+                    <td style="padding:9px;">
+                        {% if item.risk_level == "high" %}
+                            <span style="color:#dc2626;font-weight:bold;">{{ item.risk_label }}</span>
+                        {% elif item.risk_level == "watch" %}
+                            <span style="color:#f97316;font-weight:bold;">{{ item.risk_label }}</span>
+                        {% elif item.risk_level == "notice" %}
+                            <span style="color:#eab308;font-weight:bold;">{{ item.risk_label }}</span>
+                        {% elif item.risk_level == "local" %}
+                            <span style="color:#64748b;font-weight:bold;">{{ item.risk_label }}</span>
+                        {% else %}
+                            <span style="color:#16a34a;">{{ item.risk_label }}</span>
+                        {% endif %}
+                        <div style="font-size:12px;color:#64748b;">{{ item.risk_reason }}</div>
+                    </td>
                     <td style="padding:9px;color:#64748b;">{{ item.last_seen }}</td>
+                    <td style="padding:9px;">
+                        <a href="/security/ip?ip={{ item.ip|urlencode }}"
+                           style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                            查看 →
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </table>
@@ -55,10 +107,54 @@
         {% endif %}
     </div>
 
-    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>③ 异常访问明细</h2>
 
-        {% if report.suspicious_logs %}
+    {# V15.5-S2.1 分页控制 #}
+    {% if report.pagination and report.pagination.top_ip_pages > 1 %}
+    <div style="
+        background:white;
+        border-radius:16px;
+        padding:16px 20px;
+        margin:0 0 18px 0;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        gap:14px;
+        box-shadow:0 6px 18px rgba(15,23,42,0.06);
+    ">
+        {% if report.pagination.has_prev %}
+            <a href="/security/logs?page={{ report.pagination.prev_page }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                ← 上一页
+            </a>
+        {% else %}
+            <span style="background:#f1f5f9;color:#94a3b8;padding:8px 14px;border-radius:10px;">
+                ← 上一页
+            </span>
+        {% endif %}
+
+        <span style="color:#475569;font-weight:bold;">
+            第 {{ report.pagination.page }} / {{ report.pagination.top_ip_pages }} 页，
+            共 {{ report.pagination.top_ip_total }} 个 IP，
+            每页 {{ report.pagination.per_page }} 条
+        </span>
+
+        {% if report.pagination.has_next %}
+            <a href="/security/logs?page={{ report.pagination.next_page }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                下一页 →
+            </a>
+        {% else %}
+            <span style="background:#f1f5f9;color:#94a3b8;padding:8px 14px;border-radius:10px;">
+                下一页 →
+            </span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>③ 真实异常访问明细</h2>
+
+        {% if report.real_suspicious_logs %}
             <div style="max-height:520px;overflow:auto;background:white;border-radius:14px;">
                 <table style="width:100%;border-collapse:collapse;">
                     <tr style="background:#f3f4f6;position:sticky;top:0;">
@@ -70,10 +166,14 @@
                         <th style="padding:8px;text-align:left;">原因</th>
                         <th style="padding:8px;text-align:left;">UA</th>
                     </tr>
-                    {% for log in report.suspicious_logs %}
+                    {% for log in report.real_suspicious_logs %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
                         <td style="padding:8px;color:#64748b;white-space:nowrap;">{{ log.created_at }}</td>
-                        <td style="padding:8px;font-weight:bold;">{{ log.ip }}</td>
+                        <td style="padding:8px;font-weight:bold;">
+                            <a href="/security/ip?ip={{ log.ip|urlencode }}" style="color:#2563eb;text-decoration:none;">
+                                {{ log.ip }}
+                            </a>
+                        </td>
                         <td style="padding:8px;">{{ log.method }}</td>
                         <td style="padding:8px;">{{ log.path }}{% if log.query_string %}?{{ log.query_string }}{% endif %}</td>
                         <td style="padding:8px;">{{ log.status_code }}</td>
@@ -85,7 +185,7 @@
             </div>
         {% else %}
             <div style="padding:14px;background:white;border-radius:12px;color:#64748b;">
-                暂无异常访问。
+                暂无真实异常访问。
             </div>
         {% endif %}
     </div>
@@ -108,7 +208,11 @@
                     {% for log in report.recent_logs %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
                         <td style="padding:8px;color:#64748b;white-space:nowrap;">{{ log.created_at }}</td>
-                        <td style="padding:8px;">{{ log.ip }}</td>
+                        <td style="padding:8px;">
+                            <a href="/security/ip?ip={{ log.ip|urlencode }}" style="color:#2563eb;text-decoration:none;">
+                                {{ log.ip }}
+                            </a>
+                        </td>
                         <td style="padding:8px;">{{ log.method }}</td>
                         <td style="padding:8px;">{{ log.path }}</td>
                         <td style="padding:8px;">{{ log.status_code }}</td>
