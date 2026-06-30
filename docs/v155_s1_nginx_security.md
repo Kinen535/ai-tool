@@ -14,3 +14,13 @@
 注意：
 公网访问使用 http://服务器IP/
 不要再使用 http://服务器IP:5000/
+
+## S1.3 源码泄露防护
+
+本阶段增加 Nginx 敏感路径封锁：
+
+1. 禁止访问 /.git、/.env 等隐藏敏感目录
+2. 禁止访问 .py、.db、.sqlite、.sql、.bak、.zip、.tar、.gz 等敏感文件
+3. 禁止访问 /data/、/services/、/templates/、/docs/、/venv/
+4. 敏感路径统一返回 404
+5. 用 curl 验证 /app.py、/.git/config、/data/snapshots.db 均不能被访问
