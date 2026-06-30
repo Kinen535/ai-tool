@@ -345,3 +345,85 @@ def save_enemy(conn: sqlite3.Connection, data: Dict[str, str]) -> int:
     )
     conn.commit()
     return int(cur.lastrowid)
+
+
+# =========================
+# V15.5-A2 友盟 / 敌军详情与编辑
+# =========================
+
+def get_alliance(conn: sqlite3.Connection, alliance_id: int) -> Optional[Dict[str, Any]]:
+    init_archive_tables(conn)
+    cur = conn.execute(
+        "SELECT * FROM v155_archive_alliances WHERE id=?",
+        (alliance_id,),
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def update_alliance(conn: sqlite3.Connection, alliance_id: int, data: Dict[str, str]) -> None:
+    init_archive_tables(conn)
+    now = _now()
+
+    conn.execute(
+        """
+        UPDATE v155_archive_alliances
+        SET name=?,
+            relation_status=?,
+            trust_level=?,
+            contact_name=?,
+            notes=?,
+            updated_at=?
+        WHERE id=?
+        """,
+        (
+            data.get("name", "").strip(),
+            data.get("relation_status", "观察").strip(),
+            data.get("trust_level", "C").strip(),
+            data.get("contact_name", "").strip(),
+            data.get("notes", "").strip(),
+            now,
+            alliance_id,
+        ),
+    )
+    conn.commit()
+
+
+def get_enemy(conn: sqlite3.Connection, enemy_id: int) -> Optional[Dict[str, Any]]:
+    init_archive_tables(conn)
+    cur = conn.execute(
+        "SELECT * FROM v155_archive_enemies WHERE id=?",
+        (enemy_id,),
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def update_enemy(conn: sqlite3.Connection, enemy_id: int, data: Dict[str, str]) -> None:
+    init_archive_tables(conn)
+    now = _now()
+
+    conn.execute(
+        """
+        UPDATE v155_archive_enemies
+        SET name=?,
+            threat_level=?,
+            activity_level=?,
+            tactics=?,
+            core_members=?,
+            notes=?,
+            updated_at=?
+        WHERE id=?
+        """,
+        (
+            data.get("name", "").strip(),
+            data.get("threat_level", "中").strip(),
+            data.get("activity_level", "未知").strip(),
+            data.get("tactics", "").strip(),
+            data.get("core_members", "").strip(),
+            data.get("notes", "").strip(),
+            now,
+            enemy_id,
+        ),
+    )
+    conn.commit()

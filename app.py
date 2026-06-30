@@ -7800,3 +7800,85 @@ def _v155_archive_route_takeover_a1():
 
 
 _v155_archive_route_takeover_a1()
+
+
+# =========================
+# V15.5-A2 友盟 / 敌军详情与编辑路由
+# =========================
+
+@app.route("/archives/friends/<int:alliance_id>")
+@app.route("/archive_friends/<int:alliance_id>")
+@app.route("/archive_alliances/<int:alliance_id>")
+def v155_archive_friend_detail_a2(alliance_id):
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import get_alliance
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    alliance = get_alliance(conn, alliance_id)
+
+    conn.close()
+
+    return render_template(
+        "archive_friend_detail.html",
+        alliance=alliance,
+        title="友盟档案详情",
+    )
+
+
+@app.route("/archives/friends/<int:alliance_id>/update", methods=["POST"])
+@app.route("/archive_friends/<int:alliance_id>/update", methods=["POST"])
+@app.route("/archive_alliances/<int:alliance_id>/update", methods=["POST"])
+def v155_archive_friend_update_a2(alliance_id):
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import update_alliance
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    update_alliance(conn, alliance_id, dict(request.form))
+
+    conn.close()
+
+    return redirect(f"/archives/friends/{alliance_id}")
+
+
+@app.route("/archives/enemies/<int:enemy_id>")
+@app.route("/archive_enemies/<int:enemy_id>")
+def v155_archive_enemy_detail_a2(enemy_id):
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import get_enemy
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    enemy = get_enemy(conn, enemy_id)
+
+    conn.close()
+
+    return render_template(
+        "archive_enemy_detail.html",
+        enemy=enemy,
+        title="敌军档案详情",
+    )
+
+
+@app.route("/archives/enemies/<int:enemy_id>/update", methods=["POST"])
+@app.route("/archive_enemies/<int:enemy_id>/update", methods=["POST"])
+def v155_archive_enemy_update_a2(enemy_id):
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import update_enemy
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    update_enemy(conn, enemy_id, dict(request.form))
+
+    conn.close()
+
+    return redirect(f"/archives/enemies/{enemy_id}")

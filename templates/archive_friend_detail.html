@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px;margin:0 auto;padding:24px;">
+    <h1>🤝 友盟档案详情</h1>
+
+    <a href="/archives/friends"
+       style="display:inline-block;margin:8px 0 16px 0;padding:8px 12px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">
+        ← 返回友盟档案
+    </a>
+
+    {% if alliance %}
+        <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-bottom:18px;">
+            <h2>① 当前友盟</h2>
+            <p><b>友盟名称：</b>{{ alliance.name }}</p>
+            <p>
+                <b>关系状态：</b>{{ alliance.relation_status }}
+               　<b>信任等级：</b>{{ alliance.trust_level }}
+               　<b>联系人：</b>{{ alliance.contact_name or "-" }}
+            </p>
+            <p><b>创建时间：</b>{{ alliance.created_at }}　<b>更新时间：</b>{{ alliance.updated_at }}</p>
+        </div>
+
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>② 编辑友盟档案</h2>
+
+            <form method="post" action="/archives/friends/{{ alliance.id }}/update">
+                <label>友盟名称</label>
+                <input name="name" value="{{ alliance.name }}" required
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>关系状态</label>
+                <select name="relation_status"
+                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    {% for s in ["友好", "中立", "观察", "风险", "敌对"] %}
+                        <option value="{{ s }}" {% if alliance.relation_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>信任等级</label>
+                <select name="trust_level"
+                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    {% for s in ["A", "B", "C", "D"] %}
+                        <option value="{{ s }}" {% if alliance.trust_level == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>联系人 / 负责人</label>
+                <input name="contact_name" value="{{ alliance.contact_name }}"
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>备注</label>
+                <textarea name="notes" rows="8"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">{{ alliance.notes }}</textarea>
+
+                <button style="padding:10px 14px;background:#16a34a;color:white;border:0;border-radius:10px;font-weight:bold;">
+                    保存修改
+                </button>
+            </form>
+        </div>
+    {% else %}
+        <div style="padding:16px;background:#fee2e2;color:#dc2626;border-radius:12px;">
+            友盟档案不存在。
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

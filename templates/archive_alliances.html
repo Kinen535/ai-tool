@@ -10,6 +10,7 @@
     <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;">
         <div style="background:white;border-radius:18px;padding:22px;">
             <h2>① 友盟列表</h2>
+            <!-- V15.5-A2 详情入口 -->
 
             {% if alliances %}
                 <table style="width:100%;border-collapse:collapse;">
@@ -20,6 +21,7 @@
                         <th style="padding:10px;text-align:left;">联系人</th>
                         <th style="padding:10px;text-align:left;">备注</th>
                         <th style="padding:10px;text-align:left;">更新时间</th>
+                        <th style="padding:10px;text-align:left;">入口</th>
                     </tr>
                     {% for a in alliances %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
@@ -27,8 +29,9 @@
                         <td style="padding:10px;">{{ a.relation_status }}</td>
                         <td style="padding:10px;">{{ a.trust_level }}</td>
                         <td style="padding:10px;">{{ a.contact_name or "-" }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ a.notes or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;max-width:340px;">{{ (a.notes or "-")|truncate(38, True) }}</td>
                         <td style="padding:10px;color:#64748b;">{{ a.updated_at }}</td>
+                        <td style="padding:10px;"><a href="/archives/friends/{{ a.id }}">详情 →</a></td>
                     </tr>
                     {% endfor %}
                 </table>

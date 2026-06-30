@@ -10,6 +10,7 @@
     <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;">
         <div style="background:white;border-radius:18px;padding:22px;">
             <h2>① 敌军列表</h2>
+            <!-- V15.5-A2 详情入口 -->
 
             {% if enemies %}
                 <table style="width:100%;border-collapse:collapse;">
@@ -20,15 +21,17 @@
                         <th style="padding:10px;text-align:left;">打法</th>
                         <th style="padding:10px;text-align:left;">核心人物</th>
                         <th style="padding:10px;text-align:left;">备注</th>
+                        <th style="padding:10px;text-align:left;">入口</th>
                     </tr>
                     {% for e in enemies %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
                         <td style="padding:10px;font-weight:bold;">{{ e.name }}</td>
                         <td style="padding:10px;color:#dc2626;font-weight:bold;">{{ e.threat_level }}</td>
                         <td style="padding:10px;">{{ e.activity_level }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ e.tactics or "-" }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ e.core_members or "-" }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ e.notes or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;max-width:260px;">{{ (e.tactics or "-")|truncate(24, True) }}</td>
+                        <td style="padding:10px;color:#64748b;max-width:220px;">{{ (e.core_members or "-")|truncate(22, True) }}</td>
+                        <td style="padding:10px;color:#64748b;max-width:260px;">{{ (e.notes or "-")|truncate(24, True) }}</td>
+                        <td style="padding:10px;"><a href="/archives/enemies/{{ e.id }}">详情 →</a></td>
                     </tr>
                     {% endfor %}
                 </table>

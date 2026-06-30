@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px;margin:0 auto;padding:24px;">
+    <h1>⚔️ 敌军档案详情</h1>
+
+    <a href="/archives/enemies"
+       style="display:inline-block;margin:8px 0 16px 0;padding:8px 12px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">
+        ← 返回敌军档案
+    </a>
+
+    {% if enemy %}
+        <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
+            <h2>① 当前敌军</h2>
+            <p><b>敌军名称：</b>{{ enemy.name }}</p>
+            <p>
+                <b>威胁等级：</b>{{ enemy.threat_level }}
+               　<b>活跃程度：</b>{{ enemy.activity_level }}
+            </p>
+            <p><b>创建时间：</b>{{ enemy.created_at }}　<b>更新时间：</b>{{ enemy.updated_at }}</p>
+        </div>
+
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>② 编辑敌军档案</h2>
+
+            <form method="post" action="/archives/enemies/{{ enemy.id }}/update">
+                <label>敌军名称</label>
+                <input name="name" value="{{ enemy.name }}" required
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>威胁等级</label>
+                <select name="threat_level"
+                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    {% for s in ["低", "中", "高", "极高"] %}
+                        <option value="{{ s }}" {% if enemy.threat_level == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>活跃程度</label>
+                <select name="activity_level"
+                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    {% for s in ["未知", "低", "中", "高", "极高"] %}
+                        <option value="{{ s }}" {% if enemy.activity_level == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>常用打法</label>
+                <textarea name="tactics" rows="6"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">{{ enemy.tactics }}</textarea>
+
+                <label>核心人物</label>
+                <textarea name="core_members" rows="5"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">{{ enemy.core_members }}</textarea>
+
+                <label>备注</label>
+                <textarea name="notes" rows="6"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">{{ enemy.notes }}</textarea>
+
+                <button style="padding:10px 14px;background:#dc2626;color:white;border:0;border-radius:10px;font-weight:bold;">
+                    保存修改
+                </button>
+            </form>
+        </div>
+    {% else %}
+        <div style="padding:16px;background:#fee2e2;color:#dc2626;border-radius:12px;">
+            敌军档案不存在。
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
