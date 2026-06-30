@@ -563,7 +563,7 @@ def get_security_report_paginated(
     offset = (page - 1) * per_page
 
     # 先复用原安全报表，只把明细限制到每页数量，避免页面过长
-    report = get_security_report(conn, limit=per_page)
+    report = get_security_report(conn, limit=20)
 
     grouped_rows = conn.execute(
         """
