@@ -2,7 +2,9 @@
 
 {% block content %}
 
-<div style="max-width:1200px;margin:0 auto;padding:24px;">
+{% set relations = relations|default([]) %}
+
+<div style="max-width:1300px;margin:0 auto;padding:24px;">
     <h1>🧾 战场事件详情</h1>
 
     <a href="/archives/events"
@@ -14,13 +16,125 @@
         <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
             <h2>① 当前事件</h2>
             <p><b>标题：</b>{{ event.title }}</p>
-            <p><b>类型：</b>{{ event.event_type }}　<b>影响：</b>{{ event.impact_level }}　<b>状态：</b>{{ event.status }}</p>
-            <p><b>关联对象：</b>{{ event.related_target or "-" }}</p>
+            <p>
+                <b>类型：</b>{{ event.event_type }}
+               　<b>影响：</b>{{ event.impact_level }}
+               　<b>状态：</b>{{ event.status }}
+            </p>
+            <p><b>关联对象摘要：</b>{{ event.related_target or "-" }}</p>
             <p><b>创建时间：</b>{{ event.created_at }}　<b>更新时间：</b>{{ event.updated_at }}</p>
         </div>
 
+        <div id="relations"
+             style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-bottom:18px;">
+            <h2>② 关联对象</h2>
+            <p style="color:#64748b;">
+                这里用于把事件和人物、分组、友盟、敌军建立关系。后续复盘、规则中心、战略推演都会优先读取这些关联。
+            </p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;">
+                <div style="background:white;border-radius:14px;padding:16px;">
+                    <h3>已关联对象</h3>
+
+                    {% if relations %}
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr style="background:#f3f4f6;">
+                                <th style="padding:8px;text-align:left;">类型</th>
+                                <th style="padding:8px;text-align:left;">对象</th>
+                                <th style="padding:8px;text-align:left;">游戏编号</th>
+                                <th style="padding:8px;text-align:left;">备注</th>
+                                <th style="padding:8px;text-align:left;">操作</th>
+                            </tr>
+
+                            {% for r in relations %}
+                            <tr style="border-bottom:1px solid #e5e7eb;">
+                                <td style="padding:8px;font-weight:bold;">{{ r.target_type_label }}</td>
+                                <td style="padding:8px;">
+                                    {% if r.target_type == "person" %}
+                                        <a href="/identity/view?member={{ r.target_name|urlencode }}&next={{ request.full_path.rstrip('?')|urlencode }}">
+                                            {{ r.target_name }}
+                                        </a>
+                                    {% elif r.target_type == "group" %}
+                                        <a href="/leaders/group/{{ r.target_name|urlencode }}?next={{ request.full_path.rstrip('?')|urlencode }}">
+                                            {{ r.target_name }}
+                                        </a>
+                                    {% elif r.target_type == "ally" %}
+                                        <a href="/archives/friends">
+                                            {{ r.target_name }}
+                                        </a>
+                                    {% elif r.target_type == "enemy" %}
+                                        <a href="/archives/enemies">
+                                            {{ r.target_name }}
+                                        </a>
+                                    {% else %}
+                                        {{ r.target_name }}
+                                    {% endif %}
+                                </td>
+                                <td style="padding:8px;color:#64748b;">
+                                    {{ r.target_game_id or "-" }}
+                                </td>
+                                <td style="padding:8px;color:#64748b;max-width:300px;">
+                                    {{ r.note or "-" }}
+                                </td>
+                                <td style="padding:8px;">
+                                    <form method="post"
+                                          action="/archives/events/{{ event.id }}/relations/{{ r.id }}/delete"
+                                          onsubmit="return confirm('确认删除这个关联对象吗？');">
+                                        <button style="padding:6px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;">
+                                            删除
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    {% else %}
+                        <div style="padding:12px;background:#f9fafb;border-radius:10px;color:#64748b;">
+                            暂无关联对象。建议至少关联一个人物、分组、友盟或敌军。
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div style="background:white;border-radius:14px;padding:16px;">
+                    <h3>新增关联对象</h3>
+
+                    <form method="post" action="/archives/events/{{ event.id }}/relations/save">
+                        <label>对象类型</label>
+                        <select name="target_type"
+                                style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                            <option value="person">人物</option>
+                            <option value="group">分组</option>
+                            <option value="ally">友盟</option>
+                            <option value="enemy">敌军</option>
+                        </select>
+
+                        <label>对象名称</label>
+                        <input name="target_name"
+                               placeholder="例如：武疯 / 惜晨二组 / 无尘山河"
+                               required
+                               style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                        <label>游戏编号</label>
+                        <input name="target_game_id"
+                               placeholder="可选；人物对象建议填写游戏编号，后续可用于跨赛季检索"
+                               style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                        <label>关联备注</label>
+                        <textarea name="note"
+                                  rows="5"
+                                  placeholder="例如：该对象是事件主要责任人 / 受影响分组 / 涉事友盟 / 交战敌军"
+                                  style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                        <button style="padding:10px 14px;background:#16a34a;color:white;border:0;border-radius:10px;font-weight:bold;">
+                            添加关联
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div style="background:white;border-radius:18px;padding:22px;">
-            <h2>② 编辑事件</h2>
+            <h2>③ 编辑事件</h2>
 
             <form method="post" action="/archives/events/{{ event.id }}/update">
                 <label>事件标题</label>
@@ -39,8 +153,9 @@
                 <input name="status" value="{{ event.status }}"
                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
 
-                <label>关联对象</label>
+                <label>关联对象摘要</label>
                 <input name="related_target" value="{{ event.related_target }}"
+                       placeholder="这里保留简单摘要，详细关联请使用上方关联对象模块"
                        style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
 
                 <label>事件描述</label>

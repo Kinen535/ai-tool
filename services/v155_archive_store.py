@@ -427,3 +427,169 @@ def update_enemy(conn: sqlite3.Connection, enemy_id: int, data: Dict[str, str]) 
         ),
     )
     conn.commit()
+
+
+# =========================
+# V15.5-A3 战场事件关联对象
+# =========================
+
+def init_archive_relation_tables(conn: sqlite3.Connection) -> None:
+    conn.row_factory = sqlite3.Row
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_archive_event_relations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            target_type TEXT DEFAULT '',
+            target_name TEXT DEFAULT '',
+            note TEXT DEFAULT '',
+            created_at TEXT DEFAULT ''
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_v155_archive_event_relations_event_id
+        ON v155_archive_event_relations(event_id)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_v155_archive_event_relations_target
+        ON v155_archive_event_relations(target_type, target_name)
+        """
+    )
+
+    columns = {
+        row["name"]
+        for row in conn.execute("PRAGMA table_info(v155_archive_event_relations)").fetchall()
+    }
+
+    if "target_game_id" not in columns:
+        conn.execute(
+            "ALTER TABLE v155_archive_event_relations ADD COLUMN target_game_id TEXT DEFAULT ''"
+        )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_v155_archive_event_relations_game_id
+        ON v155_archive_event_relations(target_game_id)
+        """
+    )
+
+    conn.commit()
+
+
+def archive_target_type_label(target_type: str) -> str:
+    mapping = {
+        "person": "人物",
+        "group": "分组",
+        "ally": "友盟",
+        "enemy": "敌军",
+        "event": "事件",
+    }
+    return mapping.get(target_type or "", target_type or "-")
+
+
+def list_event_relations(conn: sqlite3.Connection, event_id: int) -> List[Dict[str, Any]]:
+    init_archive_tables(conn)
+    init_archive_relation_tables(conn)
+
+    cur = conn.execute(
+        """
+        SELECT *
+        FROM v155_archive_event_relations
+        WHERE event_id=?
+        ORDER BY id DESC
+        """,
+        (event_id,),
+    )
+
+    rows = _rows(cur)
+
+    for row in rows:
+        row["target_type_label"] = archive_target_type_label(row.get("target_type", ""))
+
+    return rows
+
+
+def save_event_relation(conn: sqlite3.Connection, event_id: int, data: Dict[str, str]) -> int:
+    init_archive_tables(conn)
+    init_archive_relation_tables(conn)
+
+    now = _now()
+
+    target_type = data.get("target_type", "").strip()
+    target_name = data.get("target_name", "").strip()
+    target_game_id = data.get("target_game_id", "").strip()
+    note = data.get("note", "").strip()
+
+    if not target_type or not target_name:
+        return 0
+
+    cur = conn.execute(
+        """
+        INSERT INTO v155_archive_event_relations
+        (event_id, target_type, target_name, target_game_id, note, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            event_id,
+            target_type,
+            target_name,
+            target_game_id,
+            note,
+            now,
+        ),
+    )
+
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def delete_event_relation(conn: sqlite3.Connection, event_id: int, relation_id: int) -> None:
+    init_archive_relation_tables(conn)
+
+    conn.execute(
+        """
+        DELETE FROM v155_archive_event_relations
+        WHERE id=? AND event_id=?
+        """,
+        (relation_id, event_id),
+    )
+
+    conn.commit()
+
+
+def list_related_events_by_target(
+    conn: sqlite3.Connection,
+    target_type: str,
+    target_name: str,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    init_archive_tables(conn)
+    init_archive_relation_tables(conn)
+
+    cur = conn.execute(
+        """
+        SELECT
+            e.*,
+            r.note AS relation_note,
+            r.created_at AS relation_created_at
+        FROM v155_archive_event_relations r
+        JOIN v155_archive_events e ON e.id = r.event_id
+        WHERE r.target_type=? AND r.target_name=?
+        ORDER BY e.id DESC
+        LIMIT ?
+        """,
+        (
+            target_type,
+            target_name,
+            limit,
+        ),
+    )
+
+    return _rows(cur)
