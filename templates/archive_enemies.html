@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set enemies = enemies|default([]) %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>⚔️ 敌军档案</h1>
+
+    <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;">
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>① 敌军列表</h2>
+
+            {% if enemies %}
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">敌军</th>
+                        <th style="padding:10px;text-align:left;">威胁</th>
+                        <th style="padding:10px;text-align:left;">活跃</th>
+                        <th style="padding:10px;text-align:left;">打法</th>
+                        <th style="padding:10px;text-align:left;">核心人物</th>
+                        <th style="padding:10px;text-align:left;">备注</th>
+                    </tr>
+                    {% for e in enemies %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ e.name }}</td>
+                        <td style="padding:10px;color:#dc2626;font-weight:bold;">{{ e.threat_level }}</td>
+                        <td style="padding:10px;">{{ e.activity_level }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ e.tactics or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ e.core_members or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ e.notes or "-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                    暂无敌军档案。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
+            <h2>② 新增敌军档案</h2>
+
+            <form method="post" action="/archives/enemies/save">
+                <label>敌军名称</label>
+                <input name="name" required
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>威胁等级</label>
+                <select name="threat_level" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option>低</option>
+                    <option selected>中</option>
+                    <option>高</option>
+                    <option>极高</option>
+                </select>
+
+                <label>活跃程度</label>
+                <select name="activity_level" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option selected>未知</option>
+                    <option>低</option>
+                    <option>中</option>
+                    <option>高</option>
+                    <option>极高</option>
+                </select>
+
+                <label>常用打法</label>
+                <textarea name="tactics" rows="4"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <label>核心人物</label>
+                <textarea name="core_members" rows="3"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <label>备注</label>
+                <textarea name="notes" rows="4"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <button style="padding:10px 14px;background:#dc2626;color:white;border:0;border-radius:10px;font-weight:bold;">
+                    保存敌军
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

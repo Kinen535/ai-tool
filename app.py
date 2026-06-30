@@ -7518,3 +7518,224 @@ init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
+
+
+# =========================
+# V15.5 战场档案库基础闭环
+# =========================
+
+@app.route("/archives")
+def v155_archive_home():
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import (
+        get_archive_overview,
+        list_events,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    overview = get_archive_overview(conn)
+    recent_events = list_events(conn, limit=5)
+
+    conn.close()
+
+    return render_template(
+        "archive_home.html",
+        overview=overview,
+        recent_events=recent_events,
+        title="战场档案库",
+    )
+
+
+@app.route("/archives/players")
+@app.route("/archive_players")
+def v155_archive_players():
+    import sqlite3
+    from flask import render_template, request
+    from services.v155_archive_store import list_players
+
+    q = request.args.get("q", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    players = list_players(conn, q)
+
+    conn.close()
+
+    return render_template(
+        "archive_players.html",
+        players=players,
+        q=q,
+        title="人物档案",
+    )
+
+
+@app.route("/archives/events")
+@app.route("/archive_events")
+def v155_archive_events():
+    import sqlite3
+    from flask import render_template, request
+    from services.v155_archive_store import list_events
+
+    q = request.args.get("q", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    events = list_events(conn, q)
+
+    conn.close()
+
+    return render_template(
+        "archive_events.html",
+        events=events,
+        q=q,
+        title="战场事件",
+    )
+
+
+@app.route("/archives/events/save", methods=["POST"])
+def v155_archive_event_save():
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import save_event
+
+    title = request.form.get("title", "").strip()
+
+    if not title:
+        return redirect("/archives/events")
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    event_id = save_event(conn, dict(request.form))
+
+    conn.close()
+
+    return redirect(f"/archives/events/{event_id}")
+
+
+@app.route("/archives/events/<int:event_id>")
+def v155_archive_event_detail(event_id):
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import get_event
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    event = get_event(conn, event_id)
+
+    conn.close()
+
+    return render_template(
+        "archive_event_detail.html",
+        event=event,
+        title="战场事件详情",
+    )
+
+
+@app.route("/archives/events/<int:event_id>/update", methods=["POST"])
+def v155_archive_event_update(event_id):
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import update_event
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    update_event(conn, event_id, dict(request.form))
+
+    conn.close()
+
+    return redirect(f"/archives/events/{event_id}")
+
+
+@app.route("/archives/friends")
+@app.route("/archives/allies")
+@app.route("/archive_friends")
+@app.route("/archive_alliances")
+def v155_archive_friends():
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import list_alliances
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    alliances = list_alliances(conn)
+
+    conn.close()
+
+    return render_template(
+        "archive_friends.html",
+        alliances=alliances,
+        title="友盟档案",
+    )
+
+
+@app.route("/archives/friends/save", methods=["POST"])
+@app.route("/archives/allies/save", methods=["POST"])
+def v155_archive_friend_save():
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import save_alliance
+
+    name = request.form.get("name", "").strip()
+
+    if not name:
+        return redirect("/archives/friends")
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    save_alliance(conn, dict(request.form))
+
+    conn.close()
+
+    return redirect("/archives/friends")
+
+
+@app.route("/archives/enemies")
+@app.route("/archive_enemies")
+def v155_archive_enemies():
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import list_enemies
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    enemies = list_enemies(conn)
+
+    conn.close()
+
+    return render_template(
+        "archive_enemies.html",
+        enemies=enemies,
+        title="敌军档案",
+    )
+
+
+@app.route("/archives/enemies/save", methods=["POST"])
+def v155_archive_enemy_save():
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import save_enemy
+
+    name = request.form.get("name", "").strip()
+
+    if not name:
+        return redirect("/archives/enemies")
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    save_enemy(conn, dict(request.form))
+
+    conn.close()
+
+    return redirect("/archives/enemies")

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set alliances = alliances|default([]) %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>🤝 友盟档案</h1>
+
+    <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;">
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>① 友盟列表</h2>
+
+            {% if alliances %}
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">友盟</th>
+                        <th style="padding:10px;text-align:left;">关系</th>
+                        <th style="padding:10px;text-align:left;">信任</th>
+                        <th style="padding:10px;text-align:left;">联系人</th>
+                        <th style="padding:10px;text-align:left;">备注</th>
+                        <th style="padding:10px;text-align:left;">更新时间</th>
+                    </tr>
+                    {% for a in alliances %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ a.name }}</td>
+                        <td style="padding:10px;">{{ a.relation_status }}</td>
+                        <td style="padding:10px;">{{ a.trust_level }}</td>
+                        <td style="padding:10px;">{{ a.contact_name or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ a.notes or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ a.updated_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                    暂无友盟档案。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+            <h2>② 新增友盟档案</h2>
+
+            <form method="post" action="/archives/friends/save">
+                <label>友盟名称</label>
+                <input name="name" required
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>关系状态</label>
+                <select name="relation_status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option>友好</option>
+                    <option>中立</option>
+                    <option selected>观察</option>
+                    <option>风险</option>
+                    <option>敌对</option>
+                </select>
+
+                <label>信任等级</label>
+                <select name="trust_level" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option>A</option>
+                    <option>B</option>
+                    <option selected>C</option>
+                    <option>D</option>
+                </select>
+
+                <label>联系人 / 负责人</label>
+                <input name="contact_name"
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>备注</label>
+                <textarea name="notes" rows="5"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <button style="padding:10px 14px;background:#16a34a;color:white;border:0;border-radius:10px;font-weight:bold;">
+                    保存友盟
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

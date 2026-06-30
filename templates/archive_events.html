@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set events = events|default([]) %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>🧾 战场事件</h1>
+
+    <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;">
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>① 事件列表</h2>
+
+            <form method="get" action="/archives/events" style="margin-bottom:14px;display:flex;gap:10px;">
+                <input name="q" value="{{ q|default('') }}" placeholder="搜索事件 / 对象 / 类型"
+                       style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:10px;">
+                <button style="padding:10px 14px;background:#2563eb;color:white;border:0;border-radius:10px;">搜索</button>
+                <a href="/archives/events" style="padding:10px 14px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">重置</a>
+            </form>
+
+            {% if events %}
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">事件</th>
+                        <th style="padding:10px;text-align:left;">类型</th>
+                        <th style="padding:10px;text-align:left;">影响</th>
+                        <th style="padding:10px;text-align:left;">状态</th>
+                        <th style="padding:10px;text-align:left;">关联对象</th>
+                        <th style="padding:10px;text-align:left;">入口</th>
+                    </tr>
+                    {% for e in events %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ e.title }}</td>
+                        <td style="padding:10px;">{{ e.event_type }}</td>
+                        <td style="padding:10px;">{{ e.impact_level }}</td>
+                        <td style="padding:10px;">{{ e.status }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ e.related_target }}</td>
+                        <td style="padding:10px;"><a href="/archives/events/{{ e.id }}">详情 →</a></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                    暂无事件记录。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>② 新增战场事件</h2>
+
+            <form method="post" action="/archives/events/save">
+                <label>事件标题</label>
+                <input name="title" required placeholder="例如：惜晨二组高压复核"
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>事件类型</label>
+                <select name="event_type" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option>分组管理</option>
+                    <option>成员清理</option>
+                    <option>外交事件</option>
+                    <option>敌军交战</option>
+                    <option>禁地违规</option>
+                    <option>指挥失误</option>
+                    <option>奖励处罚</option>
+                    <option>其他</option>
+                </select>
+
+                <label>影响等级</label>
+                <select name="impact_level" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option>低</option>
+                    <option selected>普通</option>
+                    <option>高</option>
+                    <option>严重</option>
+                </select>
+
+                <label>处理状态</label>
+                <select name="status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+                    <option selected>记录中</option>
+                    <option>处理中</option>
+                    <option>已处理</option>
+                    <option>待复盘</option>
+                    <option>已归档</option>
+                </select>
+
+                <label>关联对象</label>
+                <input name="related_target" placeholder="例如：惜晨二组 / 武疯 / 某友盟"
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;">
+
+                <label>事件描述</label>
+                <textarea name="description" rows="5" placeholder="记录发生了什么、影响了谁、为什么需要处理"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <label>处理结果</label>
+                <textarea name="result" rows="3" placeholder="暂未处理可留空"
+                          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px 0;"></textarea>
+
+                <button style="padding:10px 14px;background:#2563eb;color:white;border:0;border-radius:10px;font-weight:bold;">
+                    保存事件
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set players = players|default([]) %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>👤 人物档案</h1>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 人物档案说明</h2>
+        <p>
+            人物档案当前采用“入口整合”方式，不重复开发第二套人物系统。点击成员后进入现有身份档案页。
+        </p>
+
+        <form method="get" action="/archives/players" style="margin-top:14px;display:flex;gap:10px;">
+            <input name="q" value="{{ q|default('') }}" placeholder="搜索成员名"
+                   style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:10px;">
+            <button style="padding:10px 14px;background:#2563eb;color:white;border:0;border-radius:10px;">搜索</button>
+            <a href="/archives/players" style="padding:10px 14px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">重置</a>
+        </form>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>② 成员档案索引</h2>
+
+        {% if players %}
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:10px;text-align:left;">成员</th>
+                    <th style="padding:10px;text-align:left;">身份</th>
+                    <th style="padding:10px;text-align:left;">活跃</th>
+                    <th style="padding:10px;text-align:left;">稳定</th>
+                    <th style="padding:10px;text-align:left;">趋势</th>
+                    <th style="padding:10px;text-align:left;">风险</th>
+                    <th style="padding:10px;text-align:left;">原因</th>
+                    <th style="padding:10px;text-align:left;">档案</th>
+                </tr>
+                {% for p in players %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;font-weight:bold;">{{ p.member }}</td>
+                    <td style="padding:10px;">{{ p.role_tag|default(p.current_tag|default('-')) }}</td>
+                    <td style="padding:10px;">{{ "%.1f"|format(p.av|default(0)|float) }}</td>
+                    <td style="padding:10px;">{{ "%.1f"|format(p.bs|default(0)|float) }}</td>
+                    <td style="padding:10px;">{{ p.trend|default('-') }}</td>
+                    <td style="padding:10px;">
+                        {% if p.risk_level == "danger" %}
+                            <span style="color:#dc2626;font-weight:bold;">危险</span>
+                        {% elif p.risk_level == "warning" %}
+                            <span style="color:#f97316;font-weight:bold;">预警</span>
+                        {% elif p.risk_level == "protected" %}
+                            <span style="color:#8b5cf6;font-weight:bold;">保护</span>
+                        {% else %}
+                            <span style="color:#16a34a;font-weight:bold;">正常</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:10px;color:#64748b;">{{ p.risk_reason|default('-') }}</td>
+                    <td style="padding:10px;">
+                        <a href="/identity/view?member={{ p.member|urlencode }}&next={{ request.full_path.rstrip('?')|urlencode }}">
+                            查看档案 →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                暂无成员数据。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

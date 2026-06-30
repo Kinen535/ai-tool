@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>📚 战场档案库</h1>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin:18px 0;">
+        <h2>① 档案库总览</h2>
+        <p>
+            {{ overview.summary }}
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:16px;margin-top:18px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>总档案数</div>
+                <h2>{{ overview.total_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>人物档案</div>
+                <h2>{{ overview.person_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>分组档案</div>
+                <h2>{{ overview.group_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>友盟档案</div>
+                <h2>{{ overview.alliance_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>敌军档案</div>
+                <h2>{{ overview.enemy_count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(300px,1fr));gap:18px;">
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>② 今日建议</h2>
+            <p><b>优先级：</b>先沉淀战场事件，再完善友盟 / 敌军基础档案。</p>
+            <p><b>原因：</b>事件是后续复盘、学习、规则中心和战略推演的历史事实来源。</p>
+            <div style="margin-top:14px;">
+                <a href="/archives/events" style="display:inline-block;padding:10px 14px;background:#2563eb;color:white;border-radius:10px;text-decoration:none;">进入战场事件 →</a>
+                <a href="/archives/players" style="display:inline-block;padding:10px 14px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;margin-left:8px;">人物档案 →</a>
+            </div>
+        </div>
+
+        <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+            <h2>③ 快捷入口</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="/archives/players" style="padding:10px 14px;background:white;border-radius:10px;text-decoration:none;color:#111827;">人物档案</a>
+                <a href="/leaders" style="padding:10px 14px;background:white;border-radius:10px;text-decoration:none;color:#111827;">分组档案</a>
+                <a href="/archives/friends" style="padding:10px 14px;background:white;border-radius:10px;text-decoration:none;color:#111827;">友盟档案</a>
+                <a href="/archives/enemies" style="padding:10px 14px;background:white;border-radius:10px;text-decoration:none;color:#111827;">敌军档案</a>
+                <a href="/archives/events" style="padding:10px 14px;background:white;border-radius:10px;text-decoration:none;color:#111827;">战场事件</a>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;margin-top:18px;">
+        <h2>④ 最近战场事件</h2>
+
+        {% if recent_events %}
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:10px;text-align:left;">时间</th>
+                    <th style="padding:10px;text-align:left;">事件</th>
+                    <th style="padding:10px;text-align:left;">类型</th>
+                    <th style="padding:10px;text-align:left;">影响</th>
+                    <th style="padding:10px;text-align:left;">状态</th>
+                    <th style="padding:10px;text-align:left;">入口</th>
+                </tr>
+                {% for e in recent_events %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">{{ e.created_at }}</td>
+                    <td style="padding:10px;font-weight:bold;">{{ e.title }}</td>
+                    <td style="padding:10px;">{{ e.event_type }}</td>
+                    <td style="padding:10px;">{{ e.impact_level }}</td>
+                    <td style="padding:10px;">{{ e.status }}</td>
+                    <td style="padding:10px;"><a href="/archives/events/{{ e.id }}">详情 →</a></td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                暂无事件记录。建议先从“战场事件”开始录入。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
