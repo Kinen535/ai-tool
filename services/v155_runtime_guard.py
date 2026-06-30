@@ -436,3 +436,250 @@ def build_guard_report(conn: sqlite3.Connection) -> Dict[str, Any]:
         "quota_rows": [dict(row) for row in quota_rows],
         "block_rows": [dict(row) for row in block_rows],
     }
+
+
+# =========================
+# V15.5-S2.4 IP blocklist guard
+# =========================
+
+def init_ip_blocklist(conn: sqlite3.Connection) -> None:
+    init_runtime_guard(conn)
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_blocklist (
+            ip TEXT PRIMARY KEY,
+            reason TEXT,
+            source TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+
+    # 兼容安全访问日志表不存在的情况
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_access_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT,
+            method TEXT,
+            path TEXT,
+            query_string TEXT,
+            status_code INTEGER,
+            is_suspicious INTEGER DEFAULT 0,
+            suspicious_reason TEXT,
+            user_agent TEXT,
+            elapsed_ms REAL,
+            created_at TEXT
+        )
+        """
+    )
+
+    conn.commit()
+
+
+def is_local_or_private_ip(ip: str) -> bool:
+    import ipaddress
+
+    try:
+        obj = ipaddress.ip_address(str(ip or "").strip())
+        return bool(obj.is_loopback or obj.is_private or obj.is_link_local)
+    except Exception:
+        return False
+
+
+def add_block_ip(
+    conn: sqlite3.Connection,
+    ip: str,
+    reason: str = "",
+    source: str = "manual",
+) -> None:
+    init_ip_blocklist(conn)
+
+    ip = str(ip or "").strip()
+    reason = str(reason or "").strip()
+    source = str(source or "manual").strip()
+
+    if not ip:
+        return
+
+    # 本机、内网、白名单不允许封禁
+    if is_local_or_private_ip(ip):
+        return
+
+    if is_ip_whitelisted(conn, ip):
+        return
+
+    conn.execute(
+        """
+        INSERT INTO v155_security_ip_blocklist
+        (ip, reason, source, is_active, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(ip)
+        DO UPDATE SET
+            reason=excluded.reason,
+            source=excluded.source,
+            is_active=1,
+            updated_at=excluded.updated_at
+        """,
+        (ip, reason, source, now_str(), now_str()),
+    )
+
+    conn.commit()
+
+
+def remove_block_ip(conn: sqlite3.Connection, ip: str) -> None:
+    init_ip_blocklist(conn)
+
+    ip = str(ip or "").strip()
+
+    if not ip:
+        return
+
+    conn.execute(
+        """
+        UPDATE v155_security_ip_blocklist
+        SET is_active=0,
+            updated_at=?
+        WHERE ip=?
+        """,
+        (now_str(), ip),
+    )
+
+    conn.commit()
+
+
+def is_ip_blocked(conn: sqlite3.Connection, ip: str) -> bool:
+    init_ip_blocklist(conn)
+
+    ip = str(ip or "").strip()
+
+    if not ip:
+        return False
+
+    if is_local_or_private_ip(ip):
+        return False
+
+    if is_ip_whitelisted(conn, ip):
+        return False
+
+    row = conn.execute(
+        """
+        SELECT ip
+        FROM v155_security_ip_blocklist
+        WHERE ip=?
+          AND is_active=1
+        """,
+        (ip,),
+    ).fetchone()
+
+    return bool(row)
+
+
+def check_ip_blocklist(
+    conn: sqlite3.Connection,
+    ip: str,
+    method: str,
+    path: str,
+    query_string: str = "",
+    user_agent: str = "",
+):
+    if not is_ip_blocked(conn, ip):
+        return True, "", 200
+
+    reason = "IP 已被加入安全封禁名单，访问被拦截"
+
+    record_guard_block(
+        conn,
+        ip=ip,
+        method=method,
+        path=path,
+        query_string=query_string,
+        guard_type="ip_blocklist",
+        reason=reason,
+        user_agent=user_agent,
+    )
+
+    return False, reason, 403
+
+
+def build_ip_blocklist_report(conn: sqlite3.Connection) -> Dict[str, Any]:
+    init_ip_blocklist(conn)
+
+    active_blocks = conn.execute(
+        """
+        SELECT *
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        ORDER BY updated_at DESC
+        """
+    ).fetchall()
+
+    inactive_blocks = conn.execute(
+        """
+        SELECT *
+        FROM v155_security_ip_blocklist
+        WHERE is_active=0
+        ORDER BY updated_at DESC
+        LIMIT 50
+        """
+    ).fetchall()
+
+    # 最近 24 小时高风险候选：异常次数多、异常占比高
+    rows = conn.execute(
+        """
+        SELECT
+            ip,
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN is_suspicious=1 THEN 1 ELSE 0 END) AS suspicious_count,
+            MAX(created_at) AS last_seen,
+            GROUP_CONCAT(DISTINCT suspicious_reason) AS reasons
+        FROM v155_security_access_logs
+        WHERE created_at >= datetime('now', 'localtime', '-24 hours')
+          AND path NOT LIKE '/security/%'
+        GROUP BY ip
+        ORDER BY suspicious_count DESC, total_count DESC
+        LIMIT 100
+        """
+    ).fetchall()
+
+    candidates = []
+
+    for row in rows:
+        item = dict(row)
+        ip = item.get("ip", "")
+
+        if is_local_or_private_ip(ip):
+            continue
+
+        if is_ip_whitelisted(conn, ip):
+            continue
+
+        if is_ip_blocked(conn, ip):
+            continue
+
+        total = int(item.get("total_count") or 0)
+        suspicious = int(item.get("suspicious_count") or 0)
+        ratio = suspicious / total if total else 0
+
+        if suspicious >= 30 or (total >= 20 and ratio >= 0.7):
+            item["risk_label"] = "建议封禁"
+            item["risk_reason"] = f"24小时访问 {total} 次，异常 {suspicious} 次，异常占比 {ratio:.1%}"
+            candidates.append(item)
+        elif suspicious >= 10 or (total >= 10 and ratio >= 0.5):
+            item["risk_label"] = "建议观察"
+            item["risk_reason"] = f"24小时访问 {total} 次，异常 {suspicious} 次，异常占比 {ratio:.1%}"
+            candidates.append(item)
+
+    return {
+        "active_blocks": [dict(row) for row in active_blocks],
+        "inactive_blocks": [dict(row) for row in inactive_blocks],
+        "candidates": candidates[:50],
+        "stats": {
+            "active_count": len(active_blocks),
+            "inactive_count": len(inactive_blocks),
+            "candidate_count": len(candidates),
+        },
+    }

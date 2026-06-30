@@ -343,6 +343,7 @@ def get_security_report(conn: sqlite3.Connection, limit: int = 200) -> Dict[str,
             MAX(created_at) AS last_seen
         FROM v155_security_access_logs
         WHERE created_at >= datetime('now', 'localtime', '-24 hours')
+          AND path NOT LIKE '/security/%'
         GROUP BY ip
         ORDER BY total_count DESC
         LIMIT 30
@@ -634,3 +635,161 @@ def get_security_report_paginated(
     }
 
     return report
+
+
+# =========================
+# V15.5-S2.3 security log cleanup
+# =========================
+
+def ensure_security_cleanup_tables(conn: sqlite3.Connection) -> None:
+    init_security_tables(conn)
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_guard_blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT,
+            method TEXT,
+            path TEXT,
+            query_string TEXT,
+            guard_type TEXT,
+            reason TEXT,
+            user_agent TEXT,
+            created_at TEXT
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_search_quota (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT,
+            path TEXT,
+            query_string TEXT,
+            user_agent TEXT,
+            created_at TEXT
+        )
+        """
+    )
+
+    conn.commit()
+
+
+def build_security_cleanup_report(conn: sqlite3.Connection) -> Dict[str, Any]:
+    ensure_security_cleanup_tables(conn)
+
+    def one(sql: str) -> int:
+        row = conn.execute(sql).fetchone()
+        return int(row[0] or 0)
+
+    return {
+        "counts": {
+            "access_total": one("SELECT COUNT(*) FROM v155_security_access_logs"),
+            "access_older_7d": one(
+                """
+                SELECT COUNT(*)
+                FROM v155_security_access_logs
+                WHERE created_at < datetime('now', 'localtime', '-7 days')
+                """
+            ),
+            "local_test_total": one(
+                """
+                SELECT COUNT(*)
+                FROM v155_security_access_logs
+                WHERE ip IN ('127.0.0.1', '::1')
+                """
+            ),
+            "suspicious_total": one(
+                """
+                SELECT COUNT(*)
+                FROM v155_security_access_logs
+                WHERE is_suspicious=1
+                """
+            ),
+            "guard_block_total": one("SELECT COUNT(*) FROM v155_security_guard_blocks"),
+            "guard_block_older_30d": one(
+                """
+                SELECT COUNT(*)
+                FROM v155_security_guard_blocks
+                WHERE created_at < datetime('now', 'localtime', '-30 days')
+                """
+            ),
+            "quota_total": one("SELECT COUNT(*) FROM v155_security_search_quota"),
+            "quota_older_3d": one(
+                """
+                SELECT COUNT(*)
+                FROM v155_security_search_quota
+                WHERE created_at < datetime('now', 'localtime', '-3 days')
+                """
+            ),
+        }
+    }
+
+
+def cleanup_security_logs(conn: sqlite3.Connection, action: str) -> Dict[str, Any]:
+    ensure_security_cleanup_tables(conn)
+
+    action = str(action or "").strip()
+
+    before = build_security_cleanup_report(conn)["counts"]
+
+    if action == "clear_local_test":
+        conn.execute(
+            """
+            DELETE FROM v155_security_access_logs
+            WHERE ip IN ('127.0.0.1', '::1')
+            """
+        )
+        message = "已清理本机测试访问日志。"
+
+    elif action == "clear_access_older_7d":
+        conn.execute(
+            """
+            DELETE FROM v155_security_access_logs
+            WHERE created_at < datetime('now', 'localtime', '-7 days')
+            """
+        )
+        message = "已清理 7 天前访问日志。"
+
+    elif action == "clear_guard_older_30d":
+        conn.execute(
+            """
+            DELETE FROM v155_security_guard_blocks
+            WHERE created_at < datetime('now', 'localtime', '-30 days')
+            """
+        )
+        message = "已清理 30 天前安全闸门拦截日志。"
+
+    elif action == "clear_quota_older_3d":
+        conn.execute(
+            """
+            DELETE FROM v155_security_search_quota
+            WHERE created_at < datetime('now', 'localtime', '-3 days')
+            """
+        )
+        message = "已清理 3 天前搜索额度记录。"
+
+    elif action == "vacuum":
+        conn.commit()
+        conn.execute("VACUUM")
+        message = "已执行 SQLite VACUUM 压缩。"
+
+    else:
+        return {
+            "ok": False,
+            "message": "未知清理动作，未执行。",
+            "before": before,
+            "after": before,
+        }
+
+    conn.commit()
+
+    after = build_security_cleanup_report(conn)["counts"]
+
+    return {
+        "ok": True,
+        "message": message,
+        "before": before,
+        "after": after,
+    }
