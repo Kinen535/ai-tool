@@ -7882,3 +7882,126 @@ def v155_archive_enemy_update_a2(enemy_id):
     conn.close()
 
     return redirect(f"/archives/enemies/{enemy_id}")
+
+
+# =========================
+# V15.5-A3 战场事件关联对象路由
+# =========================
+
+def v155_archive_event_detail_a3(event_id):
+    import sqlite3
+    from flask import render_template
+    from services.v155_archive_store import (
+        get_event,
+        list_event_relations,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    event = get_event(conn, event_id)
+    relations = list_event_relations(conn, event_id)
+
+    conn.close()
+
+    return render_template(
+        "archive_event_detail.html",
+        event=event,
+        relations=relations,
+        title="战场事件详情",
+    )
+
+
+@app.route("/archive_events/<int:event_id>")
+def v155_archive_event_detail_legacy_a3(event_id):
+    return v155_archive_event_detail_a3(event_id)
+
+
+@app.route("/archives/events/<int:event_id>/relations/save", methods=["POST"])
+@app.route("/archive_events/<int:event_id>/relations/save", methods=["POST"])
+def v155_archive_event_relation_save_a3(event_id):
+    import sqlite3
+    from flask import request, redirect
+    from services.v155_archive_store import save_event_relation
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    save_event_relation(conn, event_id, dict(request.form))
+
+    conn.close()
+
+    return redirect(f"/archives/events/{event_id}#relations")
+
+
+@app.route("/archives/events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
+@app.route("/archive_events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
+def v155_archive_event_relation_delete_a3(event_id, relation_id):
+    import sqlite3
+    from flask import redirect
+    from services.v155_archive_store import delete_event_relation
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    delete_event_relation(conn, event_id, relation_id)
+
+    conn.close()
+
+    return redirect(f"/archives/events/{event_id}#relations")
+
+
+def _v155_archive_event_detail_takeover_a3():
+    """
+    接管原 /archives/events/<id> 详情路由，
+    让详情页可以拿到 relations 数据。
+    """
+    for rule in list(app.url_map.iter_rules()):
+        if rule.rule == "/archives/events/<int:event_id>":
+            app.view_functions[rule.endpoint] = v155_archive_event_detail_a3
+
+
+_v155_archive_event_detail_takeover_a3()
+
+
+# =========================
+# V15.5-A3.2 档案全局检索路由
+# =========================
+
+@app.route("/archives/search")
+@app.route("/archive_search")
+def v155_archive_search_a32():
+    import sqlite3
+    from flask import render_template, request
+    from services.v155_archive_store import search_archive_global
+
+    q = request.args.get("q", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    result = search_archive_global(conn, q)
+
+    conn.close()
+
+    return render_template(
+        "archive_search.html",
+        q=q,
+        result=result,
+        title="档案检索中枢",
+    )
+
+
+# =========================
+# V15.5-A3.4 分组档案独立占位页
+# =========================
+
+@app.route("/archives/groups")
+@app.route("/archive_groups")
+def v155_archive_groups_a34():
+    from flask import render_template
+
+    return render_template(
+        "archive_groups.html",
+        title="分组档案",
+    )

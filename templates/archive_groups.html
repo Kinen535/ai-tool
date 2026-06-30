@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1300px;margin:0 auto;padding:24px;">
+    <h1>🛡️ 分组档案</h1>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 模块说明</h2>
+        <p>
+            分组档案属于战场档案库，不等同于内部“组长协同驾驶舱”。
+        </p>
+        <p style="color:#64748b;">
+            这里未来用于记录跨赛季分组、组织、团队、友盟分队、敌军小队等档案。
+            当前阶段先保留独立入口，避免和内部盟务管理模块混用。
+        </p>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>② 后续规划</h2>
+        <p>后续该模块将支持：</p>
+        <ul style="line-height:1.9;">
+            <li>记录分组名称、历史别名、所属势力、常见负责人。</li>
+            <li>关联战场事件、外交事件、背刺事件、合作事件。</li>
+            <li>通过事件数量和可信度生成分组信誉画像。</li>
+            <li>支持按分组名搜索历史事件。</li>
+        </ul>
+    </div>
+</div>
+
+{% endblock %}

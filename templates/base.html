@@ -131,7 +131,7 @@
 
             <!-- 成员 -->
             <a class="nav-item {% if request.path.startswith('/members') %}active{% endif %}"
-               href="/archives">
+               href="/members">
 
                 <i data-lucide="users"></i>
 
@@ -155,11 +155,12 @@
             </a>
 
             <a class="nav-item"
-               href="/archives/alliances">
+               href="/archives/groups">
 
                <i data-lucide="shield"></i>
 
-               <span>分组驾驶舱</span>
+               <span>分组档案</span>
+               <!-- V15.5-A3.3 sidebar wrong leader href fix -->
 
             </a>
 
@@ -475,5 +476,78 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+
+<script>
+/* V15.5-A3.3 archive sidebar active fix */
+(function () {
+    const path = window.location.pathname;
+
+    const rules = [
+        {
+            labels: ["人物档案"],
+            paths: ["/identity", "/archives/players", "/archive_players"]
+        },
+        {
+            labels: ["分组驾驶舱"],
+            paths: ["/leaders", "/leaders/group", "/leaders/owner"]
+        },
+        {
+            labels: ["友盟档案"],
+            paths: ["/archives/friends", "/archives/allies", "/archives/alliances", "/archive_friends", "/archive_alliances"]
+        },
+        {
+            labels: ["敌军档案"],
+            paths: ["/archives/enemies", "/archive_enemies"]
+        },
+        {
+            labels: ["战场事件"],
+            paths: ["/archives/events", "/archive_events"]
+        },
+        {
+            labels: ["档案检索"],
+            paths: ["/archives/search", "/archive_search"]
+        }
+    ];
+
+    function matchPath(rule) {
+        return rule.paths.some(function (p) {
+            return path === p || path.startsWith(p + "/");
+        });
+    }
+
+    const archiveLabels = new Set(
+        rules.flatMap(function (r) { return r.labels; })
+    );
+
+    const links = Array.from(document.querySelectorAll("a"));
+
+    links.forEach(function (a) {
+        const txt = (a.textContent || "").trim();
+        archiveLabels.forEach(function (label) {
+            if (txt.includes(label)) {
+                a.classList.remove("active");
+                a.classList.remove("current");
+                a.style.background = "";
+                a.style.borderRadius = "";
+            }
+        });
+    });
+
+    const matched = rules.find(matchPath);
+
+    if (!matched) return;
+
+    links.forEach(function (a) {
+        const txt = (a.textContent || "").trim();
+        if (matched.labels.some(function (label) { return txt.includes(label); })) {
+            a.classList.add("active");
+            a.style.background = "rgba(255,255,255,0.10)";
+            a.style.borderRadius = "10px";
+        }
+    });
+})();
+</script>
+
+<!-- V15.5-A3.4 archive boundary navigation fix -->
 </body>
 </html>
