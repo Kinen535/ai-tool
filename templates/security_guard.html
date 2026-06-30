@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <h1>🚧 安全闸门控制台</h1>
+        <div>
+            <a href="/security/logs"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                返回安全日志
+            </a>
+            <a href="/security/logout"
+               style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                退出
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 当前保护状态</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>档案库只读</div>
+                {% if report.config.archive_read_only == "1" %}
+                    <h2 style="color:#dc2626;">已开启</h2>
+                {% else %}
+                    <h2 style="color:#16a34a;">未开启</h2>
+                {% endif %}
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>搜索额度保护</div>
+                {% if report.config.search_quota_enabled == "1" %}
+                    <h2 style="color:#16a34a;">已开启</h2>
+                {% else %}
+                    <h2 style="color:#64748b;">未开启</h2>
+                {% endif %}
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>单IP每日搜索额度</div>
+                <h2>{{ report.config.daily_search_limit }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>24小时拦截</div>
+                <h2 style="color:#dc2626;">{{ report.stats.block_total_24h }}</h2>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>24小时搜索记录</div>
+                <h2>{{ report.stats.search_total_24h }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>搜索IP数量</div>
+                <h2>{{ report.stats.quota_ip_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>白名单IP</div>
+                <h2>{{ report.stats.whitelist_count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>② 档案库只读模式</h2>
+            <p style="color:#64748b;line-height:1.7;">
+                开启后，档案库写入、修改、删除类请求会被拦截。适合遇到攻击、异常提交、维护升级时使用。
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="action" value="set_read_only">
+
+                <label style="font-weight:bold;">只读状态</label>
+                <select name="archive_read_only"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                    <option value="0" {% if report.config.archive_read_only == "0" %}selected{% endif %}>关闭只读，允许写入</option>
+                    <option value="1" {% if report.config.archive_read_only == "1" %}selected{% endif %}>开启只读，禁止写入</option>
+                </select>
+
+                <button type="submit"
+                        style="background:#f97316;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    保存只读设置
+                </button>
+            </form>
+        </div>
+
+        <div style="background:#f0fdf4;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+            <h2>③ 搜索额度保护</h2>
+            <p style="color:#64748b;line-height:1.7;">
+                用于防止陌生 IP 批量搜索档案库。Nginx 限制分钟级频率，这里限制 24 小时总量。
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="action" value="set_quota">
+
+                <label style="font-weight:bold;">额度保护</label>
+                <select name="search_quota_enabled"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                    <option value="1" {% if report.config.search_quota_enabled == "1" %}selected{% endif %}>开启</option>
+                    <option value="0" {% if report.config.search_quota_enabled == "0" %}selected{% endif %}>关闭</option>
+                </select>
+
+                <label style="font-weight:bold;">单 IP 每日搜索上限</label>
+                <input name="daily_search_limit"
+                       value="{{ report.config.daily_search_limit }}"
+                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+                <button type="submit"
+                        style="background:#16a34a;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    保存额度设置
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>④ IP 白名单</h2>
+        <p style="color:#64748b;line-height:1.7;">
+            白名单 IP 不受搜索额度限制。127.0.0.1 为服务器本机测试，默认保留。
+        </p>
+
+        <form method="post" style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end;margin-bottom:16px;">
+            <input type="hidden" name="action" value="add_whitelist">
+
+            <div>
+                <label style="font-weight:bold;">IP</label>
+                <input name="ip"
+                       placeholder="例如：119.130.130.238"
+                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            </div>
+
+            <div>
+                <label style="font-weight:bold;">备注</label>
+                <input name="note"
+                       placeholder="例如：管理员自用网络"
+                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            </div>
+
+            <button type="submit"
+                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:bold;">
+                加入白名单
+            </button>
+        </form>
+
+        {% if report.whitelist %}
+            <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:9px;text-align:left;">IP</th>
+                    <th style="padding:9px;text-align:left;">备注</th>
+                    <th style="padding:9px;text-align:left;">创建时间</th>
+                    <th style="padding:9px;text-align:left;">操作</th>
+                </tr>
+                {% for row in report.whitelist %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:9px;font-weight:bold;">{{ row.ip }}</td>
+                    <td style="padding:9px;color:#64748b;">{{ row.note }}</td>
+                    <td style="padding:9px;color:#64748b;">{{ row.created_at }}</td>
+                    <td style="padding:9px;">
+                        {% if row.ip not in ["127.0.0.1", "::1"] %}
+                            <form method="post" style="display:inline;">
+                                <input type="hidden" name="action" value="remove_whitelist">
+                                <input type="hidden" name="ip" value="{{ row.ip }}">
+                                <button type="submit"
+                                        style="background:#fee2e2;color:#dc2626;border:0;border-radius:8px;padding:6px 10px;">
+                                    移除
+                                </button>
+                            </form>
+                        {% else %}
+                            <span style="color:#94a3b8;">保留</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+    </div>
+
+    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>⑤ 最近安全闸门拦截</h2>
+
+        {% if report.block_rows %}
+            <div style="max-height:420px;overflow:auto;background:white;border-radius:12px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;position:sticky;top:0;">
+                        <th style="padding:8px;text-align:left;">时间</th>
+                        <th style="padding:8px;text-align:left;">IP</th>
+                        <th style="padding:8px;text-align:left;">类型</th>
+                        <th style="padding:8px;text-align:left;">路径</th>
+                        <th style="padding:8px;text-align:left;">原因</th>
+                    </tr>
+                    {% for row in report.block_rows %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;color:#64748b;">{{ row.created_at }}</td>
+                        <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
+                        <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ row.guard_type }}</td>
+                        <td style="padding:8px;">{{ row.path }}</td>
+                        <td style="padding:8px;color:#64748b;">{{ row.reason }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% else %}
+            <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">
+                暂无安全闸门拦截记录。
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>⑥ 24小时搜索额度记录</h2>
+
+        {% if report.quota_rows %}
+            <div style="max-height:420px;overflow:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;position:sticky;top:0;">
+                        <th style="padding:8px;text-align:left;">IP</th>
+                        <th style="padding:8px;text-align:left;">搜索次数</th>
+                        <th style="padding:8px;text-align:left;">最后搜索</th>
+                    </tr>
+                    {% for row in report.quota_rows %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
+                        <td style="padding:8px;">{{ row.search_count }}</td>
+                        <td style="padding:8px;color:#64748b;">{{ row.last_seen }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% else %}
+            <div style="background:#f9fafb;border-radius:12px;padding:14px;color:#64748b;">
+                暂无搜索额度记录。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

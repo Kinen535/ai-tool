@@ -8053,6 +8053,10 @@ def v155_security_after_request(response):
         method = request.method
         path = request.path
         query_string = request.query_string.decode("utf-8", errors="ignore")
+
+        if path.startswith("/security/logs") and "token=" in query_string:
+            query_string = "[hidden]"
+
         user_agent = request.headers.get("User-Agent", "")
         status_code = response.status_code
 
@@ -8097,6 +8101,103 @@ def v155_security_after_request(response):
     return response
 
 
+
+# =========================
+# V15.5-S0 基础安全日志与异常检测
+# =========================
+
+@app.before_request
+def v155_security_before_request():
+    import time
+    from flask import request, g
+    from services.v155_security_store import is_static_path
+
+    g.v155_security_start_time = time.time()
+
+    if is_static_path(request.path):
+        g.v155_security_skip = True
+    else:
+        g.v155_security_skip = False
+
+
+@app.after_request
+def v155_security_after_request(response):
+    import time
+    import sqlite3
+    from flask import request, g
+    from services.v155_security_store import (
+        get_client_ip,
+        detect_suspicious,
+        save_access_log,
+        cleanup_security_logs,
+        is_static_path,
+    )
+
+    try:
+        if getattr(g, "v155_security_skip", False):
+            return response
+
+        if is_static_path(request.path):
+            return response
+
+        start_time = getattr(g, "v155_security_start_time", time.time())
+        duration_ms = round((time.time() - start_time) * 1000, 2)
+
+        ip = get_client_ip(request.headers, request.remote_addr)
+        method = request.method
+        path = request.path
+        query_string = request.query_string.decode("utf-8", errors="ignore")
+        user_agent = request.headers.get("User-Agent", "")
+        status_code = response.status_code
+
+        conn = sqlite3.connect("data/snapshots.db")
+        conn.row_factory = sqlite3.Row
+
+        is_suspicious, reason = detect_suspicious(
+            conn=conn,
+            ip=ip,
+            method=method,
+            path=path,
+            query_string=query_string,
+            user_agent=user_agent,
+            status_code=status_code,
+        )
+
+        save_access_log(
+            conn=conn,
+            ip=ip,
+            method=method,
+            path=path,
+            query_string=query_string,
+            user_agent=user_agent,
+            status_code=status_code,
+            duration_ms=duration_ms,
+            is_suspicious=is_suspicious,
+            suspicious_reason=reason,
+        )
+
+        # 每 100 条请求触发一次简单清理，避免日志无限增长
+        cur = conn.execute("SELECT COUNT(*) AS c FROM v155_security_access_logs")
+        total = int(cur.fetchone()["c"] or 0)
+
+        if total % 100 == 0:
+            cleanup_security_logs(conn, keep_days=7)
+
+        conn.close()
+
+    except Exception as e:
+        print("⚠️ V15.5-S0 security log error:", e)
+
+    return response
+
+
+
+
+
+# =========================
+# V15.5-S1.1 clean security routes
+# =========================
+
 @app.route("/security/logs")
 def v155_security_logs():
     import sqlite3
@@ -8106,9 +8207,14 @@ def v155_security_logs():
 
     token_path = Path("data/security_admin_token.txt")
     saved_token = token_path.read_text().strip() if token_path.exists() else ""
-    input_token = request.args.get("token", "").strip()
 
-    if not saved_token or input_token != saved_token:
+    input_token = request.args.get("token", "").strip()
+    cookie_token = request.cookies.get("v155_security_admin", "").strip()
+
+    if not saved_token or (
+        input_token != saved_token
+        and cookie_token != saved_token
+    ):
         abort(403)
 
     conn = sqlite3.connect("data/snapshots.db")
@@ -8122,4 +8228,227 @@ def v155_security_logs():
         "security_logs.html",
         report=report,
         title="安全日志",
+    )
+
+
+@app.route("/security/login", methods=["GET", "POST"])
+def v155_security_login():
+    from pathlib import Path
+    from flask import request, render_template, redirect, make_response
+
+    token_path = Path("data/security_admin_token.txt")
+    saved_token = token_path.read_text().strip() if token_path.exists() else ""
+
+    error = ""
+
+    if request.method == "POST":
+        input_token = request.form.get("token", "").strip()
+
+        if saved_token and input_token == saved_token:
+            resp = make_response(redirect("/security/logs"))
+            resp.set_cookie(
+                "v155_security_admin",
+                saved_token,
+                max_age=60 * 60 * 12,
+                httponly=True,
+                samesite="Strict",
+            )
+            return resp
+
+        error = "安全 token 错误，请重新输入。"
+
+    return render_template(
+        "security_login.html",
+        error=error,
+        title="安全后台登录",
+    )
+
+
+
+
+
+@app.route("/security/ip")
+def v155_security_ip_detail():
+    import sqlite3
+    from pathlib import Path
+    from flask import request, render_template, abort
+    from services.v155_security_store import get_ip_detail_report
+
+    token_path = Path("data/security_admin_token.txt")
+    saved_token = token_path.read_text().strip() if token_path.exists() else ""
+
+    input_token = request.args.get("token", "").strip()
+    cookie_token = request.cookies.get("v155_security_admin", "").strip()
+
+    if not saved_token or (
+        input_token != saved_token
+        and cookie_token != saved_token
+    ):
+        abort(403)
+
+    ip = request.args.get("ip", "").strip()
+
+    if not ip:
+        abort(400)
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    report = get_ip_detail_report(conn, ip)
+
+    conn.close()
+
+    return render_template(
+        "security_ip_detail.html",
+        report=report,
+        title="IP访问明细",
+    )
+
+
+@app.route("/security/logout")
+def v155_security_logout():
+    from flask import redirect, make_response
+
+    resp = make_response(redirect("/security/login"))
+    resp.delete_cookie("v155_security_admin")
+    return resp
+
+
+
+# =========================
+# V15.5-S2 runtime security guard
+# =========================
+
+@app.before_request
+def v155_runtime_security_guard_before_request():
+    import sqlite3
+    from flask import request
+    from services.v155_runtime_guard import (
+        get_client_ip,
+        check_read_only,
+        check_search_quota,
+    )
+
+    path = request.path or ""
+
+    if path.startswith("/static/"):
+        return None
+
+    if path.startswith("/favicon"):
+        return None
+
+    if path.startswith("/security/"):
+        return None
+
+    ip = get_client_ip(request)
+    method = request.method or "GET"
+    query_string = request.query_string.decode("utf-8", errors="ignore")
+    user_agent = request.headers.get("User-Agent", "")
+
+    if path.startswith("/security/logs") and "token=" in query_string:
+        query_string = "[hidden]"
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    try:
+        ok, reason, status_code = check_read_only(
+            conn,
+            ip=ip,
+            method=method,
+            path=path,
+            query_string=query_string,
+            user_agent=user_agent,
+        )
+
+        if not ok:
+            return (
+                "档案库当前处于只读保护模式，写入请求已被安全闸门拦截。",
+                status_code,
+            )
+
+        ok, reason, status_code = check_search_quota(
+            conn,
+            ip=ip,
+            method=method,
+            path=path,
+            query_string=query_string,
+            user_agent=user_agent,
+        )
+
+        if not ok:
+            return (
+                "搜索访问过于频繁，已触发后端安全额度保护。请稍后再试。",
+                status_code,
+            )
+
+    finally:
+        conn.close()
+
+    return None
+
+
+
+@app.route("/security/guard", methods=["GET", "POST"])
+def v155_security_guard_console():
+    import sqlite3
+    from pathlib import Path
+    from flask import request, render_template, abort, redirect
+    from services.v155_runtime_guard import (
+        build_guard_report,
+        update_guard_config,
+        add_whitelist_ip,
+        remove_whitelist_ip,
+    )
+
+    token_path = Path("data/security_admin_token.txt")
+    saved_token = token_path.read_text().strip() if token_path.exists() else ""
+
+    input_token = request.args.get("token", "").strip()
+    cookie_token = request.cookies.get("v155_security_admin", "").strip()
+
+    if not saved_token or (
+        input_token != saved_token
+        and cookie_token != saved_token
+    ):
+        abort(403)
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    if request.method == "POST":
+        action = request.form.get("action", "").strip()
+
+        if action == "set_read_only":
+            value = request.form.get("archive_read_only", "0").strip()
+            update_guard_config(conn, "archive_read_only", value)
+
+        elif action == "set_quota":
+            enabled = request.form.get("search_quota_enabled", "0").strip()
+            limit = request.form.get("daily_search_limit", "120").strip()
+
+            update_guard_config(conn, "search_quota_enabled", enabled)
+            update_guard_config(conn, "daily_search_limit", limit)
+
+        elif action == "add_whitelist":
+            ip = request.form.get("ip", "").strip()
+            note = request.form.get("note", "").strip()
+            add_whitelist_ip(conn, ip, note)
+
+        elif action == "remove_whitelist":
+            ip = request.form.get("ip", "").strip()
+            remove_whitelist_ip(conn, ip)
+
+        conn.close()
+
+        return redirect("/security/guard")
+
+    report = build_guard_report(conn)
+
+    conn.close()
+
+    return render_template(
+        "security_guard.html",
+        report=report,
+        title="安全闸门",
     )
