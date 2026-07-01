@@ -793,3 +793,313 @@ def cleanup_security_logs(conn: sqlite3.Connection, action: str) -> Dict[str, An
         "before": before,
         "after": after,
     }
+
+
+# =========================
+# V15.5-S2.6 enhanced IP detail report
+# =========================
+
+def get_ip_detail_report(conn: sqlite3.Connection, ip: str, limit: int = 300) -> Dict[str, Any]:
+    init_security_tables(conn)
+
+    ip = str(ip or "").strip()
+
+    # 兼容白名单 / 封禁表不存在的情况
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_whitelist (
+            ip TEXT PRIMARY KEY,
+            note TEXT,
+            created_at TEXT
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_blocklist (
+            ip TEXT PRIMARY KEY,
+            reason TEXT,
+            source TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+
+    conn.commit()
+
+    summary = conn.execute(
+        """
+        SELECT
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN is_suspicious=1 THEN 1 ELSE 0 END) AS suspicious_count,
+            SUM(CASE WHEN path LIKE '/archives/search%' OR path LIKE '/archive_search%' THEN 1 ELSE 0 END) AS search_count,
+            SUM(CASE WHEN method='POST' THEN 1 ELSE 0 END) AS post_count,
+            SUM(CASE WHEN status_code=404 THEN 1 ELSE 0 END) AS not_found_count,
+            SUM(CASE WHEN path LIKE '/security/%' THEN 1 ELSE 0 END) AS security_count,
+            SUM(CASE WHEN path IN (
+                '/security/logs',
+                '/security/ip',
+                '/security/guard',
+                '/security/cleanup',
+                '/security/blocks'
+            ) AND status_code=200 THEN 1 ELSE 0 END) AS admin_panel_count,
+            MIN(created_at) AS first_seen,
+            MAX(created_at) AS last_seen
+        FROM v155_security_access_logs
+        WHERE ip = ?
+          AND created_at >= datetime('now', 'localtime', '-24 hours')
+        """,
+        (ip,),
+    ).fetchone()
+
+    total_count = int(summary["total_count"] or 0)
+    suspicious_count = int(summary["suspicious_count"] or 0)
+    search_count = int(summary["search_count"] or 0)
+    post_count = int(summary["post_count"] or 0)
+    not_found_count = int(summary["not_found_count"] or 0)
+    security_count = int(summary["security_count"] or 0)
+    admin_panel_count = int(summary["admin_panel_count"] or 0)
+
+    suspicious_ratio = 0.0
+    if total_count > 0:
+        suspicious_ratio = round(suspicious_count / total_count * 100, 1)
+
+    whitelist_row = conn.execute(
+        """
+        SELECT *
+        FROM v155_security_ip_whitelist
+        WHERE ip=?
+        """,
+        (ip,),
+    ).fetchone()
+
+    block_row = conn.execute(
+        """
+        SELECT *
+        FROM v155_security_ip_blocklist
+        WHERE ip=?
+          AND is_active=1
+        """,
+        (ip,),
+    ).fetchone()
+
+    ua_cur = conn.execute(
+        """
+        SELECT
+            user_agent,
+            COUNT(*) AS total_count,
+            MAX(created_at) AS last_seen
+        FROM v155_security_access_logs
+        WHERE ip = ?
+          AND created_at >= datetime('now', 'localtime', '-24 hours')
+        GROUP BY user_agent
+        ORDER BY total_count DESC
+        LIMIT 20
+        """,
+        (ip,),
+    )
+
+    user_agents = [dict(row) for row in ua_cur.fetchall()]
+
+    scan_keywords = [
+        "nmap",
+        "zgrab",
+        "curl",
+        "python-requests",
+        "scrapy",
+        "wget",
+        "go-http-client",
+        "masscan",
+        "libwww-perl",
+        "aiohttp",
+        "java/",
+        "okhttp",
+    ]
+
+    scanner_hits = []
+
+    for row in user_agents:
+        ua = str(row.get("user_agent") or "").lower()
+        for keyword in scan_keywords:
+            if keyword in ua:
+                scanner_hits.append(keyword)
+                break
+
+    scanner_hits = sorted(set(scanner_hits))
+
+    paths_cur = conn.execute(
+        """
+        SELECT
+            path,
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN is_suspicious=1 THEN 1 ELSE 0 END) AS suspicious_count,
+            SUM(CASE WHEN status_code=404 THEN 1 ELSE 0 END) AS not_found_count,
+            MAX(created_at) AS last_seen
+        FROM v155_security_access_logs
+        WHERE ip = ?
+          AND created_at >= datetime('now', 'localtime', '-24 hours')
+        GROUP BY path
+        ORDER BY total_count DESC
+        LIMIT 50
+        """,
+        (ip,),
+    )
+
+    logs_cur = conn.execute(
+        """
+        SELECT *
+        FROM v155_security_access_logs
+        WHERE ip = ?
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (ip, limit),
+    )
+
+    is_whitelisted = bool(whitelist_row)
+    is_blocked = bool(block_row)
+    is_admin_access = admin_panel_count > 0
+    is_local = is_local_test_ip(ip)
+
+    risk = classify_ip_risk(
+        total_count,
+        suspicious_count,
+        summary["last_seen"] if summary else "",
+    )
+
+    recommendation = {
+        "action": "ignore",
+        "label": "忽略",
+        "level": "normal",
+        "reason": "暂无明显异常。"
+    }
+
+    if is_local:
+        risk["risk_level"] = "local"
+        risk["risk_label"] = "本机测试"
+        risk["risk_reason"] = "服务器本机 curl / 自测访问"
+        recommendation = {
+            "action": "ignore",
+            "label": "忽略",
+            "level": "local",
+            "reason": "这是服务器本机测试访问，不需要处理。"
+        }
+
+    elif is_whitelisted:
+        risk["risk_level"] = "whitelist"
+        risk["risk_label"] = "白名单"
+        risk["risk_reason"] = "该 IP 已加入白名单。"
+        recommendation = {
+            "action": "ignore",
+            "label": "忽略",
+            "level": "whitelist",
+            "reason": "该 IP 已在白名单，不建议封禁。"
+        }
+
+    elif is_admin_access:
+        risk["risk_level"] = "admin"
+        risk["risk_label"] = "管理员访问"
+        risk["risk_reason"] = "该 IP 访问过安全后台，疑似管理员当前网络。"
+        recommendation = {
+            "action": "ignore",
+            "label": "管理员访问，暂不处理",
+            "level": "admin",
+            "reason": "该 IP 有安全后台访问记录，优先判断为管理员自用网络。"
+        }
+
+    elif is_blocked:
+        risk["risk_level"] = "blocked"
+        risk["risk_label"] = "已封禁"
+        risk["risk_reason"] = block_row["reason"] if block_row else "已在封禁名单。"
+        recommendation = {
+            "action": "blocked",
+            "label": "已封禁",
+            "level": "blocked",
+            "reason": "该 IP 已在生效封禁名单中。"
+        }
+
+    else:
+        # V15.5-S2.6.1 推荐策略修正：
+        # curl / python-requests / wget 这类弱脚本 UA 不能单独触发“建议封禁”；
+        # nmap / zgrab / masscan 这类强扫描器才可以直接进入封禁建议。
+        hard_scanners = {"nmap", "zgrab", "masscan"}
+        soft_scripts = {
+            "curl",
+            "python-requests",
+            "wget",
+            "go-http-client",
+            "scrapy",
+            "aiohttp",
+            "java/",
+            "okhttp",
+            "libwww-perl",
+        }
+
+        has_hard_scanner = any(x in hard_scanners for x in scanner_hits)
+        has_soft_script = any(x in soft_scripts for x in scanner_hits)
+
+        if (
+            has_hard_scanner
+            or not_found_count >= 20
+            or suspicious_count >= 30
+            or (has_soft_script and suspicious_count >= 10)
+            or (has_soft_script and not_found_count >= 5)
+        ):
+            recommendation = {
+                "action": "block",
+                "label": "建议封禁",
+                "level": "danger",
+                "reason": "存在强扫描器 UA、大量 404 探测、高异常访问，或脚本 UA 伴随明显异常。"
+            }
+
+        elif (
+            has_soft_script
+            or suspicious_count >= 10
+            or not_found_count >= 5
+            or search_count >= 30
+        ):
+            recommendation = {
+                "action": "watch",
+                "label": "建议观察",
+                "level": "watch",
+                "reason": "存在脚本 UA 或一定异常访问，建议观察，暂不直接封禁。"
+            }
+
+        elif suspicious_count > 0:
+            recommendation = {
+                "action": "notice",
+                "label": "轻微异常",
+                "level": "notice",
+                "reason": "存在少量异常记录，暂不需要处理。"
+            }
+
+    return {
+        "ip": ip,
+        "summary": {
+            "total_count": total_count,
+            "suspicious_count": suspicious_count,
+            "suspicious_ratio": suspicious_ratio,
+            "search_count": search_count,
+            "post_count": post_count,
+            "not_found_count": not_found_count,
+            "security_count": security_count,
+            "admin_panel_count": admin_panel_count,
+            "first_seen": summary["first_seen"] or "",
+            "last_seen": summary["last_seen"] or "",
+            "is_local_test": 1 if is_local else 0,
+            "is_whitelisted": 1 if is_whitelisted else 0,
+            "is_blocked": 1 if is_blocked else 0,
+            "is_admin_access": 1 if is_admin_access else 0,
+            "scanner_hits": scanner_hits,
+        },
+        "risk": risk,
+        "recommendation": recommendation,
+        "whitelist": dict(whitelist_row) if whitelist_row else None,
+        "block": dict(block_row) if block_row else None,
+        "paths": [dict(row) for row in paths_cur.fetchall()],
+        "user_agents": user_agents,
+        "logs": [dict(row) for row in logs_cur.fetchall()],
+    }
