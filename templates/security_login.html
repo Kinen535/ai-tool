@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:760px;margin:0 auto;padding:40px 24px;">
+    <h1>🛡️ 安全后台登录</h1>
+
+    <div style="
+        background:#eff6ff;
+        border-left:6px solid #2563eb;
+        border-radius:18px;
+        padding:24px;
+        margin-top:20px;
+        box-shadow:0 10px 30px rgba(15,23,42,0.06);
+    ">
+        <h2>访问验证</h2>
+
+        <p style="color:#64748b;line-height:1.7;">
+            输入安全后台 token 后进入安全日志页面。登录成功后会写入本地 Cookie，
+            避免 token 长期出现在浏览器地址栏和 Nginx 日志里。
+        </p>
+
+        {% if error %}
+            <div style="
+                background:#fef2f2;
+                color:#dc2626;
+                border:1px solid #fecaca;
+                border-radius:12px;
+                padding:12px;
+                margin:14px 0;
+                font-weight:bold;
+            ">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="post" style="margin-top:18px;">
+            <label style="font-weight:bold;">安全 token</label>
+
+            <input
+                type="password"
+                name="token"
+                placeholder="请输入安全后台 token"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:12px;
+                    border:1px solid #cbd5e1;
+                    border-radius:10px;
+                    margin:8px 0 16px 0;
+                    font-size:15px;
+                "
+            >
+
+            <button
+                type="submit"
+                style="
+                    background:#2563eb;
+                    color:white;
+                    border:0;
+                    border-radius:10px;
+                    padding:10px 18px;
+                    font-weight:bold;
+                    cursor:pointer;
+                "
+            >
+                登录安全后台
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

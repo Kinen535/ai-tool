@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <h1>🧹 安全日志清理</h1>
+        <div>
+            <a href="/security/logs"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                返回安全日志
+            </a>
+            <a href="/security/guard"
+               style="background:#f0fdf4;color:#16a34a;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                安全闸门
+            </a>
+            <a href="/security/logout"
+               style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                退出
+            </a>
+        </div>
+    </div>
+
+    {% if result %}
+        {% if result.ok %}
+            <div style="background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:16px;margin:16px 0;font-weight:bold;">
+                ✅ {{ result.message }}
+            </div>
+        {% else %}
+            <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:16px;margin:16px 0;font-weight:bold;">
+                ❌ {{ result.message }}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 当前日志体量</h2>
+        <p style="color:#64748b;line-height:1.7;">
+            这里只清理安全日志、访问日志、搜索额度记录，不会影响成员数据、战场档案、身份档案和业务数据库结构。
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>访问日志总数</div>
+                <h2>{{ report.counts.access_total }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>7天前访问日志</div>
+                <h2 style="color:#f97316;">{{ report.counts.access_older_7d }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>本机测试日志</div>
+                <h2 style="color:#64748b;">{{ report.counts.local_test_total }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>异常访问日志</div>
+                <h2 style="color:#dc2626;">{{ report.counts.suspicious_total }}</h2>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>安全闸门拦截</div>
+                <h2 style="color:#dc2626;">{{ report.counts.guard_block_total }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>30天前拦截</div>
+                <h2 style="color:#f97316;">{{ report.counts.guard_block_older_30d }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>搜索额度记录</div>
+                <h2>{{ report.counts.quota_total }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>3天前额度记录</div>
+                <h2 style="color:#f97316;">{{ report.counts.quota_older_3d }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>② 推荐清理动作</h2>
+        <p style="color:#64748b;line-height:1.7;">
+            建议优先清理本机测试日志和过期额度记录。真实异常日志建议至少保留 7 天，安全闸门拦截日志建议保留 30 天。
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;">
+            <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <h3>清理本机测试日志</h3>
+                <p style="color:#64748b;">删除 127.0.0.1 和 ::1 产生的访问日志，避免自测污染判断。</p>
+                <input type="hidden" name="action" value="clear_local_test">
+                <button type="submit"
+                        style="background:#64748b;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    清理本机测试日志
+                </button>
+            </form>
+
+            <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <h3>清理 3 天前搜索额度记录</h3>
+                <p style="color:#64748b;">额度记录只用于近期防刷，长期保留意义不大。</p>
+                <input type="hidden" name="action" value="clear_quota_older_3d">
+                <button type="submit"
+                        style="background:#16a34a;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    清理过期额度记录
+                </button>
+            </form>
+
+            <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <h3>清理 7 天前访问日志</h3>
+                <p style="color:#64748b;">删除较旧访问流水，保留近期安全判断数据。</p>
+                <input type="hidden" name="action" value="clear_access_older_7d">
+                <button type="submit"
+                        style="background:#f97316;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    清理 7 天前访问日志
+                </button>
+            </form>
+
+            <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <h3>清理 30 天前拦截日志</h3>
+                <p style="color:#64748b;">安全闸门拦截记录建议保留更久，方便追踪攻击源。</p>
+                <input type="hidden" name="action" value="clear_guard_older_30d">
+                <button type="submit"
+                        style="background:#dc2626;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    清理 30 天前拦截日志
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;">
+        <h2>③ 数据库压缩</h2>
+        <p style="color:#64748b;line-height:1.7;">
+            SQLite 删除数据后，文件体积不一定立刻变小。执行 VACUUM 可以压缩数据库文件。建议只在访问低峰期执行。
+        </p>
+
+        <form method="post">
+            <input type="hidden" name="action" value="vacuum">
+            <button type="submit"
+                    style="background:#334155;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                执行 SQLite VACUUM
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

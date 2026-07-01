@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <a href="/security/logs"
+       style="display:inline-block;background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;margin-bottom:16px;">
+        ← 返回安全日志
+    </a>
+
+    <h1>🔎 IP 安全判断：{{ report.ip }}</h1>
+
+    <div style="
+        background:
+        {% if report.recommendation.level == 'danger' %}#fef2f2
+        {% elif report.recommendation.level == 'watch' %}#fff7ed
+        {% elif report.recommendation.level == 'admin' %}#eff6ff
+        {% elif report.recommendation.level == 'blocked' %}#fef2f2
+        {% else %}#f0fdf4{% endif %};
+        border-left:6px solid
+        {% if report.recommendation.level == 'danger' %}#dc2626
+        {% elif report.recommendation.level == 'watch' %}#f97316
+        {% elif report.recommendation.level == 'admin' %}#2563eb
+        {% elif report.recommendation.level == 'blocked' %}#991b1b
+        {% else %}#16a34a{% endif %};
+        border-radius:18px;
+        padding:22px;
+        margin-bottom:18px;
+    ">
+        <h2>① 系统建议</h2>
+
+        <div style="font-size:26px;font-weight:bold;margin:10px 0;">
+            {% if report.recommendation.level == "danger" %}
+                🚨 {{ report.recommendation.label }}
+            {% elif report.recommendation.level == "watch" %}
+                ⚠️ {{ report.recommendation.label }}
+            {% elif report.recommendation.level == "admin" %}
+                🧑‍💻 {{ report.recommendation.label }}
+            {% elif report.recommendation.level == "blocked" %}
+                ⛔ {{ report.recommendation.label }}
+            {% elif report.recommendation.level == "whitelist" %}
+                ✅ {{ report.recommendation.label }}
+            {% else %}
+                ✅ {{ report.recommendation.label }}
+            {% endif %}
+        </div>
+
+        <p style="color:#475569;line-height:1.7;">
+            {{ report.recommendation.reason }}
+        </p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+            {% if report.summary.is_admin_access %}
+                <span style="background:#dbeafe;color:#1d4ed8;padding:6px 10px;border-radius:999px;font-weight:bold;">管理员访问</span>
+            {% endif %}
+
+            {% if report.summary.is_whitelisted %}
+                <span style="background:#dcfce7;color:#15803d;padding:6px 10px;border-radius:999px;font-weight:bold;">白名单</span>
+            {% endif %}
+
+            {% if report.summary.is_blocked %}
+                <span style="background:#fee2e2;color:#dc2626;padding:6px 10px;border-radius:999px;font-weight:bold;">已封禁</span>
+            {% endif %}
+
+            {% if report.summary.scanner_hits %}
+                <span style="background:#fee2e2;color:#dc2626;padding:6px 10px;border-radius:999px;font-weight:bold;">
+                    扫描器 UA：{{ report.summary.scanner_hits|join(", ") }}
+                </span>
+            {% endif %}
+
+            {% if report.summary.not_found_count >= 5 %}
+                <span style="background:#ffedd5;color:#c2410c;padding:6px 10px;border-radius:999px;font-weight:bold;">
+                    404 探测：{{ report.summary.not_found_count }}
+                </span>
+            {% endif %}
+
+            {% if report.summary.search_count >= 30 %}
+                <span style="background:#fef9c3;color:#a16207;padding:6px 10px;border-radius:999px;font-weight:bold;">
+                    高频搜索：{{ report.summary.search_count }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>② 24小时访问画像</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>访问次数</div>
+                <h2>{{ report.summary.total_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>异常次数</div>
+                <h2 style="color:#dc2626;">{{ report.summary.suspicious_count }}</h2>
+                <div style="color:#64748b;">{{ report.summary.suspicious_ratio }}%</div>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>404 探测</div>
+                <h2 style="color:#f97316;">{{ report.summary.not_found_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>搜索次数</div>
+                <h2>{{ report.summary.search_count }}</h2>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>提交次数</div>
+                <h2>{{ report.summary.post_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>安全后台访问</div>
+                <h2>{{ report.summary.admin_panel_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>首次访问</div>
+                <div style="font-weight:bold;color:#475569;">{{ report.summary.first_seen or "-" }}</div>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>最后访问</div>
+                <div style="font-weight:bold;color:#475569;">{{ report.summary.last_seen or "-" }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if report.block %}
+    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>③ 当前封禁信息</h2>
+        <p><b>来源：</b>{{ report.block.source }}</p>
+        <p><b>原因：</b>{{ report.block.reason }}</p>
+        <p><b>更新时间：</b>{{ report.block.updated_at }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.whitelist %}
+    <div style="background:#f0fdf4;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>③ 当前白名单信息</h2>
+        <p><b>备注：</b>{{ report.whitelist.note }}</p>
+        <p><b>创建时间：</b>{{ report.whitelist.created_at }}</p>
+    </div>
+    {% endif %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>④ 访问路径 TOP</h2>
+
+            {% if report.paths %}
+                <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:8px;text-align:left;">路径</th>
+                        <th style="padding:8px;text-align:left;">次数</th>
+                        <th style="padding:8px;text-align:left;">异常</th>
+                        <th style="padding:8px;text-align:left;">404</th>
+                    </tr>
+                    {% for row in report.paths %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;">{{ row.path }}</td>
+                        <td style="padding:8px;">{{ row.total_count }}</td>
+                        <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ row.suspicious_count }}</td>
+                        <td style="padding:8px;color:#f97316;font-weight:bold;">{{ row.not_found_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">暂无路径记录。</div>
+            {% endif %}
+        </div>
+
+        <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;">
+            <h2>⑤ User-Agent TOP</h2>
+
+            {% if report.user_agents %}
+                <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:8px;text-align:left;">UA</th>
+                        <th style="padding:8px;text-align:left;">次数</th>
+                    </tr>
+                    {% for row in report.user_agents %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;color:#64748b;max-width:520px;">{{ row.user_agent or "-" }}</td>
+                        <td style="padding:8px;">{{ row.total_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">暂无 UA 记录。</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>⑥ 最近访问明细</h2>
+
+        {% if report.logs %}
+            <div style="max-height:620px;overflow:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;position:sticky;top:0;">
+                        <th style="padding:8px;text-align:left;">时间</th>
+                        <th style="padding:8px;text-align:left;">方法</th>
+                        <th style="padding:8px;text-align:left;">路径</th>
+                        <th style="padding:8px;text-align:left;">状态</th>
+                        <th style="padding:8px;text-align:left;">异常</th>
+                        <th style="padding:8px;text-align:left;">原因</th>
+                    </tr>
+                    {% for log in report.logs %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;color:#64748b;white-space:nowrap;">{{ log.created_at }}</td>
+                        <td style="padding:8px;">{{ log.method }}</td>
+                        <td style="padding:8px;">{{ log.path }}{% if log.query_string %}?{{ log.query_string }}{% endif %}</td>
+                        <td style="padding:8px;">{{ log.status_code }}</td>
+                        <td style="padding:8px;">
+                            {% if log.is_suspicious %}
+                                <span style="color:#dc2626;font-weight:bold;">是</span>
+                            {% else %}
+                                <span style="color:#16a34a;">否</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:8px;color:#dc2626;">{{ log.suspicious_reason }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% else %}
+            <div style="background:#f9fafb;border-radius:12px;padding:14px;color:#64748b;">暂无访问明细。</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

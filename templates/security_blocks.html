@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <h1>⛔ IP 封禁候选池</h1>
+        <div>
+            <a href="/security/logs"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                返回安全日志
+            </a>
+            <a href="/security/guard"
+               style="background:#f0fdf4;color:#16a34a;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                安全闸门
+            </a>
+            <a href="/security/cleanup"
+               style="background:#fff7ed;color:#f97316;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
+                日志清理
+            </a>
+            <a href="/security/logout"
+               style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                退出
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 当前封禁状态</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>生效封禁 IP</div>
+                <h2 style="color:#dc2626;">{{ report.stats.active_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>解除封禁记录</div>
+                <h2>{{ report.stats.inactive_count }}</h2>
+            </div>
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>高风险候选</div>
+                <h2 style="color:#f97316;">{{ report.stats.candidate_count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+        <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
+            <h2>② 高风险候选</h2>
+            <p style="color:#64748b;">
+                系统根据 24 小时异常访问、404 探测、脚本 UA、扫描行为自动给出候选。建议人工确认后再封禁。
+            </p>
+
+            {% if report.candidates %}
+                <div style="max-height:520px;overflow:auto;background:white;border-radius:12px;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr style="background:#f3f4f6;position:sticky;top:0;">
+                            <th style="padding:8px;text-align:left;">IP</th>
+                            <th style="padding:8px;text-align:left;">风险</th>
+                            <th style="padding:8px;text-align:left;">原因</th>
+                            <th style="padding:8px;text-align:left;">操作</th>
+                        </tr>
+                        {% for row in report.candidates %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
+                            <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ row.risk_label }}</td>
+                            <td style="padding:8px;color:#64748b;">
+                                {{ row.risk_reason }}
+                                <br>
+                                <span style="font-size:12px;">{{ row.reasons }}</span>
+                            </td>
+                            <td style="padding:8px;">
+                                <form method="post" style="display:inline;">
+                                    <input type="hidden" name="action" value="add_candidate">
+                                    <input type="hidden" name="ip" value="{{ row.ip }}">
+                                    <input type="hidden" name="reason" value="{{ row.risk_reason }}">
+                                    <button type="submit"
+                                            style="background:#dc2626;color:white;border:0;border-radius:8px;padding:7px 10px;font-weight:bold;">
+                                        确认封禁
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% else %}
+                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">
+                    暂无高风险候选。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>③ 手动加入封禁</h2>
+            <p style="color:#64748b;">
+                用于封禁确认过的扫描 IP。不要随意封禁正常玩家 IP，公网 IP 可能存在运营商共享。
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="action" value="add_block">
+
+                <label style="font-weight:bold;">IP 地址</label>
+                <input name="ip"
+                       placeholder="例如：121.41.166.246"
+                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+                <label style="font-weight:bold;">封禁原因</label>
+                <textarea name="reason"
+                          placeholder="例如：Nmap 扫描、批量 404 探测、恶意批量搜索"
+                          style="width:100%;box-sizing:border-box;min-height:120px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;"></textarea>
+
+                <button type="submit"
+                        style="background:#dc2626;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
+                    加入封禁名单
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>④ 生效封禁名单</h2>
+
+        {% if report.active_blocks %}
+            <div style="max-height:520px;overflow:auto;background:white;border-radius:12px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;position:sticky;top:0;">
+                        <th style="padding:8px;text-align:left;">IP</th>
+                        <th style="padding:8px;text-align:left;">来源</th>
+                        <th style="padding:8px;text-align:left;">原因</th>
+                        <th style="padding:8px;text-align:left;">更新时间</th>
+                        <th style="padding:8px;text-align:left;">操作</th>
+                    </tr>
+                    {% for row in report.active_blocks %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;font-weight:bold;color:#dc2626;">{{ row.ip }}</td>
+                        <td style="padding:8px;">{{ row.source }}</td>
+                        <td style="padding:8px;color:#64748b;">{{ row.reason }}</td>
+                        <td style="padding:8px;color:#64748b;">{{ row.updated_at }}</td>
+                        <td style="padding:8px;">
+                            <form method="post" style="display:inline;">
+                                <input type="hidden" name="action" value="remove_block">
+                                <input type="hidden" name="ip" value="{{ row.ip }}">
+                                <button type="submit"
+                                        style="background:#e0f2fe;color:#0369a1;border:0;border-radius:8px;padding:7px 10px;">
+                                    解除封禁
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% else %}
+            <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">
+                当前没有生效封禁 IP。
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>⑤ 最近解除封禁记录</h2>
+
+        {% if report.inactive_blocks %}
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:8px;text-align:left;">IP</th>
+                    <th style="padding:8px;text-align:left;">来源</th>
+                    <th style="padding:8px;text-align:left;">原因</th>
+                    <th style="padding:8px;text-align:left;">更新时间</th>
+                </tr>
+                {% for row in report.inactive_blocks %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:8px;">{{ row.ip }}</td>
+                    <td style="padding:8px;">{{ row.source }}</td>
+                    <td style="padding:8px;color:#64748b;">{{ row.reason }}</td>
+                    <td style="padding:8px;color:#64748b;">{{ row.updated_at }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="background:#f9fafb;border-radius:12px;padding:14px;color:#64748b;">
+                暂无解除封禁记录。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

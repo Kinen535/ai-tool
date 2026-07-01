@@ -23,3 +23,4 @@ app_before_*.py
 # Temporary text/debug files
 *_html.txt
 alliance_check.txt
+data/security_admin_token.txt
