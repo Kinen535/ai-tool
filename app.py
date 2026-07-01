@@ -8161,6 +8161,16 @@ def v155_security_login():
         input_token = request.form.get("token", "").strip()
 
         if saved_token and input_token == saved_token:
+            try:
+                v155_record_security_admin_action(
+                    "security_login",
+                    "安全后台登录",
+                    "success",
+                    "管理员 token 登录成功",
+                )
+            except Exception:
+                pass
+
             resp = make_response(redirect("/security/logs"))
             resp.set_cookie(
                 "v155_security_admin",
@@ -8660,6 +8670,23 @@ def v155_security_nginx_sync_action():
         "message": "Nginx 封禁名单已同步并重载生效。" if ok else "同步失败，请查看下方错误输出。",
     }
 
+    try:
+        step_summary = "；".join(
+            [
+                f"{step.get('cmd')}={step.get('returncode')}"
+                for step in steps
+            ]
+        )
+
+        v155_record_security_admin_action(
+            "nginx_sync",
+            "同步 Nginx 封禁名单",
+            "success" if ok else "failed",
+            step_summary,
+        )
+    except Exception:
+        pass
+
     report = _v155_build_nginx_sync_report()
 
     return render_template(
@@ -8822,3 +8849,75 @@ def _v155_build_nginx_sync_report():
         "missing_in_nginx": missing_in_nginx[:50],
         "extra_in_nginx": extra_in_nginx[:50],
     }
+
+
+
+# =========================
+# V15.5-S3-A security admin audit
+# =========================
+
+def _v155_get_request_ip():
+    from flask import request
+
+    forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    return request.remote_addr or ""
+
+
+def v155_record_security_admin_action(
+    action_key,
+    action_label,
+    result_status="success",
+    note="",
+):
+    import sqlite3
+    from flask import request
+    from services.v155_security_admin_audit import record_admin_action
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    try:
+        record_admin_action(
+            conn,
+            admin_ip=_v155_get_request_ip(),
+            user_agent=request.headers.get("User-Agent", ""),
+            action_key=action_key,
+            action_label=action_label,
+            result_status=result_status,
+            note=note,
+            request_path=request.path,
+        )
+    finally:
+        conn.close()
+
+
+@app.route("/security/audit")
+def v155_security_admin_audit_page():
+    import sqlite3
+    from flask import request, render_template, redirect
+    from services.v155_security_admin_audit import list_admin_actions
+
+    if not _v155_security_admin_allowed():
+        return redirect("/security/login")
+
+    try:
+        page = int(request.args.get("page", "1") or 1)
+    except Exception:
+        page = 1
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    report = list_admin_actions(conn, page=page, per_page=30)
+
+    conn.close()
+
+    return render_template(
+        "security_audit.html",
+        report=report,
+        title="安全操作审计",
+    )

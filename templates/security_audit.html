@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>🧾 安全操作审计</h1>
+
+        <div style="display:flex;gap:10px;">
+            <a href="/security/logs"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                返回安全日志
+            </a>
+
+            <a href="/security/nginx"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                Nginx同步
+            </a>
+
+            <a href="/security/blocks"
+               style="background:#fef2f2;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                封禁管理
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 审计概况</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>审计记录总数</div>
+                <h2>{{ report.total }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>当前页</div>
+                <h2>{{ report.page }} / {{ report.total_pages }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>每页</div>
+                <h2>{{ report.per_page }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>② 操作记录</h2>
+
+        {% if report.rows %}
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:10px;text-align:left;">时间</th>
+                    <th style="padding:10px;text-align:left;">IP</th>
+                    <th style="padding:10px;text-align:left;">动作</th>
+                    <th style="padding:10px;text-align:left;">结果</th>
+                    <th style="padding:10px;text-align:left;">路径</th>
+                    <th style="padding:10px;text-align:left;">备注</th>
+                    <th style="padding:10px;text-align:left;">UA</th>
+                </tr>
+
+                {% for row in report.rows %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">{{ row.created_at }}</td>
+                    <td style="padding:10px;font-weight:bold;">{{ row.admin_ip }}</td>
+                    <td style="padding:10px;">
+                        <div style="font-weight:bold;">{{ row.action_label }}</div>
+                        <div style="font-size:12px;color:#64748b;">{{ row.action_key }}</div>
+                    </td>
+                    <td style="padding:10px;">
+                        {% if row.result_status == "success" %}
+                            <span style="color:#16a34a;font-weight:bold;">成功</span>
+                        {% elif row.result_status == "failed" %}
+                            <span style="color:#dc2626;font-weight:bold;">失败</span>
+                        {% else %}
+                            <span style="color:#f97316;font-weight:bold;">{{ row.result_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:10px;color:#475569;">{{ row.request_path }}</td>
+                    <td style="padding:10px;color:#475569;max-width:360px;word-break:break-all;">{{ row.note }}</td>
+                    <td style="padding:10px;color:#64748b;max-width:360px;word-break:break-all;">{{ row.user_agent }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                暂无安全操作审计记录。
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:20px 0;">
+        {% if report.has_prev %}
+            <a href="/security/audit?page={{ report.prev_page }}"
+               style="background:#eff6ff;color:#2563eb;padding:10px 16px;border-radius:10px;text-decoration:none;">
+                ← 上一页
+            </a>
+        {% else %}
+            <span style="background:#f1f5f9;color:#94a3b8;padding:10px 16px;border-radius:10px;">
+                ← 上一页
+            </span>
+        {% endif %}
+
+        <strong>第 {{ report.page }} / {{ report.total_pages }} 页，共 {{ report.total }} 条</strong>
+
+        {% if report.has_next %}
+            <a href="/security/audit?page={{ report.next_page }}"
+               style="background:#eff6ff;color:#2563eb;padding:10px 16px;border-radius:10px;text-decoration:none;">
+                下一页 →
+            </a>
+        {% else %}
+            <span style="background:#f1f5f9;color:#94a3b8;padding:10px 16px;border-radius:10px;">
+                下一页 →
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
