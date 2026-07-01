@@ -194,7 +194,36 @@
             <hr>
 
             <div class="nav-section">
-                🤖 AI幕僚中心
+                
+            <!-- V15.6-A2 reputation archive nav -->
+            <div class="nav-section-title">🧭 信誉档案库</div>
+
+            <a class="nav-item {% if request.path == '/reputation' %}active{% endif %}"
+               href="/reputation">
+                <span class="nav-icon">🧭</span>
+                <span>档案首页</span>
+            </a>
+
+            <a class="nav-item {% if request.path.startswith('/reputation/search') %}active{% endif %}"
+               href="/reputation/search">
+                <span class="nav-icon">🔎</span>
+                <span>信誉检索</span>
+            </a>
+
+            <a class="nav-item {% if request.path.startswith('/reputation/subjects') %}active{% endif %}"
+               href="/reputation/subjects">
+                <span class="nav-icon">👤</span>
+                <span>信誉主体</span>
+            </a>
+
+            <a class="nav-item {% if request.path.startswith('/reputation/events') %}active{% endif %}"
+               href="/reputation/events">
+                <span class="nav-icon">📌</span>
+                <span>信誉事件</span>
+            </a>
+
+
+            🤖 AI幕僚中心
             </div>
 
             <a class="nav-item"
