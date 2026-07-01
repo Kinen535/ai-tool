@@ -9097,6 +9097,72 @@ def v155_security_console():
         """
     )
 
+    # V15.5-S3-D security risk noise reduction
+    high_risk_ip_count = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM (
+            SELECT
+                ip,
+                SUM(CASE WHEN is_suspicious=1 THEN 1 ELSE 0 END) AS suspicious_count,
+                SUM(CASE WHEN status_code=404 THEN 1 ELSE 0 END) AS error_404_count,
+                SUM(
+                    CASE
+                        WHEN lower(user_agent) LIKE '%nmap%'
+                          OR lower(user_agent) LIKE '%zgrab%'
+                          OR lower(user_agent) LIKE '%python-requests%'
+                          OR lower(user_agent) LIKE '%curl%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS script_ua_count
+            FROM v155_security_access_logs
+            WHERE created_at >= datetime('now','localtime','-24 hours')
+              AND path NOT LIKE '/security/%'
+              AND ip NOT IN ('127.0.0.1','::1')
+            GROUP BY ip
+        )
+        WHERE suspicious_count >= 20
+           OR error_404_count >= 20
+           OR script_ua_count >= 8
+        """
+    )
+
+    observe_ip_count = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM (
+            SELECT
+                ip,
+                SUM(CASE WHEN is_suspicious=1 THEN 1 ELSE 0 END) AS suspicious_count,
+                SUM(CASE WHEN status_code=404 THEN 1 ELSE 0 END) AS error_404_count,
+                SUM(
+                    CASE
+                        WHEN lower(user_agent) LIKE '%nmap%'
+                          OR lower(user_agent) LIKE '%zgrab%'
+                          OR lower(user_agent) LIKE '%python-requests%'
+                          OR lower(user_agent) LIKE '%curl%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS script_ua_count
+            FROM v155_security_access_logs
+            WHERE created_at >= datetime('now','localtime','-24 hours')
+              AND path NOT LIKE '/security/%'
+              AND ip NOT IN ('127.0.0.1','::1')
+            GROUP BY ip
+        )
+        WHERE (
+                suspicious_count > 0
+             OR error_404_count > 0
+             OR script_ua_count > 0
+        )
+          AND NOT (
+                suspicious_count >= 20
+             OR error_404_count >= 20
+             OR script_ua_count >= 8
+        )
+        """
+    )
+
     archive_read_only = safe_config("archive_read_only", "0")
     quota_enabled = safe_config("search_quota_enabled", "1")
     daily_search_limit = safe_config("daily_search_limit", "120")
@@ -9120,12 +9186,15 @@ def v155_security_console():
 
     conn.close()
 
-    if suspicious_24h >= 20 or active_blocks >= 5:
+    nginx_not_synced = not nginx_report.get("is_synced", False)
+    nginx_has_residue = int(nginx_report.get("nginx_deny_count", 0) or 0) > int(nginx_report.get("syncable_block_count", 0) or 0)
+
+    if high_risk_ip_count > 0 or nginx_not_synced or nginx_has_residue:
         risk_level = "高"
-        risk_text = "存在较明显异常访问或封禁压力，建议重点观察。"
-    elif suspicious_24h > 0 or active_blocks > 0:
+        risk_text = "存在高风险 IP、Nginx 未同步或残留封禁配置，建议优先处理。"
+    elif observe_ip_count > 0 or suspicious_24h >= 20 or active_blocks > 0:
         risk_level = "中"
-        risk_text = "存在少量异常访问，当前可继续观察。"
+        risk_text = "存在观察 IP 或零散异常访问，当前建议持续观察，不必立即大规模封禁。"
     else:
         risk_level = "低"
         risk_text = "当前没有明显异常访问压力。"
@@ -9136,6 +9205,8 @@ def v155_security_console():
         "search_24h": search_24h,
         "submit_24h": submit_24h,
         "active_blocks": active_blocks,
+        "high_risk_ip_count": high_risk_ip_count,
+        "observe_ip_count": observe_ip_count,
         "whitelist_count": whitelist_count,
         "guard_blocks": guard_blocks,
         "audit_total": audit_total,

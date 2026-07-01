@@ -41,6 +41,16 @@
 
         <p style="color:#475569;line-height:1.7;">{{ report.risk_text }}</p>
 
+        <!-- V15.5-S3-D risk noise hint -->
+        <p style="color:#475569;line-height:1.7;">
+            高风险IP：
+            <b style="color:#dc2626;">{{ report.high_risk_ip_count }}</b>
+            ｜观察IP：
+            <b style="color:#f97316;">{{ report.observe_ip_count }}</b>
+            ｜真实异常：
+            <b style="color:#dc2626;">{{ report.suspicious_24h }}</b>
+        </p>
+
         <p style="color:#475569;line-height:1.7;">
             Nginx同步：
             {% if report.nginx.is_synced %}
