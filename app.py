@@ -8361,9 +8361,16 @@ def v155_security_guard_console():
     if request.method == "POST":
         action = request.form.get("action", "").strip()
 
+        # V15.5-S3-B audit security guard cleanup blocks
+        audit_label = "安全闸门操作"
+        audit_note = f"action={action}"
+        audit_status = "success"
+
         if action == "set_read_only":
             value = request.form.get("archive_read_only", "0").strip()
             update_guard_config(conn, "archive_read_only", value)
+            audit_label = "修改档案库只读模式"
+            audit_note = f"archive_read_only={value}"
 
         elif action == "set_quota":
             enabled = request.form.get("search_quota_enabled", "0").strip()
@@ -8371,17 +8378,33 @@ def v155_security_guard_console():
 
             update_guard_config(conn, "search_quota_enabled", enabled)
             update_guard_config(conn, "daily_search_limit", limit)
+            audit_label = "修改搜索额度"
+            audit_note = f"search_quota_enabled={enabled}; daily_search_limit={limit}"
 
         elif action == "add_whitelist":
             ip = request.form.get("ip", "").strip()
             note = request.form.get("note", "").strip()
             add_whitelist_ip(conn, ip, note)
+            audit_label = "加入安全白名单"
+            audit_note = f"ip={ip}; note={note}"
 
         elif action == "remove_whitelist":
             ip = request.form.get("ip", "").strip()
             remove_whitelist_ip(conn, ip)
+            audit_label = "移除安全白名单"
+            audit_note = f"ip={ip}"
 
         conn.close()
+
+        try:
+            v155_record_security_admin_action(
+                action,
+                audit_label,
+                audit_status,
+                audit_note,
+            )
+        except Exception:
+            pass
 
         return redirect("/security/guard")
 
@@ -8423,14 +8446,40 @@ def v155_security_cleanup():
     conn.row_factory = sqlite3.Row
 
     result = None
+    cleanup_action = ""
+    cleanup_label = ""
+    cleanup_note = ""
 
     if request.method == "POST":
         action = request.form.get("action", "").strip()
+        cleanup_action = action
+
+        cleanup_label_map = {
+            "clear_local_test": "清理本机测试日志",
+            "clear_quota_older_3d": "清理 3 天前搜索额度记录",
+            "clear_access_older_7d": "清理 7 天前访问日志",
+            "clear_guard_older_30d": "清理 30 天前拦截日志",
+            "vacuum": "压缩安全日志数据库",
+        }
+
+        cleanup_label = cleanup_label_map.get(action, "安全日志清理操作")
         result = cleanup_security_logs(conn, action)
+        cleanup_note = str(result)[:900]
 
     report = build_security_cleanup_report(conn)
 
     conn.close()
+
+    if request.method == "POST":
+        try:
+            v155_record_security_admin_action(
+                cleanup_action,
+                cleanup_label,
+                "success",
+                cleanup_note,
+            )
+        except Exception:
+            pass
 
     return render_template(
         "security_cleanup.html",
@@ -8472,16 +8521,37 @@ def v155_security_blocks():
         ip = request.form.get("ip", "").strip()
         reason = request.form.get("reason", "").strip()
 
+        audit_label = "IP封禁操作"
+        audit_note = f"action={action}; ip={ip}; reason={reason}"
+        audit_status = "success"
+
         if action == "add_block":
             add_block_ip(conn, ip, reason or "后台手动封禁", "manual")
+            audit_label = "手动加入封禁 IP"
+            audit_note = f"ip={ip}; reason={reason or '后台手动封禁'}"
 
         elif action == "add_candidate":
             add_block_ip(conn, ip, reason or "高风险候选确认封禁", "candidate")
+            audit_label = "高风险候选确认封禁 IP"
+            audit_note = f"ip={ip}; reason={reason or '高风险候选确认封禁'}"
 
         elif action == "remove_block":
             remove_block_ip(conn, ip)
+            audit_label = "解除封禁 IP"
+            audit_note = f"ip={ip}"
 
         conn.close()
+
+        try:
+            v155_record_security_admin_action(
+                action,
+                audit_label,
+                audit_status,
+                audit_note,
+            )
+        except Exception:
+            pass
+
         return redirect("/security/blocks")
 
     report = build_ip_blocklist_report(conn)
