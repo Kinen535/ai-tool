@@ -8136,7 +8136,7 @@ def v155_security_logs():
     except Exception:
         page = 1
 
-    report = get_security_report_paginated(conn, page=page, per_page=30)
+    report = get_security_report_paginated(conn, page=page, per_page=8)
 
     conn.close()
 
@@ -8171,7 +8171,7 @@ def v155_security_login():
             except Exception:
                 pass
 
-            resp = make_response(redirect("/security/logs"))
+            resp = make_response(redirect("/security"))
             resp.set_cookie(
                 "v155_security_admin",
                 saved_token,
@@ -8990,4 +8990,166 @@ def v155_security_admin_audit_page():
         "security_audit.html",
         report=report,
         title="安全操作审计",
+    )
+
+
+
+# =========================
+# V15.5-S3-C unified security console
+# =========================
+
+@app.route("/security")
+def v155_security_console():
+    import sqlite3
+    from flask import render_template, redirect
+    from services.v155_security_admin_audit import list_admin_actions
+
+    if not _v155_security_admin_allowed():
+        return redirect("/security/login")
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    def safe_count(sql, params=()):
+        try:
+            row = conn.execute(sql, params).fetchone()
+            return int(row[0] or 0) if row else 0
+        except Exception:
+            return 0
+
+    def safe_config(key, default=""):
+        try:
+            row = conn.execute(
+                """
+                SELECT config_value
+                FROM v155_security_runtime_config
+                WHERE config_key=?
+                """,
+                (key,),
+            ).fetchone()
+            return row["config_value"] if row else default
+        except Exception:
+            return default
+
+    access_24h = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_access_logs
+        WHERE created_at >= datetime('now','localtime','-24 hours')
+        """
+    )
+
+    suspicious_24h = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_access_logs
+        WHERE created_at >= datetime('now','localtime','-24 hours')
+          AND is_suspicious=1
+          AND path NOT LIKE '/security/%'
+          AND ip NOT IN ('127.0.0.1','::1')
+        """
+    )
+
+    search_24h = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_access_logs
+        WHERE created_at >= datetime('now','localtime','-24 hours')
+          AND path LIKE '/archives/search%'
+        """
+    )
+
+    submit_24h = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_access_logs
+        WHERE created_at >= datetime('now','localtime','-24 hours')
+          AND method='POST'
+        """
+    )
+
+    active_blocks = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        """
+    )
+
+    whitelist_count = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_ip_whitelist
+        """
+    )
+
+    guard_blocks = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_guard_blocks
+        """
+    )
+
+    audit_total = safe_count(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_admin_audit_logs
+        """
+    )
+
+    archive_read_only = safe_config("archive_read_only", "0")
+    quota_enabled = safe_config("search_quota_enabled", "1")
+    daily_search_limit = safe_config("daily_search_limit", "120")
+
+    try:
+        nginx_report = _v155_build_nginx_sync_report()
+    except Exception:
+        nginx_report = {
+            "is_synced": False,
+            "sync_label": "未知",
+            "sync_message": "无法读取 Nginx 同步状态。",
+            "active_block_count": active_blocks,
+            "syncable_block_count": 0,
+            "nginx_deny_count": 0,
+        }
+
+    try:
+        recent_audit = list_admin_actions(conn, page=1, per_page=8)["rows"]
+    except Exception:
+        recent_audit = []
+
+    conn.close()
+
+    if suspicious_24h >= 20 or active_blocks >= 5:
+        risk_level = "高"
+        risk_text = "存在较明显异常访问或封禁压力，建议重点观察。"
+    elif suspicious_24h > 0 or active_blocks > 0:
+        risk_level = "中"
+        risk_text = "存在少量异常访问，当前可继续观察。"
+    else:
+        risk_level = "低"
+        risk_text = "当前没有明显异常访问压力。"
+
+    report = {
+        "access_24h": access_24h,
+        "suspicious_24h": suspicious_24h,
+        "search_24h": search_24h,
+        "submit_24h": submit_24h,
+        "active_blocks": active_blocks,
+        "whitelist_count": whitelist_count,
+        "guard_blocks": guard_blocks,
+        "audit_total": audit_total,
+        "archive_read_only": archive_read_only,
+        "quota_enabled": quota_enabled,
+        "daily_search_limit": daily_search_limit,
+        "nginx": nginx_report,
+        "risk_level": risk_level,
+        "risk_text": risk_text,
+    }
+
+    return render_template(
+        "security_console.html",
+        report=report,
+        recent_audit=recent_audit,
+        title="安全控制台",
     )
