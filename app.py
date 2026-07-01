@@ -8483,3 +8483,188 @@ def v155_security_blocks():
         report=report,
         title="IP封禁池",
     )
+
+
+
+# =========================
+# V15.5-S2.8 nginx blocklist sync admin
+# =========================
+
+def _v155_security_admin_allowed():
+    from pathlib import Path
+    from flask import request
+
+    token_path = Path("data/security_admin_token.txt")
+    saved_token = token_path.read_text().strip() if token_path.exists() else ""
+
+    input_token = request.args.get("token", "").strip()
+    cookie_token = request.cookies.get("v155_security_admin", "").strip()
+
+    return bool(saved_token and (input_token == saved_token or cookie_token == saved_token))
+
+
+def _v155_build_nginx_sync_report():
+    import sqlite3
+    from pathlib import Path
+    from datetime import datetime
+
+    snippet_path = Path("/etc/nginx/snippets/ai-tool-ip-blocklist.conf")
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_blocklist (
+            ip TEXT PRIMARY KEY,
+            reason TEXT,
+            source TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+
+    active_blocks = conn.execute(
+        """
+        SELECT ip, reason, source, updated_at
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        ORDER BY updated_at DESC
+        LIMIT 50
+        """
+    ).fetchall()
+
+    active_block_count = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        """
+    ).fetchone()[0]
+
+    conn.close()
+
+    snippet_exists = snippet_path.exists()
+    snippet_text = snippet_path.read_text(encoding="utf-8") if snippet_exists else ""
+
+    deny_lines = [
+        line.strip()
+        for line in snippet_text.splitlines()
+        if line.strip().startswith("deny ")
+    ]
+
+    snippet_mtime = ""
+
+    if snippet_exists:
+        snippet_mtime = datetime.fromtimestamp(
+            snippet_path.stat().st_mtime
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "active_block_count": active_block_count,
+        "active_blocks": [dict(row) for row in active_blocks],
+        "snippet_path": str(snippet_path),
+        "snippet_exists": snippet_exists,
+        "snippet_mtime": snippet_mtime,
+        "nginx_deny_count": len(deny_lines),
+        "deny_lines": deny_lines[:80],
+        "snippet_preview": snippet_text[:5000],
+    }
+
+
+def _v155_run_fixed_command(cmd, cwd="/home/admin/ai-tool", timeout=15):
+    import subprocess
+
+    try:
+        p = subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+        return {
+            "cmd": " ".join(cmd),
+            "returncode": p.returncode,
+            "stdout": p.stdout[-4000:],
+            "stderr": p.stderr[-4000:],
+            "ok": p.returncode == 0,
+        }
+
+    except Exception as e:
+        return {
+            "cmd": " ".join(cmd),
+            "returncode": -1,
+            "stdout": "",
+            "stderr": str(e),
+            "ok": False,
+        }
+
+
+@app.route("/security/nginx")
+def v155_security_nginx_sync_page():
+    from flask import render_template, redirect
+
+    if not _v155_security_admin_allowed():
+        return redirect("/security/login")
+
+    report = _v155_build_nginx_sync_report()
+
+    return render_template(
+        "security_nginx_sync.html",
+        report=report,
+        result=None,
+        title="Nginx封禁同步",
+    )
+
+
+@app.route("/security/nginx/sync", methods=["POST"])
+def v155_security_nginx_sync_action():
+    from flask import render_template, redirect
+
+    if not _v155_security_admin_allowed():
+        return redirect("/security/login")
+
+    steps = []
+
+    steps.append(
+        _v155_run_fixed_command(
+            ["python3", "scripts/sync_nginx_blocklist.py"]
+        )
+    )
+
+    if steps[-1]["ok"]:
+        steps.append(
+            _v155_run_fixed_command(
+                ["nginx", "-t"],
+                cwd="/home/admin/ai-tool"
+            )
+        )
+
+    if steps[-1]["ok"]:
+        steps.append(
+            _v155_run_fixed_command(
+                ["systemctl", "reload", "nginx"],
+                cwd="/home/admin/ai-tool"
+            )
+        )
+
+    ok = all(step["ok"] for step in steps)
+
+    result = {
+        "ok": ok,
+        "steps": steps,
+        "message": "Nginx 封禁名单已同步并重载生效。" if ok else "同步失败，请查看下方错误输出。",
+    }
+
+    report = _v155_build_nginx_sync_report()
+
+    return render_template(
+        "security_nginx_sync.html",
+        report=report,
+        result=result,
+        title="Nginx封禁同步",
+    )
