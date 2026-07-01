@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1000px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>✏️ 编辑信誉主体</h1>
+
+        <a href="/reputation/subjects"
+           style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+            返回主体库
+        </a>
+    </div>
+
+    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
+        <form method="POST" action="/reputation/subjects/{{ row.id }}/edit">
+            <label style="font-weight:bold;">主体类型</label>
+            <select name="subject_type"
+                    style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                <option value="player" {% if row.subject_type == "player" %}selected{% endif %}>玩家</option>
+                <option value="account" {% if row.subject_type == "account" %}selected{% endif %}>账号</option>
+                <option value="alliance" {% if row.subject_type == "alliance" %}selected{% endif %}>同盟</option>
+                <option value="group" {% if row.subject_type == "group" %}selected{% endif %}>团体</option>
+                <option value="other" {% if row.subject_type == "other" %}selected{% endif %}>其他</option>
+            </select>
+
+            <label style="font-weight:bold;">显示名称</label>
+            <input name="display_name"
+                   value="{{ row.display_name or '' }}"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+            <label style="font-weight:bold;">游戏编号</label>
+            <input name="game_id"
+                   value="{{ row.game_id or '' }}"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+            <label style="font-weight:bold;">曾用名</label>
+            <input name="alias_names"
+                   value="{{ row.alias_names or '' }}"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-weight:bold;">信任等级</label>
+                    <select name="trust_level"
+                            style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                        <option value="unknown" {% if row.trust_level == "unknown" %}selected{% endif %}>未知</option>
+                        <option value="trusted" {% if row.trust_level == "trusted" %}selected{% endif %}>可信</option>
+                        <option value="risky" {% if row.trust_level == "risky" %}selected{% endif %}>存疑</option>
+                        <option value="black" {% if row.trust_level == "black" %}selected{% endif %}>黑名单</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-weight:bold;">风险等级</label>
+                    <select name="risk_level"
+                            style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                        <option value="normal" {% if row.risk_level == "normal" %}selected{% endif %}>正常</option>
+                        <option value="warning" {% if row.risk_level == "warning" %}selected{% endif %}>预警</option>
+                        <option value="danger" {% if row.risk_level == "danger" %}selected{% endif %}>危险</option>
+                        <option value="black" {% if row.risk_level == "black" %}selected{% endif %}>黑</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="font-weight:bold;">状态</label>
+            <select name="status"
+                    style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                <option value="active" {% if row.status == "active" %}selected{% endif %}>生效</option>
+                <option value="archived" {% if row.status == "archived" %}selected{% endif %}>归档</option>
+                <option value="ignored" {% if row.status == "ignored" %}selected{% endif %}>忽略</option>
+            </select>
+
+            <label style="font-weight:bold;">备注</label>
+            <textarea name="note"
+                      style="width:100%;height:160px;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">{{ row.note or '' }}</textarea>
+
+            <button type="submit"
+                    style="background:#dc2626;color:white;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;">
+                保存修改
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

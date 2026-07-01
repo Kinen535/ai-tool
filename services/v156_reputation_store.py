@@ -184,3 +184,177 @@ def search_reputation(conn: sqlite3.Connection, q: str) -> dict[str, Any]:
         "subjects": subjects,
         "events": events,
     }
+
+
+# =========================
+# V15.6-A3 reputation subject CRUD
+# =========================
+
+def list_reputation_subjects(
+    conn: sqlite3.Connection,
+    q: str = "",
+    limit: int = 100,
+) -> list:
+    ensure_reputation_tables(conn)
+
+    q = (q or "").strip()
+
+    if not q:
+        return conn.execute(
+            """
+            SELECT *
+            FROM v156_reputation_subjects
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    like = f"%{q}%"
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE display_name LIKE ?
+           OR game_id LIKE ?
+           OR alias_names LIKE ?
+           OR note LIKE ?
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (like, like, like, like, limit),
+    ).fetchall()
+
+
+def get_reputation_subject(
+    conn: sqlite3.Connection,
+    subject_id: int,
+):
+    ensure_reputation_tables(conn)
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE id=?
+        """,
+        (subject_id,),
+    ).fetchone()
+
+
+def create_reputation_subject(
+    conn: sqlite3.Connection,
+    data: dict[str, Any],
+) -> int | None:
+    ensure_reputation_tables(conn)
+
+    display_name = (data.get("display_name") or "").strip()
+    game_id = (data.get("game_id") or "").strip()
+
+    if not display_name and not game_id:
+        return None
+
+    cur = conn.execute(
+        """
+        INSERT INTO v156_reputation_subjects (
+            subject_type,
+            display_name,
+            game_id,
+            alias_names,
+            trust_level,
+            risk_level,
+            status,
+            source_type,
+            note,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+        """,
+        (
+            (data.get("subject_type") or "player").strip(),
+            display_name,
+            game_id,
+            (data.get("alias_names") or "").strip(),
+            (data.get("trust_level") or "unknown").strip(),
+            (data.get("risk_level") or "normal").strip(),
+            (data.get("status") or "active").strip(),
+            (data.get("source_type") or "manual").strip(),
+            (data.get("note") or "").strip(),
+        ),
+    )
+
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def update_reputation_subject(
+    conn: sqlite3.Connection,
+    subject_id: int,
+    data: dict[str, Any],
+) -> bool:
+    ensure_reputation_tables(conn)
+
+    display_name = (data.get("display_name") or "").strip()
+    game_id = (data.get("game_id") or "").strip()
+
+    if not display_name and not game_id:
+        return False
+
+    conn.execute(
+        """
+        UPDATE v156_reputation_subjects
+        SET
+            subject_type=?,
+            display_name=?,
+            game_id=?,
+            alias_names=?,
+            trust_level=?,
+            risk_level=?,
+            status=?,
+            source_type=?,
+            note=?,
+            updated_at=datetime('now','localtime')
+        WHERE id=?
+        """,
+        (
+            (data.get("subject_type") or "player").strip(),
+            display_name,
+            game_id,
+            (data.get("alias_names") or "").strip(),
+            (data.get("trust_level") or "unknown").strip(),
+            (data.get("risk_level") or "normal").strip(),
+            (data.get("status") or "active").strip(),
+            (data.get("source_type") or "manual").strip(),
+            (data.get("note") or "").strip(),
+            subject_id,
+        ),
+    )
+
+    conn.commit()
+    return True
+
+
+def delete_reputation_subject(
+    conn: sqlite3.Connection,
+    subject_id: int,
+) -> None:
+    ensure_reputation_tables(conn)
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_event_relations
+        WHERE subject_id=?
+        """,
+        (subject_id,),
+    )
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_subjects
+        WHERE id=?
+        """,
+        (subject_id,),
+    )
+
+    conn.commit()

@@ -9273,33 +9273,109 @@ def v156_reputation_search():
     )
 
 
-@app.route("/reputation/subjects")
+# V15.6-A3 reputation subject CRUD routes
+@app.route("/reputation/subjects", methods=["GET", "POST"])
 def v156_reputation_subjects():
     import sqlite3
-    from flask import render_template
-    from services.v156_reputation_store import ensure_reputation_tables
+    from flask import request, render_template, redirect
+    from services.v156_reputation_store import (
+        list_reputation_subjects,
+        create_reputation_subject,
+    )
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    ensure_reputation_tables(conn)
+    if request.method == "POST":
+        data = {
+            "subject_type": request.form.get("subject_type", "player"),
+            "display_name": request.form.get("display_name", ""),
+            "game_id": request.form.get("game_id", ""),
+            "alias_names": request.form.get("alias_names", ""),
+            "trust_level": request.form.get("trust_level", "unknown"),
+            "risk_level": request.form.get("risk_level", "normal"),
+            "status": request.form.get("status", "active"),
+            "source_type": "manual",
+            "note": request.form.get("note", ""),
+        }
 
-    rows = conn.execute(
-        """
-        SELECT *
-        FROM v156_reputation_subjects
-        ORDER BY id DESC
-        LIMIT 50
-        """
-    ).fetchall()
+        create_reputation_subject(conn, data)
+
+        conn.close()
+        return redirect("/reputation/subjects")
+
+    q = request.args.get("q", "").strip()
+    rows = list_reputation_subjects(conn, q=q, limit=100)
 
     conn.close()
 
     return render_template(
         "reputation_subjects.html",
         rows=rows,
+        q=q,
         title="信誉主体",
     )
+
+
+@app.route("/reputation/subjects/<int:subject_id>/edit", methods=["GET", "POST"])
+def v156_reputation_subject_edit(subject_id):
+    import sqlite3
+    from flask import request, render_template, redirect, abort
+    from services.v156_reputation_store import (
+        get_reputation_subject,
+        update_reputation_subject,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    row = get_reputation_subject(conn, subject_id)
+
+    if not row:
+        conn.close()
+        abort(404)
+
+    if request.method == "POST":
+        data = {
+            "subject_type": request.form.get("subject_type", "player"),
+            "display_name": request.form.get("display_name", ""),
+            "game_id": request.form.get("game_id", ""),
+            "alias_names": request.form.get("alias_names", ""),
+            "trust_level": request.form.get("trust_level", "unknown"),
+            "risk_level": request.form.get("risk_level", "normal"),
+            "status": request.form.get("status", "active"),
+            "source_type": "manual",
+            "note": request.form.get("note", ""),
+        }
+
+        update_reputation_subject(conn, subject_id, data)
+
+        conn.close()
+        return redirect("/reputation/subjects")
+
+    conn.close()
+
+    return render_template(
+        "reputation_subject_edit.html",
+        row=row,
+        title="编辑信誉主体",
+    )
+
+
+@app.route("/reputation/subjects/<int:subject_id>/delete", methods=["POST"])
+def v156_reputation_subject_delete(subject_id):
+    import sqlite3
+    from flask import redirect
+    from services.v156_reputation_store import delete_reputation_subject
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    delete_reputation_subject(conn, subject_id)
+
+    conn.close()
+
+    return redirect("/reputation/subjects")
 
 
 @app.route("/reputation/events")
