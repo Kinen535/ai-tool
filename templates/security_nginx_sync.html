@@ -34,6 +34,61 @@
         </div>
     {% endif %}
 
+    <div style="
+        background:{% if report.is_synced %}#f0fdf4{% else %}#fff7ed{% endif %};
+        border:1px solid {% if report.is_synced %}#86efac{% else %}#fed7aa{% endif %};
+        border-left:6px solid {% if report.is_synced %}#16a34a{% else %}#f97316{% endif %};
+        border-radius:18px;
+        padding:18px 22px;
+        margin-bottom:18px;
+    ">
+        <h2 style="margin-bottom:8px;">
+            {% if report.is_synced %}
+                ✅ 同步状态：{{ report.sync_label }}
+            {% else %}
+                ⚠️ 同步状态：{{ report.sync_label }}
+            {% endif %}
+        </h2>
+
+        <p style="color:#475569;line-height:1.7;">
+            {{ report.sync_message }}
+        </p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <span style="background:white;padding:8px 12px;border-radius:999px;">
+                数据库生效封禁：<b>{{ report.active_block_count }}</b>
+            </span>
+            <span style="background:white;padding:8px 12px;border-radius:999px;">
+                可同步到 Nginx：<b>{{ report.syncable_block_count }}</b>
+            </span>
+            <span style="background:white;padding:8px 12px;border-radius:999px;">
+                Nginx deny：<b>{{ report.nginx_deny_count }}</b>
+            </span>
+        </div>
+
+        {% if not report.is_synced %}
+            <div style="margin-top:14px;background:white;border-radius:12px;padding:14px;">
+                {% if report.missing_in_nginx %}
+                    <div style="color:#dc2626;font-weight:bold;margin-bottom:6px;">
+                        数据库已封禁但 Nginx 未同步：
+                    </div>
+                    <div style="color:#475569;">
+                        {{ report.missing_in_nginx|join(", ") }}
+                    </div>
+                {% endif %}
+
+                {% if report.extra_in_nginx %}
+                    <div style="color:#dc2626;font-weight:bold;margin-top:10px;margin-bottom:6px;">
+                        Nginx 中存在但数据库已不应封禁：
+                    </div>
+                    <div style="color:#475569;">
+                        {{ report.extra_in_nginx|join(", ") }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
     <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
         <h2>① 当前同步状态</h2>
 

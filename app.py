@@ -8668,3 +8668,157 @@ def v155_security_nginx_sync_action():
         result=result,
         title="Nginx封禁同步",
     )
+
+
+
+# =========================
+# V15.5-S2.9 nginx sync status enhanced report
+# =========================
+
+def _v155_build_nginx_sync_report():
+    import sqlite3
+    import ipaddress
+    from pathlib import Path
+    from datetime import datetime
+
+    snippet_path = Path("/etc/nginx/snippets/ai-tool-ip-blocklist.conf")
+
+    def can_export_to_nginx(ip: str) -> bool:
+        ip = str(ip or "").strip()
+        if not ip:
+            return False
+
+        try:
+            obj = ipaddress.ip_address(ip)
+        except Exception:
+            return False
+
+        if obj.is_loopback or obj.is_private or obj.is_link_local or obj.is_reserved:
+            return False
+
+        return True
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_blocklist (
+            ip TEXT PRIMARY KEY,
+            reason TEXT,
+            source TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v155_security_ip_whitelist (
+            ip TEXT PRIMARY KEY,
+            note TEXT,
+            created_at TEXT
+        )
+        """
+    )
+
+    active_blocks = conn.execute(
+        """
+        SELECT ip, reason, source, updated_at
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        ORDER BY updated_at DESC
+        LIMIT 80
+        """
+    ).fetchall()
+
+    all_active_blocks = conn.execute(
+        """
+        SELECT ip, reason, source, updated_at
+        FROM v155_security_ip_blocklist
+        WHERE is_active=1
+        ORDER BY updated_at DESC
+        """
+    ).fetchall()
+
+    whitelist = {
+        row["ip"]
+        for row in conn.execute(
+            "SELECT ip FROM v155_security_ip_whitelist"
+        ).fetchall()
+    }
+
+    conn.close()
+
+    syncable_blocks = []
+
+    for row in all_active_blocks:
+        ip = str(row["ip"] or "").strip()
+
+        if ip in whitelist:
+            continue
+
+        if not can_export_to_nginx(ip):
+            continue
+
+        syncable_blocks.append(dict(row))
+
+    snippet_exists = snippet_path.exists()
+    snippet_text = snippet_path.read_text(encoding="utf-8") if snippet_exists else ""
+
+    deny_lines = [
+        line.strip()
+        for line in snippet_text.splitlines()
+        if line.strip().startswith("deny ")
+    ]
+
+    nginx_ips = set()
+
+    for line in deny_lines:
+        parts = line.replace(";", " ").split()
+        if len(parts) >= 2 and parts[0] == "deny":
+            nginx_ips.add(parts[1].strip())
+
+    expected_ips = {row["ip"] for row in syncable_blocks}
+
+    missing_in_nginx = sorted(expected_ips - nginx_ips)
+    extra_in_nginx = sorted(nginx_ips - expected_ips)
+
+    is_synced = len(missing_in_nginx) == 0 and len(extra_in_nginx) == 0
+
+    snippet_mtime = ""
+
+    if snippet_exists:
+        snippet_mtime = datetime.fromtimestamp(
+            snippet_path.stat().st_mtime
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+    if is_synced:
+        sync_label = "已同步"
+        sync_level = "safe"
+        sync_message = "数据库封禁名单与 Nginx deny 配置一致。"
+    else:
+        sync_label = "待同步"
+        sync_level = "warning"
+        sync_message = "数据库封禁名单与 Nginx deny 配置不一致，建议立即同步。"
+
+    return {
+        "active_block_count": len(all_active_blocks),
+        "syncable_block_count": len(syncable_blocks),
+        "active_blocks": [dict(row) for row in active_blocks],
+        "syncable_blocks": syncable_blocks[:80],
+        "snippet_path": str(snippet_path),
+        "snippet_exists": snippet_exists,
+        "snippet_mtime": snippet_mtime,
+        "nginx_deny_count": len(deny_lines),
+        "deny_lines": deny_lines[:80],
+        "snippet_preview": snippet_text[:5000],
+        "is_synced": is_synced,
+        "sync_label": sync_label,
+        "sync_level": sync_level,
+        "sync_message": sync_message,
+        "missing_in_nginx": missing_in_nginx[:50],
+        "extra_in_nginx": extra_in_nginx[:50],
+    }
