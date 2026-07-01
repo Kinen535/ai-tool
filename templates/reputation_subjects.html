@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>👤 信誉主体</h1>
+        <a href="/reputation"
+           style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+            返回信誉档案库
+        </a>
+    </div>
+
+    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
+        <h2>① 主体列表</h2>
+        <p style="color:#64748b;">下一阶段会加入新增主体、编辑主体、游戏编号绑定、曾用名管理。</p>
+
+        {% if rows %}
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:10px;text-align:left;">名称</th>
+                    <th style="padding:10px;text-align:left;">游戏编号</th>
+                    <th style="padding:10px;text-align:left;">信任</th>
+                    <th style="padding:10px;text-align:left;">风险</th>
+                    <th style="padding:10px;text-align:left;">更新时间</th>
+                </tr>
+
+                {% for row in rows %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;font-weight:bold;">{{ row.display_name }}</td>
+                    <td style="padding:10px;color:#64748b;">{{ row.game_id }}</td>
+                    <td style="padding:10px;">{{ row.trust_level }}</td>
+                    <td style="padding:10px;">{{ row.risk_level }}</td>
+                    <td style="padding:10px;color:#64748b;">{{ row.updated_at }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="background:white;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                暂无信誉主体。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>🧭 信誉档案库</h1>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 模块定位</h2>
+        <p style="color:#475569;line-height:1.8;">
+            信誉档案库独立于当前战场、当前同盟和当前赛季成员数据。
+            这里用于记录长期可信主体、风险主体、游戏编号、历史事件和证据备注。
+        </p>
+
+        <form method="GET" action="/reputation/search" style="display:flex;gap:10px;margin-top:16px;">
+            <input name="q"
+                   placeholder="输入游戏编号 / 玩家名称 / 曾用名 / 事件关键词"
+                   style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;">
+            <button type="submit"
+                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;">
+                信誉检索
+            </button>
+        </form>
+    </div>
+
+    <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>② 档案概况</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>信誉主体</div>
+                <h2>{{ report.total_subjects }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>风险主体</div>
+                <h2 style="color:#dc2626;">{{ report.risky_subjects }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>信誉事件</div>
+                <h2>{{ report.total_events }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>已关联事件</div>
+                <h2>{{ report.linked_events }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;">
+        <a href="/reputation/search"
+           style="background:white;border-left:6px solid #2563eb;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
+            <h2>③ 编号 / 名称检索</h2>
+            <p style="color:#64748b;">通过游戏编号、玩家名、曾用名、事件关键词进行穿透检索。</p>
+            <b style="color:#2563eb;">进入检索 →</b>
+        </a>
+
+        <a href="/reputation/subjects"
+           style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
+            <h2>④ 信誉主体</h2>
+            <p style="color:#64748b;">管理玩家、账号、同盟、团体等长期信誉主体。</p>
+            <b style="color:#dc2626;">进入主体库 →</b>
+        </a>
+
+        <a href="/reputation/events"
+           style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
+            <h2>⑤ 信誉事件</h2>
+            <p style="color:#64748b;">记录背刺、欺诈、恶意行为、合作履约等历史事件。</p>
+            <b style="color:#f97316;">进入事件库 →</b>
+        </a>
+    </div>
+
+    <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+        <h2>⑥ 当前建设阶段</h2>
+        <p style="color:#475569;line-height:1.8;">
+            V15.6-A1：已完成信誉档案库独立入口。下一阶段会加入主体新增、事件新增、事件关联和游戏编号穿透检索。
+        </p>
+    </div>
+</div>
+
+{% endblock %}

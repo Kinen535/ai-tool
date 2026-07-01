@@ -9224,3 +9224,108 @@ def v155_security_console():
         recent_audit=recent_audit,
         title="安全控制台",
     )
+
+
+# =========================
+# V15.6-A1 reputation archive independent module
+# =========================
+
+@app.route("/reputation")
+def v156_reputation_home():
+    import sqlite3
+    from flask import render_template
+    from services.v156_reputation_store import get_reputation_dashboard
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    report = get_reputation_dashboard(conn)
+
+    conn.close()
+
+    return render_template(
+        "reputation_home.html",
+        report=report,
+        title="信誉档案库",
+    )
+
+
+@app.route("/reputation/search")
+def v156_reputation_search():
+    import sqlite3
+    from flask import request, render_template
+    from services.v156_reputation_store import search_reputation
+
+    q = request.args.get("q", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    result = search_reputation(conn, q)
+
+    conn.close()
+
+    return render_template(
+        "reputation_search.html",
+        result=result,
+        q=q,
+        title="信誉检索",
+    )
+
+
+@app.route("/reputation/subjects")
+def v156_reputation_subjects():
+    import sqlite3
+    from flask import render_template
+    from services.v156_reputation_store import ensure_reputation_tables
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    ensure_reputation_tables(conn)
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        ORDER BY id DESC
+        LIMIT 50
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "reputation_subjects.html",
+        rows=rows,
+        title="信誉主体",
+    )
+
+
+@app.route("/reputation/events")
+def v156_reputation_events():
+    import sqlite3
+    from flask import render_template
+    from services.v156_reputation_store import ensure_reputation_tables
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    ensure_reputation_tables(conn)
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        ORDER BY id DESC
+        LIMIT 50
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "reputation_events.html",
+        rows=rows,
+        title="信誉事件",
+    )

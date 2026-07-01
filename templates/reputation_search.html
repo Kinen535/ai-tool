@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>🔎 信誉检索</h1>
+        <a href="/reputation"
+           style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+            返回信誉档案库
+        </a>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 搜索</h2>
+
+        <form method="GET" action="/reputation/search" style="display:flex;gap:10px;margin-top:12px;">
+            <input name="q"
+                   value="{{ q }}"
+                   placeholder="输入游戏编号 / 玩家名称 / 曾用名 / 事件关键词"
+                   style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;">
+            <button type="submit"
+                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;">
+                搜索
+            </button>
+        </form>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>② 匹配主体</h2>
+
+            {% if result.subjects %}
+                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">名称</th>
+                        <th style="padding:10px;text-align:left;">游戏编号</th>
+                        <th style="padding:10px;text-align:left;">风险</th>
+                        <th style="padding:10px;text-align:left;">更新时间</th>
+                    </tr>
+
+                    {% for row in result.subjects %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ row.display_name }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ row.game_id }}</td>
+                        <td style="padding:10px;">{{ row.risk_level }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ row.updated_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                    暂无匹配主体。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>③ 匹配事件</h2>
+
+            {% if result.events %}
+                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">事件</th>
+                        <th style="padding:10px;text-align:left;">类型</th>
+                        <th style="padding:10px;text-align:left;">影响</th>
+                        <th style="padding:10px;text-align:left;">状态</th>
+                    </tr>
+
+                    {% for row in result.events %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ row.title }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ row.event_type }}</td>
+                        <td style="padding:10px;">{{ row.impact_level }}</td>
+                        <td style="padding:10px;">{{ row.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                    暂无匹配事件。
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
