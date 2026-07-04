@@ -9715,3 +9715,134 @@ def v156_reputation_merge_logs():
         rows=rows,
         title="主体合并日志",
     )
+
+
+# =========================
+# V15.6-A13B restore reputation events list route
+# =========================
+
+@app.route("/reputation/events", methods=["GET", "POST"])
+def v156_reputation_events():
+    import sqlite3
+    from flask import request, render_template, redirect
+    from services.v156_reputation_store import ensure_reputation_tables
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    ensure_reputation_tables(conn)
+
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(v156_reputation_events)").fetchall()
+    }
+
+    if request.method == "POST":
+        data = {
+            "title": (
+                request.form.get("title", "")
+                or request.form.get("event_title", "")
+            ).strip(),
+            "event_type": request.form.get("event_type", "").strip(),
+            "impact_level": request.form.get("impact_level", "").strip(),
+            "status": request.form.get("status", "").strip(),
+            "event_time": request.form.get("event_time", "").strip(),
+            "summary": (
+                request.form.get("summary", "")
+                or request.form.get("event_summary", "")
+            ).strip(),
+            "evidence_note": (
+                request.form.get("evidence_note", "")
+                or request.form.get("evidence", "")
+                or request.form.get("note", "")
+            ).strip(),
+            "created_at": None,
+            "updated_at": None,
+        }
+
+        if data["title"]:
+            insert_data = {}
+
+            for key, value in data.items():
+                if key in cols:
+                    insert_data[key] = value
+
+            if "created_at" in cols:
+                insert_data["created_at"] = "datetime('now','localtime')"
+
+            if "updated_at" in cols:
+                insert_data["updated_at"] = "datetime('now','localtime')"
+
+            fields = []
+            placeholders = []
+            values = []
+
+            for key, value in insert_data.items():
+                fields.append(key)
+
+                if value == "datetime('now','localtime')":
+                    placeholders.append(value)
+                else:
+                    placeholders.append("?")
+                    values.append(value)
+
+            conn.execute(
+                f"""
+                INSERT INTO v156_reputation_events (
+                    {", ".join(fields)}
+                )
+                VALUES (
+                    {", ".join(placeholders)}
+                )
+                """,
+                values,
+            )
+
+            conn.commit()
+
+        conn.close()
+        return redirect("/reputation/events")
+
+    q = request.args.get("q", "").strip()
+
+    search_cols = [
+        c for c in ["title", "event_type", "summary", "evidence_note", "note"]
+        if c in cols
+    ]
+
+    where_sql = ""
+    params = []
+
+    if q and search_cols:
+        where_sql = "WHERE " + " OR ".join([f"IFNULL({c}, '') LIKE ?" for c in search_cols])
+        params = [f"%{q}%"] * len(search_cols)
+
+    if "updated_at" in cols:
+        order_sql = "ORDER BY updated_at DESC, id DESC"
+    elif "created_at" in cols:
+        order_sql = "ORDER BY created_at DESC, id DESC"
+    elif "event_time" in cols:
+        order_sql = "ORDER BY event_time DESC, id DESC"
+    else:
+        order_sql = "ORDER BY id DESC"
+
+    rows = conn.execute(
+        f"""
+        SELECT *
+        FROM v156_reputation_events
+        {where_sql}
+        {order_sql}
+        LIMIT 100
+        """,
+        params,
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "reputation_events.html",
+        events=rows,
+        rows=rows,
+        q=q,
+        title="信誉事件",
+    )
