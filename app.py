@@ -9470,17 +9470,39 @@ def v156_reputation_event_edit(event_id):
 @app.route("/reputation/events/<int:event_id>/delete", methods=["POST"])
 def v156_reputation_event_delete(event_id):
     import sqlite3
+    from urllib.parse import urlencode
     from flask import redirect
-    from services.v156_reputation_store import delete_reputation_event
+    from services.v156_reputation_store import delete_reputation_event_safely
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    delete_reputation_event(conn, event_id)
+    result = delete_reputation_event_safely(conn, event_id)
 
     conn.close()
 
-    return redirect("/reputation/events")
+    if result.get("ok"):
+        params = urlencode({
+            "delete_result": "success",
+            "event_id": event_id,
+            "title": result.get("title", ""),
+        })
+        return redirect("/reputation/events?" + params)
+
+    if result.get("blocked"):
+        params = urlencode({
+            "delete_result": "blocked",
+            "event_id": event_id,
+            "title": result.get("title", ""),
+            "relations": result.get("relation_count", 0),
+        })
+        return redirect("/reputation/events?" + params)
+
+    params = urlencode({
+        "delete_result": "failed",
+        "event_id": event_id,
+    })
+    return redirect("/reputation/events?" + params)
 
 
 # =========================

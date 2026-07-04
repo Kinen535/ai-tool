@@ -3,6 +3,24 @@
 {% block content %}
 
 <div style="max-width:1500px;margin:0 auto;padding:24px;">
+
+    <!-- V15.6-A14 event delete protection alert -->
+    {% if request.args.get('delete_result') == 'blocked' %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;line-height:1.7;">
+        🛡️ 已阻止删除：事件
+        {% if request.args.get('title') %}「{{ request.args.get('title') }}」{% endif %}
+        仍有关联主体 {{ request.args.get('relations') or 0 }} 个。请先解除关联，或保留事件作为证据记录。
+    </div>
+    {% elif request.args.get('delete_result') == 'success' %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ✅ 事件已删除。
+    </div>
+    {% elif request.args.get('delete_result') == 'failed' %}
+    <div style="background:#fff7ed;border:1px solid #fed7aa;color:#f97316;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 删除失败：事件不存在或请求异常。
+    </div>
+    {% endif %}
+
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
         <h1>📌 信誉事件</h1>
 

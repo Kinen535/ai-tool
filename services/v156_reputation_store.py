@@ -1289,3 +1289,79 @@ def delete_reputation_subject_safely(
         "relation_count": 0,
         "message": "主体已删除。",
     }
+
+
+# =========================
+# V15.6-A14 reputation event delete protection
+# =========================
+
+def get_reputation_event_relation_count(
+    conn: sqlite3.Connection,
+    event_id: int,
+) -> int:
+    ensure_reputation_tables(conn)
+
+    row = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_event_relations
+        WHERE event_id=?
+        """,
+        (event_id,),
+    ).fetchone()
+
+    return int(row[0] or 0) if row else 0
+
+
+def delete_reputation_event_safely(
+    conn: sqlite3.Connection,
+    event_id: int,
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    event = conn.execute(
+        """
+        SELECT id, title, event_type, impact_level, status
+        FROM v156_reputation_events
+        WHERE id=?
+        """,
+        (event_id,),
+    ).fetchone()
+
+    if not event:
+        return {
+            "ok": False,
+            "blocked": False,
+            "message": "事件不存在，无法删除。",
+        }
+
+    relation_count = get_reputation_event_relation_count(conn, event_id)
+
+    if relation_count > 0:
+        return {
+            "ok": False,
+            "blocked": True,
+            "event_id": event_id,
+            "title": event["title"] or "",
+            "relation_count": relation_count,
+            "message": f"该事件存在 {relation_count} 条主体关联，禁止直接删除。请先解除关联，或保留事件作为证据记录。",
+        }
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_events
+        WHERE id=?
+        """,
+        (event_id,),
+    )
+
+    conn.commit()
+
+    return {
+        "ok": True,
+        "blocked": False,
+        "event_id": event_id,
+        "title": event["title"] or "",
+        "relation_count": 0,
+        "message": "事件已删除。",
+    }
