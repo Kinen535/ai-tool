@@ -829,7 +829,7 @@ def _v156_subject_ids_to_rows(conn: sqlite3.Connection, ids: list[int]) -> list:
 
     placeholders = ",".join(["?"] * len(ids))
 
-    return conn.execute(
+    rows = conn.execute(
         f"""
         SELECT
             s.*,
@@ -838,10 +838,39 @@ def _v156_subject_ids_to_rows(conn: sqlite3.Connection, ids: list[int]) -> list:
         LEFT JOIN v156_reputation_event_relations r ON r.subject_id = s.id
         WHERE s.id IN ({placeholders})
         GROUP BY s.id
-        ORDER BY s.updated_at DESC, s.id DESC
         """,
         tuple(ids),
     ).fetchall()
+
+    def score(row):
+        relation_count = int(row["relation_count"] or 0)
+
+        risk_rank = {
+            "normal": 0,
+            "warning": 1,
+            "danger": 2,
+            "black": 3,
+        }.get((row["risk_level"] or "").strip(), 0)
+
+        trust_rank = {
+            "unknown": 0,
+            "trusted": 1,
+            "risky": 2,
+            "black": 3,
+        }.get((row["trust_level"] or "").strip(), 0)
+
+        updated_at = row["updated_at"] or ""
+        row_id = int(row["id"] or 0)
+
+        return (
+            relation_count,
+            risk_rank,
+            trust_rank,
+            updated_at,
+            row_id,
+        )
+
+    return sorted(rows, key=score, reverse=True)
 
 
 def build_reputation_duplicate_report(conn: sqlite3.Connection) -> dict[str, Any]:

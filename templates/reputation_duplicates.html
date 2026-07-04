@@ -139,7 +139,14 @@
                 </table>
 
                 <div style="background:#ecfdf5;border-radius:12px;padding:12px 14px;margin-top:14px;color:#166534;line-height:1.7;">
-                    ✅ 系统推荐保留：默认优先选择关联事件更多、资料更完整的主体。请确认无误后再合并。
+                    ✅ 系统推荐保留：
+                    {% if group.rows and group.rows|length >= 2 %}
+                        <b>#{{ group.rows[0].id }}｜{{ group.rows[0].display_name or '未命名' }}</b>
+                        ，因为它的关联事件数 / 风险等级 / 资料完整度排序更靠前。
+                    {% else %}
+                        默认优先选择关联事件更多、资料更完整的主体。
+                    {% endif %}
+                    请确认无误后再合并。
                 </div>
 
                 <form method="POST"
