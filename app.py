@@ -9570,3 +9570,37 @@ def v156_reputation_subject_detail(subject_id):
         events=events,
         title="信誉主体详情",
     )
+
+
+# =========================
+# V15.6-A7 reputation event detail
+# =========================
+
+@app.route("/reputation/events/<int:event_id>")
+def v156_reputation_event_detail(event_id):
+    import sqlite3
+    from flask import render_template, abort
+    from services.v156_reputation_store import (
+        get_reputation_event,
+        list_reputation_event_relations,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    row = get_reputation_event(conn, event_id)
+
+    if not row:
+        conn.close()
+        abort(404)
+
+    relations = list_reputation_event_relations(conn, event_id)
+
+    conn.close()
+
+    return render_template(
+        "reputation_event_detail.html",
+        row=row,
+        relations=relations,
+        title="信誉事件详情",
+    )

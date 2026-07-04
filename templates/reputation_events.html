@@ -89,8 +89,13 @@
                         <td style="padding:10px;color:#64748b;">{{ row.event_time or row.created_at }}</td>
 
                         <td style="padding:10px;white-space:nowrap;">
-                            <a href="/reputation/events/{{ row.id }}/edit"
+                            <a href="/reputation/events/{{ row.id }}"
                                style="color:#2563eb;text-decoration:none;font-weight:bold;margin-right:8px;">
+                                查看
+                            </a>
+
+                            <a href="/reputation/events/{{ row.id }}/edit"
+                               style="color:#f97316;text-decoration:none;font-weight:bold;margin-right:8px;">
                                 编辑
                             </a>
 
