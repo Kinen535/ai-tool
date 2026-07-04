@@ -140,11 +140,12 @@
 
                 <form method="POST"
                       action="/reputation/duplicates"
-                      onsubmit="return confirm('确认执行合并？被合并主体会被删除，事件关联会迁移到保留主体。');"
+                      class="reputation-merge-form"
                       style="background:#f8fafc;border-radius:14px;padding:16px;margin-top:16px;display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
                     <div>
                         <label style="font-weight:bold;">保留主体</label>
                         <select name="keep_id"
+                                class="merge-keep-select"
                                 style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
                             {% for row in group.rows %}
                                 <option value="{{ row.id }}">
@@ -159,6 +160,7 @@
                     <div>
                         <label style="font-weight:bold;">被合并主体</label>
                         <select name="merge_id"
+                                class="merge-target-select"
                                 style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
                             {% for row in group.rows %}
                                 <option value="{{ row.id }}">
@@ -171,6 +173,7 @@
                     </div>
 
                     <button type="submit"
+                            class="merge-submit-btn"
                             style="background:#dc2626;color:white;border:0;border-radius:10px;padding:11px 18px;font-weight:bold;">
                         合并主体
                     </button>
@@ -186,5 +189,49 @@
         </div>
     {% endif %}
 </div>
+
+
+<script>
+// V15.6-A11.1 duplicate merge safety
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".reputation-merge-form").forEach(function (form) {
+        const keepSelect = form.querySelector(".merge-keep-select");
+        const mergeSelect = form.querySelector(".merge-target-select");
+        const btn = form.querySelector(".merge-submit-btn");
+
+        function refreshState() {
+            if (!keepSelect || !mergeSelect || !btn) return;
+
+            if (keepSelect.value === mergeSelect.value) {
+                btn.disabled = true;
+                btn.innerText = "请选择不同主体";
+                btn.style.background = "#94a3b8";
+                btn.style.cursor = "not-allowed";
+            } else {
+                btn.disabled = false;
+                btn.innerText = "合并主体";
+                btn.style.background = "#dc2626";
+                btn.style.cursor = "pointer";
+            }
+        }
+
+        if (keepSelect && mergeSelect) {
+            keepSelect.addEventListener("change", refreshState);
+            mergeSelect.addEventListener("change", refreshState);
+            refreshState();
+        }
+
+        form.addEventListener("submit", function (e) {
+            if (keepSelect.value === mergeSelect.value) {
+                e.preventDefault();
+                alert("保留主体和被合并主体不能相同，请重新选择。");
+                return false;
+            }
+
+            return confirm("确认执行合并？被合并主体会被删除，事件关联会迁移到保留主体。");
+        });
+    });
+});
+</script>
 
 {% endblock %}
