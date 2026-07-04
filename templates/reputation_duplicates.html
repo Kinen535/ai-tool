@@ -138,6 +138,10 @@
                     {% endfor %}
                 </table>
 
+                <div style="background:#ecfdf5;border-radius:12px;padding:12px 14px;margin-top:14px;color:#166534;line-height:1.7;">
+                    ✅ 系统推荐保留：默认优先选择关联事件更多、资料更完整的主体。请确认无误后再合并。
+                </div>
+
                 <form method="POST"
                       action="/reputation/duplicates"
                       class="reputation-merge-form"
@@ -148,7 +152,7 @@
                                 class="merge-keep-select"
                                 style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
                             {% for row in group.rows %}
-                                <option value="{{ row.id }}">
+                                <option value="{{ row.id }}" {% if loop.index0 == 0 %}selected{% endif %}>
                                     #{{ row.id }}｜{{ row.display_name or '未命名' }}
                                     {% if row.game_id %}｜{{ row.game_id }}{% endif %}
                                     ｜关联 {{ row.relation_count or 0 }}
@@ -163,7 +167,7 @@
                                 class="merge-target-select"
                                 style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
                             {% for row in group.rows %}
-                                <option value="{{ row.id }}">
+                                <option value="{{ row.id }}" {% if loop.index0 == 1 %}selected{% endif %}>
                                     #{{ row.id }}｜{{ row.display_name or '未命名' }}
                                     {% if row.game_id %}｜{{ row.game_id }}{% endif %}
                                     ｜关联 {{ row.relation_count or 0 }}
