@@ -9536,3 +9536,37 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
     conn.close()
 
     return redirect(f"/reputation/events/{event_id}/edit#relations")
+
+
+# =========================
+# V15.6-A6 reputation subject detail
+# =========================
+
+@app.route("/reputation/subjects/<int:subject_id>")
+def v156_reputation_subject_detail(subject_id):
+    import sqlite3
+    from flask import render_template, abort
+    from services.v156_reputation_store import (
+        get_reputation_subject,
+        list_reputation_events_by_subject,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    row = get_reputation_subject(conn, subject_id)
+
+    if not row:
+        conn.close()
+        abort(404)
+
+    events = list_reputation_events_by_subject(conn, subject_id)
+
+    conn.close()
+
+    return render_template(
+        "reputation_subject_detail.html",
+        row=row,
+        events=events,
+        title="信誉主体详情",
+    )

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1300px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>👤 信誉主体详情</h1>
+
+        <div style="display:flex;gap:10px;">
+            <a href="/reputation/search?q={{ row.game_id or row.display_name }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                返回检索
+            </a>
+
+            <a href="/reputation/subjects"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                主体库
+            </a>
+
+            <a href="/reputation/subjects/{{ row.id }}/edit"
+               style="background:#fee2e2;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                编辑主体
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 主体画像</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>显示名称</div>
+                <h2>{{ row.display_name or '-' }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>游戏编号</div>
+                <h2>{{ row.game_id or '-' }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>信任等级</div>
+                {% if row.trust_level == "trusted" %}
+                    <h2 style="color:#16a34a;">可信</h2>
+                {% elif row.trust_level == "risky" %}
+                    <h2 style="color:#f97316;">存疑</h2>
+                {% elif row.trust_level == "black" %}
+                    <h2 style="color:#dc2626;">黑名单</h2>
+                {% else %}
+                    <h2 style="color:#64748b;">未知</h2>
+                {% endif %}
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>风险等级</div>
+                {% if row.risk_level == "black" %}
+                    <h2 style="color:#dc2626;">黑</h2>
+                {% elif row.risk_level == "danger" %}
+                    <h2 style="color:#dc2626;">危险</h2>
+                {% elif row.risk_level == "warning" %}
+                    <h2 style="color:#f97316;">预警</h2>
+                {% else %}
+                    <h2 style="color:#16a34a;">正常</h2>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:0.85fr 1.15fr;gap:18px;align-items:start;">
+        <div style="background:white;border-radius:18px;padding:22px;">
+            <h2>② 基础资料</h2>
+
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;width:120px;">主体类型</td>
+                    <td style="padding:10px;font-weight:bold;">{{ row.subject_type or '-' }}</td>
+                </tr>
+
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">曾用名</td>
+                    <td style="padding:10px;">{{ row.alias_names or '-' }}</td>
+                </tr>
+
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">状态</td>
+                    <td style="padding:10px;">{{ row.status or '-' }}</td>
+                </tr>
+
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">来源</td>
+                    <td style="padding:10px;">{{ row.source_type or '-' }}</td>
+                </tr>
+
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;">创建时间</td>
+                    <td style="padding:10px;">{{ row.created_at or '-' }}</td>
+                </tr>
+
+                <tr>
+                    <td style="padding:10px;color:#64748b;">更新时间</td>
+                    <td style="padding:10px;">{{ row.updated_at or '-' }}</td>
+                </tr>
+            </table>
+
+            <div style="margin-top:18px;background:#f8fafc;border-radius:12px;padding:14px;">
+                <h3 style="margin-top:0;">备注</h3>
+                <p style="color:#475569;line-height:1.8;white-space:pre-wrap;">{{ row.note or '暂无备注。' }}</p>
+            </div>
+        </div>
+
+        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+            <h2>③ 关联信誉事件</h2>
+            <p style="color:#64748b;line-height:1.7;">
+                这里展示该主体被关联过的全部信誉事件。后续可以作为信誉判断、跨赛季检索和风险复盘依据。
+            </p>
+
+            {% if events %}
+                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">事件</th>
+                        <th style="padding:10px;text-align:left;">影响</th>
+                        <th style="padding:10px;text-align:left;">状态</th>
+                        <th style="padding:10px;text-align:left;">关系</th>
+                        <th style="padding:10px;text-align:left;">操作</th>
+                    </tr>
+
+                    {% for e in events %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;max-width:260px;word-break:break-all;">
+                            {{ e.title or '-' }}
+                            {% if e.summary %}
+                                <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                    {{ e.summary[:60] }}{% if e.summary|length > 60 %}...{% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            {% if e.impact_level == "severe" %}
+                                <span style="color:#dc2626;font-weight:bold;">严重</span>
+                            {% elif e.impact_level == "high" %}
+                                <span style="color:#f97316;font-weight:bold;">高</span>
+                            {% elif e.impact_level == "normal" %}
+                                <span style="color:#2563eb;">普通</span>
+                            {% else %}
+                                <span style="color:#64748b;">轻微</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            {% if e.status == "verified" %}
+                                <span style="color:#16a34a;font-weight:bold;">已核实</span>
+                            {% elif e.status == "disputed" %}
+                                <span style="color:#f97316;font-weight:bold;">有争议</span>
+                            {% elif e.status == "archived" %}
+                                <span style="color:#64748b;">已归档</span>
+                            {% else %}
+                                <span style="color:#2563eb;">记录中</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">
+                            {{ e.relation_role or '-' }}
+                            {% if e.relation_note %}
+                                <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                    {{ e.relation_note }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            <a href="/reputation/events/{{ e.id }}/edit"
+                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                                查看事件 →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                    暂无关联信誉事件。
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

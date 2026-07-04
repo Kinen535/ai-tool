@@ -673,3 +673,30 @@ def delete_reputation_event_relation(
     )
 
     conn.commit()
+
+
+# =========================
+# V15.6-A6 reputation subject detail
+# =========================
+
+def list_reputation_events_by_subject(
+    conn: sqlite3.Connection,
+    subject_id: int,
+) -> list:
+    ensure_reputation_tables(conn)
+
+    return conn.execute(
+        """
+        SELECT
+            e.*,
+            r.id AS relation_id,
+            r.relation_role,
+            r.note AS relation_note,
+            r.created_at AS relation_created_at
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+        WHERE r.subject_id=?
+        ORDER BY e.id DESC
+        """,
+        (subject_id,),
+    ).fetchall()
