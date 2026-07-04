@@ -1259,6 +1259,20 @@ def delete_reputation_subject_safely(
 
     relation_count = get_reputation_subject_relation_count(conn, subject_id)
 
+    # V15.6-A13.1 first relation event guide
+    first_event = conn.execute(
+        """
+        SELECT event_id
+        FROM v156_reputation_event_relations
+        WHERE subject_id=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (subject_id,),
+    ).fetchone()
+
+    first_event_id = int(first_event["event_id"] or 0) if first_event else 0
+
     if relation_count > 0:
         return {
             "ok": False,
@@ -1267,6 +1281,7 @@ def delete_reputation_subject_safely(
             "display_name": subject["display_name"] or "",
             "game_id": subject["game_id"] or "",
             "relation_count": relation_count,
+            "first_event_id": first_event_id,
             "message": f"该主体存在 {relation_count} 条事件关联，禁止直接删除。请先解除关联或通过合并机制处理。",
         }
 

@@ -10,6 +10,30 @@
         🛡️ 已阻止删除：主体
         {% if request.args.get('name') %}「{{ request.args.get('name') }}」{% endif %}
         仍有关联事件 {{ request.args.get('relations') or 0 }} 条。请先解除关联，或使用“重复检测”合并主体。
+
+        <!-- V15.6-A13.1 blocked subject delete guide -->
+        {% set blocked_subject_id = request.args.get('subject_id') %}
+        {% set blocked_event_id = request.args.get('event_id') %}
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+            {% if blocked_subject_id %}
+            <a href="/reputation/subjects/{{ blocked_subject_id }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                查看主体详情 →
+            </a>
+            {% endif %}
+
+            {% if blocked_event_id and blocked_event_id != "0" %}
+            <a href="/reputation/events/{{ blocked_event_id }}/edit#relations"
+               style="background:#fff7ed;color:#f97316;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                进入关联事件编辑页 →
+            </a>
+            {% endif %}
+
+            <a href="/reputation/duplicates"
+               style="background:#fef2f2;color:#dc2626;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                进入重复检测合并主体 →
+            </a>
+        </div>
     </div>
     {% elif request.args.get('delete_result') == 'success' %}
     <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">

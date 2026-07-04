@@ -9406,6 +9406,7 @@ def v156_reputation_subject_delete(subject_id):
             "subject_id": subject_id,
             "name": result.get("display_name", ""),
             "relations": result.get("relation_count", 0),
+            "event_id": result.get("first_event_id", 0),
         })
         return redirect("/reputation/subjects?" + params)
 
