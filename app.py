@@ -9427,6 +9427,8 @@ def v156_reputation_event_edit(event_id):
     from services.v156_reputation_store import (
         get_reputation_event,
         update_reputation_event,
+        list_reputation_event_relations,
+        list_reputation_subjects,
     )
 
     conn = sqlite3.connect("data/snapshots.db")
@@ -9454,11 +9456,17 @@ def v156_reputation_event_edit(event_id):
         conn.close()
         return redirect("/reputation/events")
 
+    # V15.6-A5 event relation edit context
+    relations = list_reputation_event_relations(conn, event_id)
+    subjects = list_reputation_subjects(conn, q="", limit=200)
+
     conn.close()
 
     return render_template(
         "reputation_event_edit.html",
         row=row,
+        relations=relations,
+        subjects=subjects,
         title="编辑信誉事件",
     )
 
@@ -9477,3 +9485,54 @@ def v156_reputation_event_delete(event_id):
     conn.close()
 
     return redirect("/reputation/events")
+
+
+# =========================
+# V15.6-A5 reputation event relation routes
+# =========================
+
+@app.route("/reputation/events/<int:event_id>/relations/save", methods=["POST"])
+def v156_reputation_event_relation_save(event_id):
+    import sqlite3
+    from flask import request, redirect
+    from services.v156_reputation_store import add_reputation_event_relation
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    subject_id_raw = request.form.get("subject_id", "").strip()
+    relation_role = request.form.get("relation_role", "").strip()
+    note = request.form.get("note", "").strip()
+
+    try:
+        subject_id = int(subject_id_raw)
+    except Exception:
+        subject_id = 0
+
+    add_reputation_event_relation(
+        conn,
+        event_id=event_id,
+        subject_id=subject_id,
+        relation_role=relation_role,
+        note=note,
+    )
+
+    conn.close()
+
+    return redirect(f"/reputation/events/{event_id}/edit#relations")
+
+
+@app.route("/reputation/events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
+def v156_reputation_event_relation_delete(event_id, relation_id):
+    import sqlite3
+    from flask import redirect
+    from services.v156_reputation_store import delete_reputation_event_relation
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    delete_reputation_event_relation(conn, relation_id)
+
+    conn.close()
+
+    return redirect(f"/reputation/events/{event_id}/edit#relations")

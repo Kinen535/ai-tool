@@ -524,3 +524,119 @@ def delete_reputation_event(
     )
 
     conn.commit()
+
+
+# =========================
+# V15.6-A5 reputation event relations
+# =========================
+
+def list_reputation_event_relations(
+    conn: sqlite3.Connection,
+    event_id: int,
+) -> list:
+    ensure_reputation_tables(conn)
+
+    return conn.execute(
+        """
+        SELECT
+            r.*,
+            s.display_name,
+            s.game_id,
+            s.alias_names,
+            s.trust_level,
+            s.risk_level,
+            s.status AS subject_status
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+        WHERE r.event_id=?
+        ORDER BY r.id DESC
+        """,
+        (event_id,),
+    ).fetchall()
+
+
+def add_reputation_event_relation(
+    conn: sqlite3.Connection,
+    event_id: int,
+    subject_id: int,
+    relation_role: str = "",
+    note: str = "",
+) -> bool:
+    ensure_reputation_tables(conn)
+
+    if not event_id or not subject_id:
+        return False
+
+    event = conn.execute(
+        "SELECT id FROM v156_reputation_events WHERE id=?",
+        (event_id,),
+    ).fetchone()
+
+    subject = conn.execute(
+        "SELECT id FROM v156_reputation_subjects WHERE id=?",
+        (subject_id,),
+    ).fetchone()
+
+    if not event or not subject:
+        return False
+
+    exists = conn.execute(
+        """
+        SELECT id
+        FROM v156_reputation_event_relations
+        WHERE event_id=? AND subject_id=?
+        """,
+        (event_id, subject_id),
+    ).fetchone()
+
+    if exists:
+        conn.execute(
+            """
+            UPDATE v156_reputation_event_relations
+            SET relation_role=?, note=?
+            WHERE id=?
+            """,
+            (
+                (relation_role or "").strip(),
+                (note or "").strip(),
+                exists["id"],
+            ),
+        )
+    else:
+        conn.execute(
+            """
+            INSERT INTO v156_reputation_event_relations (
+                event_id,
+                subject_id,
+                relation_role,
+                note
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                event_id,
+                subject_id,
+                (relation_role or "").strip(),
+                (note or "").strip(),
+            ),
+        )
+
+    conn.commit()
+    return True
+
+
+def delete_reputation_event_relation(
+    conn: sqlite3.Connection,
+    relation_id: int,
+) -> None:
+    ensure_reputation_tables(conn)
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_event_relations
+        WHERE id=?
+        """,
+        (relation_id,),
+    )
+
+    conn.commit()
