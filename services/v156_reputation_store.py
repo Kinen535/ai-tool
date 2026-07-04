@@ -1211,3 +1211,81 @@ def list_reputation_merge_logs(
         """,
         (limit,),
     ).fetchall()
+
+
+# =========================
+# V15.6-A13 reputation subject delete protection
+# =========================
+
+def get_reputation_subject_relation_count(
+    conn: sqlite3.Connection,
+    subject_id: int,
+) -> int:
+    ensure_reputation_tables(conn)
+
+    row = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_event_relations
+        WHERE subject_id=?
+        """,
+        (subject_id,),
+    ).fetchone()
+
+    return int(row[0] or 0) if row else 0
+
+
+def delete_reputation_subject_safely(
+    conn: sqlite3.Connection,
+    subject_id: int,
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    subject = conn.execute(
+        """
+        SELECT id, display_name, game_id
+        FROM v156_reputation_subjects
+        WHERE id=?
+        """,
+        (subject_id,),
+    ).fetchone()
+
+    if not subject:
+        return {
+            "ok": False,
+            "blocked": False,
+            "message": "主体不存在，无法删除。",
+        }
+
+    relation_count = get_reputation_subject_relation_count(conn, subject_id)
+
+    if relation_count > 0:
+        return {
+            "ok": False,
+            "blocked": True,
+            "subject_id": subject_id,
+            "display_name": subject["display_name"] or "",
+            "game_id": subject["game_id"] or "",
+            "relation_count": relation_count,
+            "message": f"该主体存在 {relation_count} 条事件关联，禁止直接删除。请先解除关联或通过合并机制处理。",
+        }
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_subjects
+        WHERE id=?
+        """,
+        (subject_id,),
+    )
+
+    conn.commit()
+
+    return {
+        "ok": True,
+        "blocked": False,
+        "subject_id": subject_id,
+        "display_name": subject["display_name"] or "",
+        "game_id": subject["game_id"] or "",
+        "relation_count": 0,
+        "message": "主体已删除。",
+    }

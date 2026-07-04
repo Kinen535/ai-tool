@@ -9381,64 +9381,39 @@ def v156_reputation_subject_edit(subject_id):
 @app.route("/reputation/subjects/<int:subject_id>/delete", methods=["POST"])
 def v156_reputation_subject_delete(subject_id):
     import sqlite3
+    from urllib.parse import urlencode
     from flask import redirect
-    from services.v156_reputation_store import delete_reputation_subject
+    from services.v156_reputation_store import delete_reputation_subject_safely
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    delete_reputation_subject(conn, subject_id)
+    result = delete_reputation_subject_safely(conn, subject_id)
 
     conn.close()
 
-    return redirect("/reputation/subjects")
+    if result.get("ok"):
+        params = urlencode({
+            "delete_result": "success",
+            "subject_id": subject_id,
+            "name": result.get("display_name", ""),
+        })
+        return redirect("/reputation/subjects?" + params)
 
+    if result.get("blocked"):
+        params = urlencode({
+            "delete_result": "blocked",
+            "subject_id": subject_id,
+            "name": result.get("display_name", ""),
+            "relations": result.get("relation_count", 0),
+        })
+        return redirect("/reputation/subjects?" + params)
 
-# V15.6-A4 reputation event CRUD routes
-@app.route("/reputation/events", methods=["GET", "POST"])
-def v156_reputation_events():
-    import sqlite3
-    from flask import request, render_template, redirect
-    from services.v156_reputation_store import (
-        list_reputation_events,
-        create_reputation_event,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
-    conn.row_factory = sqlite3.Row
-
-    if request.method == "POST":
-        data = {
-            "title": request.form.get("title", ""),
-            "event_type": request.form.get("event_type", "general"),
-            "impact_level": request.form.get("impact_level", "normal"),
-            "status": request.form.get("status", "recorded"),
-            "event_time": request.form.get("event_time", ""),
-            "summary": request.form.get("summary", ""),
-            "evidence_note": request.form.get("evidence_note", ""),
-        }
-
-        create_reputation_event(conn, data)
-
-        conn.close()
-        return redirect("/reputation/events")
-
-    q = request.args.get("q", "").strip()
-
-    # V15.6-A10 event prefill
-    prefill_title = request.args.get("prefill", "").strip()
-
-    rows = list_reputation_events(conn, q=q, limit=100)
-
-    conn.close()
-
-    return render_template(
-        "reputation_events.html",
-        rows=rows,
-        q=q,
-        prefill_title=prefill_title,
-        title="信誉事件",
-    )
+    params = urlencode({
+        "delete_result": "failed",
+        "subject_id": subject_id,
+    })
+    return redirect("/reputation/subjects?" + params)
 
 
 @app.route("/reputation/events/<int:event_id>/edit", methods=["GET", "POST"])
