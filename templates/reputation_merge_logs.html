@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>📜 主体合并日志</h1>
+
+        <div style="display:flex;gap:10px;">
+            <a href="/reputation/duplicates"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                重复检测
+            </a>
+
+            <a href="/reputation"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                返回信誉首页
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 日志说明</h2>
+        <p style="color:#475569;line-height:1.8;">
+            这里记录信誉主体合并操作。合并后，被合并主体会被删除，但系统会保留合并前快照、迁移关联数量和重复关联清理数量，方便后续追溯。
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>合并记录</div>
+                <h2>{{ rows|length }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>记录范围</div>
+                <h2>最近 100 条</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>用途</div>
+                <h2>追溯</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:white;border-radius:18px;padding:22px;">
+        <h2>② 合并记录</h2>
+
+        {% if rows %}
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:10px;text-align:left;">时间</th>
+                    <th style="padding:10px;text-align:left;">保留主体</th>
+                    <th style="padding:10px;text-align:left;">被合并主体</th>
+                    <th style="padding:10px;text-align:left;">迁移关联</th>
+                    <th style="padding:10px;text-align:left;">去重关联</th>
+                    <th style="padding:10px;text-align:left;">结果</th>
+                    <th style="padding:10px;text-align:left;">入口</th>
+                </tr>
+
+                {% for row in rows %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;color:#64748b;white-space:nowrap;">
+                        {{ row.created_at or '-' }}
+                    </td>
+
+                    <td style="padding:10px;font-weight:bold;">
+                        #{{ row.keep_subject_id }}｜{{ row.keep_display_name or '-' }}
+                        {% if row.keep_game_id %}
+                            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                {{ row.keep_game_id }}
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:10px;">
+                        #{{ row.merge_subject_id }}｜{{ row.merge_display_name or '-' }}
+                        {% if row.merge_game_id %}
+                            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                {{ row.merge_game_id }}
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:10px;font-weight:bold;">
+                        {{ row.moved_relations_count or 0 }}
+                    </td>
+
+                    <td style="padding:10px;color:#64748b;">
+                        {{ row.removed_duplicate_relations_count or 0 }}
+                    </td>
+
+                    <td style="padding:10px;color:#16a34a;font-weight:bold;">
+                        {{ row.result_message or '已合并' }}
+                    </td>
+
+                    <td style="padding:10px;">
+                        <a href="/reputation/subjects/{{ row.keep_subject_id }}"
+                           style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                            查看保留主体 →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
+                暂无主体合并日志。下一次通过“重复检测”合并主体后，这里会自动记录。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

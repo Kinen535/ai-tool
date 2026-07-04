@@ -979,6 +979,8 @@ def merge_reputation_subjects(
     merge_id: int,
 ) -> dict[str, Any]:
     ensure_reputation_tables(conn)
+    # V15.6-A12 merge audit init
+    ensure_reputation_merge_log_table(conn)
 
     if not keep_id or not merge_id:
         return {"ok": False, "message": "缺少主体 ID。"}
@@ -998,6 +1000,30 @@ def merge_reputation_subjects(
 
     if not keep or not merge:
         return {"ok": False, "message": "主体不存在，无法合并。"}
+
+    # V15.6-A12 merge audit relation stats
+    merge_relation_total = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM v156_reputation_event_relations WHERE subject_id=?",
+            (merge_id,),
+        ).fetchone()[0] or 0
+    )
+
+    duplicate_relation_total = int(
+        conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM v156_reputation_event_relations mr
+            INNER JOIN v156_reputation_event_relations kr
+                ON kr.event_id = mr.event_id
+               AND kr.subject_id = ?
+            WHERE mr.subject_id = ?
+            """,
+            (keep_id, merge_id),
+        ).fetchone()[0] or 0
+    )
+
+    moved_relation_total = max(0, merge_relation_total - duplicate_relation_total)
 
     keep_name = (keep["display_name"] or "").strip()
     merge_name = (merge["display_name"] or "").strip()
@@ -1097,6 +1123,42 @@ def merge_reputation_subjects(
         (merge_id,),
     )
 
+    # V15.6-A12 write merge audit log
+    import json
+
+    conn.execute(
+        """
+        INSERT INTO v156_reputation_merge_logs (
+            keep_subject_id,
+            keep_display_name,
+            keep_game_id,
+            merge_subject_id,
+            merge_display_name,
+            merge_game_id,
+            moved_relations_count,
+            removed_duplicate_relations_count,
+            keep_snapshot,
+            merge_snapshot,
+            result_message,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+        """,
+        (
+            keep_id,
+            keep_name,
+            merged_game_id,
+            merge_id,
+            merge_name,
+            (merge["game_id"] or "").strip(),
+            moved_relation_total,
+            duplicate_relation_total,
+            json.dumps(dict(keep), ensure_ascii=False),
+            json.dumps(dict(merge), ensure_ascii=False),
+            f"已合并主体 #{merge_id} 到 #{keep_id}",
+        ),
+    )
+
     conn.commit()
 
     return {
@@ -1105,3 +1167,47 @@ def merge_reputation_subjects(
         "keep_id": keep_id,
         "merge_id": merge_id,
     }
+
+
+# =========================
+# V15.6-A12 reputation merge audit logs
+# =========================
+
+def ensure_reputation_merge_log_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v156_reputation_merge_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keep_subject_id INTEGER,
+            keep_display_name TEXT,
+            keep_game_id TEXT,
+            merge_subject_id INTEGER,
+            merge_display_name TEXT,
+            merge_game_id TEXT,
+            moved_relations_count INTEGER DEFAULT 0,
+            removed_duplicate_relations_count INTEGER DEFAULT 0,
+            keep_snapshot TEXT,
+            merge_snapshot TEXT,
+            result_message TEXT,
+            created_at TEXT
+        )
+        """
+    )
+    conn.commit()
+
+
+def list_reputation_merge_logs(
+    conn: sqlite3.Connection,
+    limit: int = 100,
+) -> list:
+    ensure_reputation_merge_log_table(conn)
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_merge_logs
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()

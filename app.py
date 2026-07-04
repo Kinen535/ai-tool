@@ -9716,3 +9716,27 @@ def v156_reputation_duplicates():
         result=result,
         title="重复主体检测",
     )
+
+
+# =========================
+# V15.6-A12 reputation merge logs
+# =========================
+
+@app.route("/reputation/merge-logs")
+def v156_reputation_merge_logs():
+    import sqlite3
+    from flask import render_template
+    from services.v156_reputation_store import list_reputation_merge_logs
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    rows = list_reputation_merge_logs(conn, limit=100)
+
+    conn.close()
+
+    return render_template(
+        "reputation_merge_logs.html",
+        rows=rows,
+        title="主体合并日志",
+    )
