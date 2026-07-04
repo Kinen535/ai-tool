@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1000px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>✏️ 编辑信誉事件</h1>
+
+        <a href="/reputation/events"
+           style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+            返回事件库
+        </a>
+    </div>
+
+    <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
+        <form method="POST" action="/reputation/events/{{ row.id }}/edit">
+            <label style="font-weight:bold;">事件标题</label>
+            <input name="title"
+                   value="{{ row.title or '' }}"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+            <label style="font-weight:bold;">事件类型</label>
+            <select name="event_type"
+                    style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                <option value="general" {% if row.event_type == "general" %}selected{% endif %}>普通记录</option>
+                <option value="betrayal" {% if row.event_type == "betrayal" %}selected{% endif %}>背刺 / 跳反</option>
+                <option value="fraud" {% if row.event_type == "fraud" %}selected{% endif %}>欺诈 / 诈骗</option>
+                <option value="conflict" {% if row.event_type == "conflict" %}selected{% endif %}>纠纷 / 冲突</option>
+                <option value="cooperation" {% if row.event_type == "cooperation" %}selected{% endif %}>合作履约</option>
+                <option value="management" {% if row.event_type == "management" %}selected{% endif %}>管理事件</option>
+                <option value="other" {% if row.event_type == "other" %}selected{% endif %}>其他</option>
+            </select>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-weight:bold;">影响等级</label>
+                    <select name="impact_level"
+                            style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                        <option value="low" {% if row.impact_level == "low" %}selected{% endif %}>轻微</option>
+                        <option value="normal" {% if row.impact_level == "normal" %}selected{% endif %}>普通</option>
+                        <option value="high" {% if row.impact_level == "high" %}selected{% endif %}>高</option>
+                        <option value="severe" {% if row.impact_level == "severe" %}selected{% endif %}>严重</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-weight:bold;">处理状态</label>
+                    <select name="status"
+                            style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+                        <option value="recorded" {% if row.status == "recorded" %}selected{% endif %}>记录中</option>
+                        <option value="verified" {% if row.status == "verified" %}selected{% endif %}>已核实</option>
+                        <option value="disputed" {% if row.status == "disputed" %}selected{% endif %}>有争议</option>
+                        <option value="archived" {% if row.status == "archived" %}selected{% endif %}>已归档</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="font-weight:bold;">事件时间</label>
+            <input name="event_time"
+                   value="{{ row.event_time or '' }}"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
+
+            <label style="font-weight:bold;">事件摘要</label>
+            <textarea name="summary"
+                      style="width:100%;height:140px;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">{{ row.summary or '' }}</textarea>
+
+            <label style="font-weight:bold;">证据备注</label>
+            <textarea name="evidence_note"
+                      style="width:100%;height:160px;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">{{ row.evidence_note or '' }}</textarea>
+
+            <button type="submit"
+                    style="background:#f97316;color:white;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;">
+                保存修改
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

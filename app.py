@@ -9378,30 +9378,102 @@ def v156_reputation_subject_delete(subject_id):
     return redirect("/reputation/subjects")
 
 
-@app.route("/reputation/events")
+# V15.6-A4 reputation event CRUD routes
+@app.route("/reputation/events", methods=["GET", "POST"])
 def v156_reputation_events():
     import sqlite3
-    from flask import render_template
-    from services.v156_reputation_store import ensure_reputation_tables
+    from flask import request, render_template, redirect
+    from services.v156_reputation_store import (
+        list_reputation_events,
+        create_reputation_event,
+    )
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    ensure_reputation_tables(conn)
+    if request.method == "POST":
+        data = {
+            "title": request.form.get("title", ""),
+            "event_type": request.form.get("event_type", "general"),
+            "impact_level": request.form.get("impact_level", "normal"),
+            "status": request.form.get("status", "recorded"),
+            "event_time": request.form.get("event_time", ""),
+            "summary": request.form.get("summary", ""),
+            "evidence_note": request.form.get("evidence_note", ""),
+        }
 
-    rows = conn.execute(
-        """
-        SELECT *
-        FROM v156_reputation_events
-        ORDER BY id DESC
-        LIMIT 50
-        """
-    ).fetchall()
+        create_reputation_event(conn, data)
+
+        conn.close()
+        return redirect("/reputation/events")
+
+    q = request.args.get("q", "").strip()
+    rows = list_reputation_events(conn, q=q, limit=100)
 
     conn.close()
 
     return render_template(
         "reputation_events.html",
         rows=rows,
+        q=q,
         title="信誉事件",
     )
+
+
+@app.route("/reputation/events/<int:event_id>/edit", methods=["GET", "POST"])
+def v156_reputation_event_edit(event_id):
+    import sqlite3
+    from flask import request, render_template, redirect, abort
+    from services.v156_reputation_store import (
+        get_reputation_event,
+        update_reputation_event,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    row = get_reputation_event(conn, event_id)
+
+    if not row:
+        conn.close()
+        abort(404)
+
+    if request.method == "POST":
+        data = {
+            "title": request.form.get("title", ""),
+            "event_type": request.form.get("event_type", "general"),
+            "impact_level": request.form.get("impact_level", "normal"),
+            "status": request.form.get("status", "recorded"),
+            "event_time": request.form.get("event_time", ""),
+            "summary": request.form.get("summary", ""),
+            "evidence_note": request.form.get("evidence_note", ""),
+        }
+
+        update_reputation_event(conn, event_id, data)
+
+        conn.close()
+        return redirect("/reputation/events")
+
+    conn.close()
+
+    return render_template(
+        "reputation_event_edit.html",
+        row=row,
+        title="编辑信誉事件",
+    )
+
+
+@app.route("/reputation/events/<int:event_id>/delete", methods=["POST"])
+def v156_reputation_event_delete(event_id):
+    import sqlite3
+    from flask import redirect
+    from services.v156_reputation_store import delete_reputation_event
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    delete_reputation_event(conn, event_id)
+
+    conn.close()
+
+    return redirect("/reputation/events")

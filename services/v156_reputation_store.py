@@ -358,3 +358,169 @@ def delete_reputation_subject(
     )
 
     conn.commit()
+
+
+# =========================
+# V15.6-A4 reputation event CRUD
+# =========================
+
+def list_reputation_events(
+    conn: sqlite3.Connection,
+    q: str = "",
+    limit: int = 100,
+) -> list:
+    ensure_reputation_tables(conn)
+
+    q = (q or "").strip()
+
+    if not q:
+        return conn.execute(
+            """
+            SELECT *
+            FROM v156_reputation_events
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    like = f"%{q}%"
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE title LIKE ?
+           OR event_type LIKE ?
+           OR impact_level LIKE ?
+           OR status LIKE ?
+           OR summary LIKE ?
+           OR evidence_note LIKE ?
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (like, like, like, like, like, like, limit),
+    ).fetchall()
+
+
+def get_reputation_event(
+    conn: sqlite3.Connection,
+    event_id: int,
+):
+    ensure_reputation_tables(conn)
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE id=?
+        """,
+        (event_id,),
+    ).fetchone()
+
+
+def create_reputation_event(
+    conn: sqlite3.Connection,
+    data: dict[str, Any],
+) -> int | None:
+    ensure_reputation_tables(conn)
+
+    title = (data.get("title") or "").strip()
+
+    if not title:
+        return None
+
+    cur = conn.execute(
+        """
+        INSERT INTO v156_reputation_events (
+            title,
+            event_type,
+            impact_level,
+            status,
+            event_time,
+            summary,
+            evidence_note,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
+        """,
+        (
+            title,
+            (data.get("event_type") or "general").strip(),
+            (data.get("impact_level") or "normal").strip(),
+            (data.get("status") or "recorded").strip(),
+            (data.get("event_time") or "").strip(),
+            (data.get("summary") or "").strip(),
+            (data.get("evidence_note") or "").strip(),
+        ),
+    )
+
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def update_reputation_event(
+    conn: sqlite3.Connection,
+    event_id: int,
+    data: dict[str, Any],
+) -> bool:
+    ensure_reputation_tables(conn)
+
+    title = (data.get("title") or "").strip()
+
+    if not title:
+        return False
+
+    conn.execute(
+        """
+        UPDATE v156_reputation_events
+        SET
+            title=?,
+            event_type=?,
+            impact_level=?,
+            status=?,
+            event_time=?,
+            summary=?,
+            evidence_note=?,
+            updated_at=datetime('now','localtime')
+        WHERE id=?
+        """,
+        (
+            title,
+            (data.get("event_type") or "general").strip(),
+            (data.get("impact_level") or "normal").strip(),
+            (data.get("status") or "recorded").strip(),
+            (data.get("event_time") or "").strip(),
+            (data.get("summary") or "").strip(),
+            (data.get("evidence_note") or "").strip(),
+            event_id,
+        ),
+    )
+
+    conn.commit()
+    return True
+
+
+def delete_reputation_event(
+    conn: sqlite3.Connection,
+    event_id: int,
+) -> None:
+    ensure_reputation_tables(conn)
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_event_relations
+        WHERE event_id=?
+        """,
+        (event_id,),
+    )
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_events
+        WHERE id=?
+        """,
+        (event_id,),
+    )
+
+    conn.commit()
