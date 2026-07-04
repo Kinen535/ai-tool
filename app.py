@@ -9230,16 +9230,17 @@ def v155_security_console():
 # V15.6-A1 reputation archive independent module
 # =========================
 
+# V15.6-A8 reputation home dashboard route
 @app.route("/reputation")
 def v156_reputation_home():
     import sqlite3
     from flask import render_template
-    from services.v156_reputation_store import get_reputation_dashboard
+    from services.v156_reputation_store import build_reputation_home_report
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    report = get_reputation_dashboard(conn)
+    report = build_reputation_home_report(conn)
 
     conn.close()
 

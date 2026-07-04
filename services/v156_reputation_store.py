@@ -700,3 +700,120 @@ def list_reputation_events_by_subject(
         """,
         (subject_id,),
     ).fetchall()
+
+
+# =========================
+# V15.6-A8 reputation home dashboard
+# =========================
+
+def build_reputation_home_report(conn: sqlite3.Connection) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    def one(sql: str, args: tuple = ()) -> int:
+        row = conn.execute(sql, args).fetchone()
+        return int(row[0] or 0) if row else 0
+
+    subject_total = one("SELECT COUNT(*) FROM v156_reputation_subjects")
+
+    risk_subject_total = one(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_subjects
+        WHERE risk_level IN ('warning', 'danger', 'black')
+           OR trust_level IN ('risky', 'black')
+        """
+    )
+
+    black_subject_total = one(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_subjects
+        WHERE risk_level='black'
+           OR trust_level='black'
+        """
+    )
+
+    event_total = one("SELECT COUNT(*) FROM v156_reputation_events")
+
+    severe_event_total = one(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_events
+        WHERE impact_level IN ('high', 'severe')
+        """
+    )
+
+    relation_total = one("SELECT COUNT(*) FROM v156_reputation_event_relations")
+
+    high_risk_subjects = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE risk_level IN ('warning', 'danger', 'black')
+           OR trust_level IN ('risky', 'black')
+        ORDER BY
+            CASE
+                WHEN risk_level='black' THEN 1
+                WHEN risk_level='danger' THEN 2
+                WHEN trust_level='black' THEN 3
+                WHEN trust_level='risky' THEN 4
+                WHEN risk_level='warning' THEN 5
+                ELSE 9
+            END,
+            updated_at DESC,
+            id DESC
+        LIMIT 8
+        """
+    ).fetchall()
+
+    recent_events = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 8
+        """
+    ).fetchall()
+
+    recent_relations = conn.execute(
+        """
+        SELECT
+            r.*,
+            e.title,
+            e.impact_level,
+            e.status AS event_status,
+            s.display_name,
+            s.game_id,
+            s.risk_level,
+            s.trust_level
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+        LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+        ORDER BY r.id DESC
+        LIMIT 8
+        """
+    ).fetchall()
+
+    if black_subject_total > 0:
+        stage_tip = "已有黑名单或高危主体，建议优先补充事件证据和关联关系。"
+    elif risk_subject_total > 0:
+        stage_tip = "已有风险主体，建议继续完善事件库与主体详情。"
+    elif subject_total > 0 or event_total > 0:
+        stage_tip = "基础数据已开始沉淀，下一步建议补充关联关系。"
+    else:
+        stage_tip = "当前仍是空库，建议先录入主体和事件。"
+
+    return {
+        "stats": {
+            "subject_total": subject_total,
+            "risk_subject_total": risk_subject_total,
+            "black_subject_total": black_subject_total,
+            "event_total": event_total,
+            "severe_event_total": severe_event_total,
+            "relation_total": relation_total,
+        },
+        "high_risk_subjects": high_risk_subjects,
+        "recent_events": recent_events,
+        "recent_relations": recent_relations,
+        "stage_tip": stage_tip,
+    }
