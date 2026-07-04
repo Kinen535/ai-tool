@@ -125,6 +125,7 @@
             <form method="POST" action="/reputation/events">
                 <label style="font-weight:bold;">事件标题</label>
                 <input name="title"
+                       value="{{ prefill_title or '' }}"
                        placeholder="例如：某玩家背刺事件 / 资源纠纷 / 合作履约"
                        style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
 

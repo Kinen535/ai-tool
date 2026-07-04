@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>🧩 重复主体检测</h1>
+
+        <div style="display:flex;gap:10px;">
+            <a href="/reputation"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                返回信誉首页
+            </a>
+
+            <a href="/reputation/subjects"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                主体库
+            </a>
+
+            <a href="/reputation/search"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                信誉检索
+            </a>
+        </div>
+    </div>
+
+    {% if result %}
+        {% if result.ok %}
+            <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+                ✅ {{ result.message }}
+                <a href="/reputation/subjects/{{ result.keep_id }}"
+                   style="color:#2563eb;margin-left:10px;text-decoration:none;">
+                    查看保留主体 →
+                </a>
+            </div>
+        {% else %}
+            <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+                ⚠️ {{ result.message }}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 检测概况</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>重复分组</div>
+                <h2>{{ report.group_count }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>涉及主体</div>
+                <h2>{{ report.duplicate_subject_count }}</h2>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
+                <div>处理方式</div>
+                <h2>人工确认</h2>
+            </div>
+        </div>
+
+        <p style="color:#64748b;line-height:1.8;margin-top:14px;">
+            系统只做候选检测，不自动合并。合并时会保留一个主体，把另一个主体的事件关联、曾用名和备注迁移过去，再删除被合并主体。
+        </p>
+    </div>
+
+    {% if report.groups %}
+        {% for group in report.groups %}
+            <div style="background:white;border-radius:18px;padding:22px;margin-bottom:18px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div>
+                        <h2 style="margin:0;">② {{ group.group_label }}</h2>
+                        <div style="color:#64748b;margin-top:6px;">
+                            识别值：<b>{{ group.group_key }}</b>｜数量：{{ group.count }}
+                        </div>
+                    </div>
+                </div>
+
+                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">ID</th>
+                        <th style="padding:10px;text-align:left;">主体</th>
+                        <th style="padding:10px;text-align:left;">游戏编号</th>
+                        <th style="padding:10px;text-align:left;">曾用名</th>
+                        <th style="padding:10px;text-align:left;">信任</th>
+                        <th style="padding:10px;text-align:left;">风险</th>
+                        <th style="padding:10px;text-align:left;">关联事件</th>
+                        <th style="padding:10px;text-align:left;">更新时间</th>
+                        <th style="padding:10px;text-align:left;">入口</th>
+                    </tr>
+
+                    {% for row in group.rows %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;color:#64748b;">#{{ row.id }}</td>
+
+                        <td style="padding:10px;font-weight:bold;">
+                            {{ row.display_name or '-' }}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">
+                            {{ row.game_id or '-' }}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;max-width:260px;word-break:break-all;">
+                            {{ row.alias_names or '-' }}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">
+                            {{ row.trust_level or '-' }}
+                        </td>
+
+                        <td style="padding:10px;">
+                            {% if row.risk_level in ["danger", "black"] %}
+                                <span style="color:#dc2626;font-weight:bold;">{{ row.risk_level }}</span>
+                            {% elif row.risk_level == "warning" %}
+                                <span style="color:#f97316;font-weight:bold;">warning</span>
+                            {% else %}
+                                <span style="color:#16a34a;">{{ row.risk_level or 'normal' }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;font-weight:bold;">
+                            {{ row.relation_count or 0 }}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">
+                            {{ row.updated_at or '-' }}
+                        </td>
+
+                        <td style="padding:10px;">
+                            <a href="/reputation/subjects/{{ row.id }}"
+                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                                查看 →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+
+                <form method="POST"
+                      action="/reputation/duplicates"
+                      onsubmit="return confirm('确认执行合并？被合并主体会被删除，事件关联会迁移到保留主体。');"
+                      style="background:#f8fafc;border-radius:14px;padding:16px;margin-top:16px;display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
+                    <div>
+                        <label style="font-weight:bold;">保留主体</label>
+                        <select name="keep_id"
+                                style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+                            {% for row in group.rows %}
+                                <option value="{{ row.id }}">
+                                    #{{ row.id }}｜{{ row.display_name or '未命名' }}
+                                    {% if row.game_id %}｜{{ row.game_id }}{% endif %}
+                                    ｜关联 {{ row.relation_count or 0 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-weight:bold;">被合并主体</label>
+                        <select name="merge_id"
+                                style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+                            {% for row in group.rows %}
+                                <option value="{{ row.id }}">
+                                    #{{ row.id }}｜{{ row.display_name or '未命名' }}
+                                    {% if row.game_id %}｜{{ row.game_id }}{% endif %}
+                                    ｜关联 {{ row.relation_count or 0 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit"
+                            style="background:#dc2626;color:white;border:0;border-radius:10px;padding:11px 18px;font-weight:bold;">
+                        合并主体
+                    </button>
+                </form>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+            <h2>② 暂无重复主体</h2>
+            <p style="color:#475569;line-height:1.8;">
+                当前没有发现相同游戏编号或相同显示名称的重复主体。后续录入数据变多后，可以定期回来检查。
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

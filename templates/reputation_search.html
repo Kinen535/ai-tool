@@ -11,6 +11,16 @@
         </a>
     </div>
 
+    {% if request.args.get('quick_link') == 'success' %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ✅ 快速关联已保存；如果原本已存在关联，则已更新关系和备注，不会重复新增。
+    </div>
+    {% elif request.args.get('quick_link') == 'failed' %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 快速关联失败：请确认主体和事件都已选择。
+    </div>
+    {% endif %}
+
     <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
         <h2>① 搜索</h2>
 
@@ -25,6 +35,78 @@
             </button>
         </form>
     </div>
+
+
+    <!-- V15.6-A10 quick action panel -->
+    {% if q %}
+    <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:18px;margin-bottom:18px;">
+        <h2>快速处理</h2>
+        <p style="color:#475569;line-height:1.7;margin:6px 0 12px 0;">
+            当前关键词：<b>{{ q }}</b>。可以直接带入关键词新增主体、事件，或者把当前匹配到的主体和事件快速建立/更新关联。已有关系时只会更新，不会重复新增。
+        </p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <a href="/reputation/subjects?prefill={{ q|urlencode }}"
+               style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                新增为信誉主体 →
+            </a>
+
+            <a href="/reputation/events?prefill={{ q|urlencode }}"
+               style="background:#fff7ed;color:#f97316;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                新增为信誉事件 →
+            </a>
+        </div>
+
+        {% if result.subjects and result.events %}
+        <form method="POST" action="/reputation/quick-link"
+              style="display:grid;grid-template-columns:1fr 1fr 0.8fr 1.2fr auto;gap:10px;align-items:end;">
+            <input type="hidden" name="q" value="{{ q }}">
+
+            <div>
+                <label style="font-weight:bold;">选择主体</label>
+                <select name="subject_id"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+                    {% for s in result.subjects %}
+                        <option value="{{ s.id }}">
+                            {{ s.display_name or '未命名' }}
+                            {% if s.game_id %}｜{{ s.game_id }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-weight:bold;">选择事件</label>
+                <select name="event_id"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+                    {% for e in result.events %}
+                        <option value="{{ e.id }}">{{ e.title or '未命名事件' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-weight:bold;">关系</label>
+                <input name="relation_role"
+                       value="主要责任人"
+                       style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            </div>
+
+            <div>
+                <label style="font-weight:bold;">备注</label>
+                <input name="note"
+                       value="检索页快速建立/更新关联"
+                       style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            </div>
+
+            <button type="submit"
+                    style="background:#16a34a;color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:bold;">
+                建立/更新关联
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <div style="display:grid;grid-template-columns:0.95fr 1.25fr;gap:18px;align-items:start;">
         <div style="background:white;border-radius:18px;padding:22px;">

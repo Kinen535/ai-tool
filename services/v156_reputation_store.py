@@ -817,3 +817,262 @@ def build_reputation_home_report(conn: sqlite3.Connection) -> dict[str, Any]:
         "recent_relations": recent_relations,
         "stage_tip": stage_tip,
     }
+
+
+# =========================
+# V15.6-A11 reputation duplicate detection and merge
+# =========================
+
+def _v156_subject_ids_to_rows(conn: sqlite3.Connection, ids: list[int]) -> list:
+    if not ids:
+        return []
+
+    placeholders = ",".join(["?"] * len(ids))
+
+    return conn.execute(
+        f"""
+        SELECT
+            s.*,
+            COUNT(r.id) AS relation_count
+        FROM v156_reputation_subjects s
+        LEFT JOIN v156_reputation_event_relations r ON r.subject_id = s.id
+        WHERE s.id IN ({placeholders})
+        GROUP BY s.id
+        ORDER BY s.updated_at DESC, s.id DESC
+        """,
+        tuple(ids),
+    ).fetchall()
+
+
+def build_reputation_duplicate_report(conn: sqlite3.Connection) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    groups: list[dict[str, Any]] = []
+
+    game_id_groups = conn.execute(
+        """
+        SELECT game_id, GROUP_CONCAT(id) AS ids, COUNT(*) AS c
+        FROM v156_reputation_subjects
+        WHERE IFNULL(TRIM(game_id), '') != ''
+        GROUP BY game_id
+        HAVING c > 1
+        ORDER BY c DESC, game_id
+        LIMIT 50
+        """
+    ).fetchall()
+
+    for g in game_id_groups:
+        ids = [int(x) for x in (g["ids"] or "").split(",") if x.strip().isdigit()]
+        groups.append(
+            {
+                "group_type": "game_id",
+                "group_label": "游戏编号重复",
+                "group_key": g["game_id"],
+                "count": int(g["c"] or 0),
+                "rows": _v156_subject_ids_to_rows(conn, ids),
+            }
+        )
+
+    name_groups = conn.execute(
+        """
+        SELECT display_name, GROUP_CONCAT(id) AS ids, COUNT(*) AS c
+        FROM v156_reputation_subjects
+        WHERE IFNULL(TRIM(display_name), '') != ''
+        GROUP BY display_name
+        HAVING c > 1
+        ORDER BY c DESC, display_name
+        LIMIT 50
+        """
+    ).fetchall()
+
+    for g in name_groups:
+        ids = [int(x) for x in (g["ids"] or "").split(",") if x.strip().isdigit()]
+        groups.append(
+            {
+                "group_type": "display_name",
+                "group_label": "显示名称重复",
+                "group_key": g["display_name"],
+                "count": int(g["c"] or 0),
+                "rows": _v156_subject_ids_to_rows(conn, ids),
+            }
+        )
+
+    duplicate_subject_ids = set()
+
+    for group in groups:
+        for row in group["rows"]:
+            duplicate_subject_ids.add(int(row["id"]))
+
+    return {
+        "groups": groups,
+        "group_count": len(groups),
+        "duplicate_subject_count": len(duplicate_subject_ids),
+    }
+
+
+def _v156_split_aliases(value: str | None) -> list[str]:
+    if not value:
+        return []
+
+    raw = (
+        value.replace("，", ",")
+        .replace("、", ",")
+        .replace("；", ",")
+        .replace(";", ",")
+        .split(",")
+    )
+
+    result = []
+
+    for item in raw:
+        item = item.strip()
+        if item and item not in result:
+            result.append(item)
+
+    return result
+
+
+def _v156_pick_worse_level(a: str | None, b: str | None, order: list[str]) -> str:
+    a = (a or "").strip()
+    b = (b or "").strip()
+
+    rank = {name: i for i, name in enumerate(order)}
+
+    if rank.get(b, -1) > rank.get(a, -1):
+        return b
+
+    return a or b
+
+
+def merge_reputation_subjects(
+    conn: sqlite3.Connection,
+    keep_id: int,
+    merge_id: int,
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    if not keep_id or not merge_id:
+        return {"ok": False, "message": "缺少主体 ID。"}
+
+    if keep_id == merge_id:
+        return {"ok": False, "message": "保留主体和被合并主体不能相同。"}
+
+    keep = conn.execute(
+        "SELECT * FROM v156_reputation_subjects WHERE id=?",
+        (keep_id,),
+    ).fetchone()
+
+    merge = conn.execute(
+        "SELECT * FROM v156_reputation_subjects WHERE id=?",
+        (merge_id,),
+    ).fetchone()
+
+    if not keep or not merge:
+        return {"ok": False, "message": "主体不存在，无法合并。"}
+
+    keep_name = (keep["display_name"] or "").strip()
+    merge_name = (merge["display_name"] or "").strip()
+
+    alias_items: list[str] = []
+
+    for item in _v156_split_aliases(keep["alias_names"]):
+        if item not in alias_items:
+            alias_items.append(item)
+
+    if merge_name and merge_name != keep_name and merge_name not in alias_items:
+        alias_items.append(merge_name)
+
+    for item in _v156_split_aliases(merge["alias_names"]):
+        if item and item != keep_name and item not in alias_items:
+            alias_items.append(item)
+
+    merged_alias_names = ",".join(alias_items)
+
+    merged_game_id = (keep["game_id"] or "").strip() or (merge["game_id"] or "").strip()
+
+    merged_trust_level = _v156_pick_worse_level(
+        keep["trust_level"],
+        merge["trust_level"],
+        ["unknown", "trusted", "risky", "black"],
+    )
+
+    merged_risk_level = _v156_pick_worse_level(
+        keep["risk_level"],
+        merge["risk_level"],
+        ["normal", "warning", "danger", "black"],
+    )
+
+    keep_note = (keep["note"] or "").strip()
+    merge_note = (merge["note"] or "").strip()
+
+    merge_info = f"已合并主体 #{merge_id}"
+    if merge_name:
+        merge_info += f"：{merge_name}"
+    if merge["game_id"]:
+        merge_info += f"｜{merge['game_id']}"
+
+    note_parts = [x for x in [keep_note, merge_note, merge_info] if x]
+    merged_note = "\\n\\n".join(note_parts)
+
+    # 先迁移不重复的事件关联
+    conn.execute(
+        """
+        UPDATE v156_reputation_event_relations
+        SET subject_id=?
+        WHERE subject_id=?
+          AND event_id NOT IN (
+              SELECT event_id
+              FROM v156_reputation_event_relations
+              WHERE subject_id=?
+          )
+        """,
+        (keep_id, merge_id, keep_id),
+    )
+
+    # 删除迁移后仍然剩下的重复关联，避免同一事件同一主体重复绑定
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_event_relations
+        WHERE subject_id=?
+        """,
+        (merge_id,),
+    )
+
+    conn.execute(
+        """
+        UPDATE v156_reputation_subjects
+        SET
+            game_id=?,
+            alias_names=?,
+            trust_level=?,
+            risk_level=?,
+            note=?,
+            updated_at=datetime('now','localtime')
+        WHERE id=?
+        """,
+        (
+            merged_game_id,
+            merged_alias_names,
+            merged_trust_level,
+            merged_risk_level,
+            merged_note,
+            keep_id,
+        ),
+    )
+
+    conn.execute(
+        """
+        DELETE FROM v156_reputation_subjects
+        WHERE id=?
+        """,
+        (merge_id,),
+    )
+
+    conn.commit()
+
+    return {
+        "ok": True,
+        "message": f"已合并主体 #{merge_id} 到 #{keep_id}。",
+        "keep_id": keep_id,
+        "merge_id": merge_id,
+    }

@@ -129,11 +129,13 @@
 
                 <label style="font-weight:bold;">显示名称</label>
                 <input name="display_name"
+                       value="{{ prefill.display_name if prefill else '' }}"
                        placeholder="例如：山河白酒"
                        style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
 
                 <label style="font-weight:bold;">游戏编号</label>
                 <input name="game_id"
+                       value="{{ prefill.game_id if prefill else '' }}"
                        placeholder="例如：31475391"
                        style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
 

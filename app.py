@@ -9306,6 +9306,20 @@ def v156_reputation_subjects():
         return redirect("/reputation/subjects")
 
     q = request.args.get("q", "").strip()
+
+    # V15.6-A10 subject prefill
+    prefill_raw = request.args.get("prefill", "").strip()
+    prefill = {
+        "display_name": "",
+        "game_id": "",
+    }
+
+    if prefill_raw:
+        if prefill_raw.isdigit():
+            prefill["game_id"] = prefill_raw
+        else:
+            prefill["display_name"] = prefill_raw
+
     rows = list_reputation_subjects(conn, q=q, limit=100)
 
     conn.close()
@@ -9314,6 +9328,7 @@ def v156_reputation_subjects():
         "reputation_subjects.html",
         rows=rows,
         q=q,
+        prefill=prefill,
         title="信誉主体",
     )
 
@@ -9409,6 +9424,10 @@ def v156_reputation_events():
         return redirect("/reputation/events")
 
     q = request.args.get("q", "").strip()
+
+    # V15.6-A10 event prefill
+    prefill_title = request.args.get("prefill", "").strip()
+
     rows = list_reputation_events(conn, q=q, limit=100)
 
     conn.close()
@@ -9417,6 +9436,7 @@ def v156_reputation_events():
         "reputation_events.html",
         rows=rows,
         q=q,
+        prefill_title=prefill_title,
         title="信誉事件",
     )
 
@@ -9604,4 +9624,95 @@ def v156_reputation_event_detail(event_id):
         row=row,
         relations=relations,
         title="信誉事件详情",
+    )
+
+
+# =========================
+# V15.6-A10 reputation quick relation
+# =========================
+
+@app.route("/reputation/quick-link", methods=["POST"])
+def v156_reputation_quick_link():
+    import sqlite3
+    from flask import request, redirect
+    from services.v156_reputation_store import add_reputation_event_relation
+
+    q = request.form.get("q", "").strip()
+
+    try:
+        subject_id = int(request.form.get("subject_id", "0") or 0)
+    except Exception:
+        subject_id = 0
+
+    try:
+        event_id = int(request.form.get("event_id", "0") or 0)
+    except Exception:
+        event_id = 0
+
+    relation_role = request.form.get("relation_role", "").strip()
+    note = request.form.get("note", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    add_reputation_event_relation(
+        conn,
+        event_id=event_id,
+        subject_id=subject_id,
+        relation_role=relation_role or "关联主体",
+        note=note or "检索页快速建立关联",
+    )
+
+    conn.close()
+
+    if q:
+        return redirect(f"/reputation/search?q={q}")
+
+    return redirect("/reputation/search")
+
+
+# =========================
+# V15.6-A11 reputation duplicate subjects
+# =========================
+
+@app.route("/reputation/duplicates", methods=["GET", "POST"])
+def v156_reputation_duplicates():
+    import sqlite3
+    from flask import request, render_template
+    from services.v156_reputation_store import (
+        build_reputation_duplicate_report,
+        merge_reputation_subjects,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    result = None
+
+    if request.method == "POST":
+        try:
+            keep_id = int(request.form.get("keep_id", "0") or 0)
+        except Exception:
+            keep_id = 0
+
+        try:
+            merge_id = int(request.form.get("merge_id", "0") or 0)
+        except Exception:
+            merge_id = 0
+
+        result = merge_reputation_subjects(
+            conn,
+            keep_id=keep_id,
+            merge_id=merge_id,
+        )
+
+    report = build_reputation_duplicate_report(conn)
+
+    conn.close()
+
+    return render_template(
+        "reputation_duplicates.html",
+        report=report,
+        result=result,
+        title="重复主体检测",
     )
