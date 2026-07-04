@@ -135,6 +135,7 @@ def get_reputation_dashboard(conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def search_reputation(conn: sqlite3.Connection, q: str) -> dict[str, Any]:
+    # V15.6-A5.1 search relation display
     ensure_reputation_tables(conn)
 
     q = (q or "").strip()
@@ -144,6 +145,7 @@ def search_reputation(conn: sqlite3.Connection, q: str) -> dict[str, Any]:
             "query": q,
             "subjects": [],
             "events": [],
+            "event_relation_map": {},
         }
 
     like = f"%{q}%"
@@ -173,16 +175,47 @@ def search_reputation(conn: sqlite3.Connection, q: str) -> dict[str, Any]:
            OR e.evidence_note LIKE ?
            OR s.display_name LIKE ?
            OR s.game_id LIKE ?
+           OR s.alias_names LIKE ?
         ORDER BY e.id DESC
         LIMIT 30
         """,
-        (like, like, like, like, like),
+        (like, like, like, like, like, like),
     ).fetchall()
+
+    event_relation_map: dict[int, list] = {}
+
+    event_ids = [int(e["id"]) for e in events]
+
+    if event_ids:
+        placeholders = ",".join(["?"] * len(event_ids))
+
+        relation_rows = conn.execute(
+            f"""
+            SELECT
+                r.*,
+                s.display_name,
+                s.game_id,
+                s.alias_names,
+                s.trust_level,
+                s.risk_level,
+                s.status AS subject_status
+            FROM v156_reputation_event_relations r
+            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+            WHERE r.event_id IN ({placeholders})
+            ORDER BY r.id DESC
+            """,
+            tuple(event_ids),
+        ).fetchall()
+
+        for row in relation_rows:
+            event_id = int(row["event_id"])
+            event_relation_map.setdefault(event_id, []).append(row)
 
     return {
         "query": q,
         "subjects": subjects,
         "events": events,
+        "event_relation_map": event_relation_map,
     }
 
 

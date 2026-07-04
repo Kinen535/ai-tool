@@ -26,7 +26,7 @@
         </form>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div style="display:grid;grid-template-columns:0.95fr 1.25fr;gap:18px;align-items:start;">
         <div style="background:white;border-radius:18px;padding:22px;">
             <h2>② 匹配主体</h2>
 
@@ -36,15 +36,40 @@
                         <th style="padding:10px;text-align:left;">名称</th>
                         <th style="padding:10px;text-align:left;">游戏编号</th>
                         <th style="padding:10px;text-align:left;">风险</th>
-                        <th style="padding:10px;text-align:left;">更新时间</th>
+                        <th style="padding:10px;text-align:left;">操作</th>
                     </tr>
 
                     {% for row in result.subjects %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:10px;font-weight:bold;">{{ row.display_name }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ row.game_id }}</td>
-                        <td style="padding:10px;">{{ row.risk_level }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ row.updated_at }}</td>
+                        <td style="padding:10px;font-weight:bold;">
+                            {{ row.display_name or '-' }}
+                            {% if row.alias_names %}
+                                <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                    曾用名：{{ row.alias_names }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">{{ row.game_id or '-' }}</td>
+
+                        <td style="padding:10px;">
+                            {% if row.risk_level == "black" %}
+                                <span style="color:#dc2626;font-weight:bold;">黑</span>
+                            {% elif row.risk_level == "danger" %}
+                                <span style="color:#dc2626;font-weight:bold;">危险</span>
+                            {% elif row.risk_level == "warning" %}
+                                <span style="color:#f97316;font-weight:bold;">预警</span>
+                            {% else %}
+                                <span style="color:#16a34a;">正常</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            <a href="/reputation/subjects/{{ row.id }}/edit"
+                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                                查看/编辑 →
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </table>
@@ -65,14 +90,83 @@
                         <th style="padding:10px;text-align:left;">类型</th>
                         <th style="padding:10px;text-align:left;">影响</th>
                         <th style="padding:10px;text-align:left;">状态</th>
+                        <th style="padding:10px;text-align:left;">关联主体</th>
+                        <th style="padding:10px;text-align:left;">操作</th>
                     </tr>
 
                     {% for row in result.events %}
                     <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:10px;font-weight:bold;">{{ row.title }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ row.event_type }}</td>
-                        <td style="padding:10px;">{{ row.impact_level }}</td>
-                        <td style="padding:10px;">{{ row.status }}</td>
+                        <td style="padding:10px;font-weight:bold;max-width:220px;word-break:break-all;">
+                            {{ row.title or '-' }}
+                            {% if row.summary %}
+                                <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                    {{ row.summary[:50] }}{% if row.summary|length > 50 %}...{% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;color:#64748b;">{{ row.event_type or '-' }}</td>
+
+                        <td style="padding:10px;">
+                            {% if row.impact_level == "severe" %}
+                                <span style="color:#dc2626;font-weight:bold;">严重</span>
+                            {% elif row.impact_level == "high" %}
+                                <span style="color:#f97316;font-weight:bold;">高</span>
+                            {% elif row.impact_level == "normal" %}
+                                <span style="color:#2563eb;">普通</span>
+                            {% else %}
+                                <span style="color:#64748b;">轻微</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            {% if row.status == "verified" %}
+                                <span style="color:#16a34a;font-weight:bold;">已核实</span>
+                            {% elif row.status == "disputed" %}
+                                <span style="color:#f97316;font-weight:bold;">有争议</span>
+                            {% elif row.status == "archived" %}
+                                <span style="color:#64748b;">已归档</span>
+                            {% else %}
+                                <span style="color:#2563eb;">记录中</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;min-width:220px;">
+                            {% set rels = result.event_relation_map.get(row.id, []) %}
+                            {% if rels %}
+                                {% for r in rels %}
+                                    <div style="background:#f8fafc;border-radius:10px;padding:8px;margin-bottom:6px;">
+                                        <div style="font-weight:bold;">
+                                            {{ r.display_name or '未知主体' }}
+                                            {% if r.game_id %}
+                                                <span style="color:#64748b;font-weight:normal;">｜{{ r.game_id }}</span>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if r.relation_role %}
+                                            <div style="font-size:12px;color:#dc2626;margin-top:3px;">
+                                                关系：{{ r.relation_role }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if r.note %}
+                                            <div style="font-size:12px;color:#64748b;margin-top:3px;">
+                                                {{ r.note }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span style="color:#94a3b8;">暂无关联</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding:10px;">
+                            <a href="/reputation/events/{{ row.id }}/edit"
+                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                                查看/编辑 →
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </table>
