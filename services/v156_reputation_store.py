@@ -1041,7 +1041,7 @@ def merge_reputation_subjects(
         merge_info += f"｜{merge['game_id']}"
 
     note_parts = [x for x in [keep_note, merge_note, merge_info] if x]
-    merged_note = "\\n\\n".join(note_parts)
+    merged_note = "\n\n".join(note_parts)
 
     # 先迁移不重复的事件关联
     conn.execute(
