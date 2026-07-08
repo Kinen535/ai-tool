@@ -9264,12 +9264,101 @@ def v156_reputation_search():
 
     result = search_reputation(conn, q)
 
+    # V15.6-A21 search evidence chain summary
+    subject_evidence_map = {}
+    event_subject_summary_map = {}
+
+    try:
+        subject_rows = result.get("subjects", []) if isinstance(result, dict) else []
+        event_rows = result.get("events", []) if isinstance(result, dict) else []
+
+        subject_ids = []
+        for item in subject_rows:
+            try:
+                subject_ids.append(int(item["id"]))
+            except Exception:
+                pass
+
+        event_ids = []
+        for item in event_rows:
+            try:
+                event_ids.append(int(item["id"]))
+            except Exception:
+                pass
+
+        if subject_ids:
+            placeholders = ",".join(["?"] * len(subject_ids))
+            stat_rows = conn.execute(
+                f"""
+                SELECT
+                    r.subject_id,
+                    COUNT(DISTINCT e.id) AS event_count,
+                    SUM(
+                        CASE
+                            WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1
+                            ELSE 0
+                        END
+                    ) AS high_impact_count,
+                    MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time
+                FROM v156_reputation_event_relations r
+                LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+                WHERE r.subject_id IN ({placeholders})
+                  AND e.id IS NOT NULL
+                GROUP BY r.subject_id
+                """,
+                subject_ids,
+            ).fetchall()
+
+            for row in stat_rows:
+                subject_evidence_map[int(row["subject_id"])] = {
+                    "event_count": int(row["event_count"] or 0),
+                    "high_impact_count": int(row["high_impact_count"] or 0),
+                    "latest_event_time": row["latest_event_time"] or "",
+                    "is_complete": int(row["event_count"] or 0) > 0,
+                }
+
+        if event_ids:
+            placeholders = ",".join(["?"] * len(event_ids))
+            stat_rows = conn.execute(
+                f"""
+                SELECT
+                    r.event_id,
+                    COUNT(DISTINCT s.id) AS subject_count,
+                    SUM(
+                        CASE
+                            WHEN s.risk_level IN ('danger', 'black')
+                              OR s.trust_level IN ('black', 'risky')
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS high_risk_count
+                FROM v156_reputation_event_relations r
+                LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+                WHERE r.event_id IN ({placeholders})
+                  AND s.id IS NOT NULL
+                GROUP BY r.event_id
+                """,
+                event_ids,
+            ).fetchall()
+
+            for row in stat_rows:
+                event_subject_summary_map[int(row["event_id"])] = {
+                    "subject_count": int(row["subject_count"] or 0),
+                    "high_risk_count": int(row["high_risk_count"] or 0),
+                    "is_complete": int(row["subject_count"] or 0) > 0,
+                }
+
+    except Exception as e:
+        print("⚠️ V15.6-A21 search evidence chain summary error:", e)
+
     conn.close()
 
     return render_template(
         "reputation_search.html",
         result=result,
         q=q,
+        subject_evidence_map=subject_evidence_map,
+        event_subject_summary_map=event_subject_summary_map,
         title="信誉检索",
     )
 

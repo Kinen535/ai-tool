@@ -46,12 +46,12 @@
         </p>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-            <a href="/reputation/subjects?prefill={{ q|urlencode }}"
+            <a href="/reputation/subjects/new?prefill={{ q|urlencode }}"
                style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
                 新增为信誉主体 →
             </a>
 
-            <a href="/reputation/events?prefill={{ q|urlencode }}"
+            <a href="/reputation/events/new?prefill={{ q|urlencode }}"
                style="background:#fff7ed;color:#f97316;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
                 新增为信誉事件 →
             </a>
@@ -118,6 +118,7 @@
                         <th style="padding:10px;text-align:left;">名称</th>
                         <th style="padding:10px;text-align:left;">游戏编号</th>
                         <th style="padding:10px;text-align:left;">风险</th>
+                        <th style="padding:10px;text-align:left;">证据链</th>
                         <th style="padding:10px;text-align:left;">操作</th>
                     </tr>
 
@@ -143,6 +144,28 @@
                                 <span style="color:#f97316;font-weight:bold;">预警</span>
                             {% else %}
                                 <span style="color:#16a34a;">正常</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- V15.6-A21 search subject evidence column -->
+                        <td style="padding:10px;min-width:150px;">
+                            {% set stat = subject_evidence_map.get(row.id) %}
+                            {% if stat and stat.event_count > 0 %}
+                                <div style="font-weight:bold;color:#16a34a;">
+                                    完整｜{{ stat.event_count }} 事
+                                </div>
+                                <div style="font-size:12px;color:#64748b;line-height:1.5;">
+                                    高影响 {{ stat.high_impact_count }}｜{{ stat.latest_event_time or '-' }}
+                                </div>
+                            {% else %}
+                                {% if row.risk_level in ['danger', 'black'] or row.trust_level in ['black', 'risky'] %}
+                                    <div style="font-weight:bold;color:#dc2626;">
+                                        ⚠️ 缺失
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;">高风险主体需补事件</div>
+                                {% else %}
+                                    <div style="font-weight:bold;color:#f97316;">未关联</div>
+                                {% endif %}
                             {% endif %}
                         </td>
 
@@ -214,6 +237,28 @@
                         </td>
 
                         <td style="padding:10px;min-width:220px;">
+                            <!-- V15.6-A21 search event subject summary -->
+                            {% set es = event_subject_summary_map.get(row.id) %}
+                            {% if es and es.subject_count > 0 %}
+                                <div style="background:#ecfdf5;border-radius:10px;padding:8px;margin-bottom:8px;">
+                                    <div style="font-weight:bold;color:#16a34a;">
+                                        已关联 {{ es.subject_count }} 个主体
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:3px;">
+                                        高风险主体 {{ es.high_risk_count }} 个｜证据链完整
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div style="background:#fff7ed;border-radius:10px;padding:8px;margin-bottom:8px;">
+                                    <div style="font-weight:bold;color:#f97316;">
+                                        ⚠️ 未关联主体
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:3px;">
+                                        该事件需要补充责任主体
+                                    </div>
+                                </div>
+                            {% endif %}
+
                             {% set rels = result.event_relation_map.get(row.id, []) %}
                             {% if rels %}
                                 {% for r in rels %}
