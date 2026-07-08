@@ -54,6 +54,11 @@
                 返回档案首页
             </a>
 
+            <a href="/reputation/subjects/new"
+               style="background:#ecfdf5;color:#16a34a;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                新增主体
+            </a>
+
             <a href="/reputation/search"
                style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
                 信誉检索
@@ -259,5 +264,30 @@
         </div>
     </div>
 </div>
+
+
+<!-- V15.6-A17B hide inline subject create panel -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3"));
+    for (const h of headings) {
+        if ((h.textContent || "").includes("新增信誉主体")) {
+            const panel =
+                h.closest("div[style*='border-left']") ||
+                h.closest("div[style*='background']") ||
+                h.parentElement;
+
+            if (panel) {
+                const parent = panel.parentElement;
+                panel.style.display = "none";
+
+                if (parent && (parent.style.display || "").includes("grid")) {
+                    parent.style.gridTemplateColumns = "1fr";
+                }
+            }
+        }
+    }
+});
+</script>
 
 {% endblock %}

@@ -9985,3 +9985,43 @@ def v156_reputation_event_new():
         "reputation_event_new.html",
         title="新增信誉事件",
     )
+
+
+# =========================
+# V15.6-A17B reputation subject new page
+# =========================
+
+@app.route("/reputation/subjects/new", methods=["GET", "POST"])
+def v156_reputation_subject_new():
+    from flask import request, redirect, render_template
+    from services.v156_reputation_store import create_reputation_subject
+
+    if request.method == "POST":
+        conn = get_db_connection()
+
+        data = {
+            "subject_type": (request.form.get("subject_type") or "player").strip(),
+            "display_name": (request.form.get("display_name") or "").strip(),
+            "game_id": (request.form.get("game_id") or "").strip(),
+            "alias_names": (request.form.get("alias_names") or "").strip(),
+            "trust_level": (request.form.get("trust_level") or "unknown").strip(),
+            "risk_level": (request.form.get("risk_level") or "normal").strip(),
+            "status": (request.form.get("status") or "active").strip(),
+            "source": (request.form.get("source") or "manual").strip(),
+            "note": (request.form.get("note") or "").strip(),
+        }
+
+        if not data["display_name"] and not data["game_id"]:
+            conn.close()
+            return redirect("/reputation/subjects/new?error=missing")
+
+        create_reputation_subject(conn, data)
+        conn.commit()
+        conn.close()
+
+        return redirect("/reputation/subjects?created=1")
+
+    return render_template(
+        "reputation_subject_new.html",
+        title="新增信誉主体",
+    )
