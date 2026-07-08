@@ -25,7 +25,52 @@
     </div>
 
     <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 主体画像</h2>
+        
+    <!-- V15.6-A19 subject detail evidence summary card -->
+    <div style="background:white;border-radius:18px;padding:22px;margin-bottom:20px;">
+        <h2 style="margin-top:0;">🧾 证据链摘要</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">关联事件数</div>
+                <div style="font-size:28px;font-weight:bold;color:#0f172a;">
+                    {{ evidence_summary.event_count if evidence_summary else 0 }}
+                </div>
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">高影响事件</div>
+                <div style="font-size:28px;font-weight:bold;color:#dc2626;">
+                    {{ evidence_summary.high_impact_count if evidence_summary else 0 }}
+                </div>
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">证据链状态</div>
+                {% if evidence_summary and evidence_summary.is_complete %}
+                    <div style="font-size:22px;font-weight:bold;color:#16a34a;">完整</div>
+                {% else %}
+                    <div style="font-size:22px;font-weight:bold;color:#dc2626;">缺失</div>
+                {% endif %}
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">最近事件时间</div>
+                <div style="font-size:18px;font-weight:bold;color:#475569;">
+                    {{ evidence_summary.latest_event_time or '-' if evidence_summary else '-' }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:14px;color:#64748b;line-height:1.7;">
+            最近事件：
+            <strong style="color:#0f172a;">
+                {{ evidence_summary.latest_event_title or '暂无关联事件' if evidence_summary else '暂无关联事件' }}
+            </strong>
+        </div>
+    </div>
+
+<h2>① 主体画像</h2>
 
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">

@@ -9617,10 +9617,69 @@ def v156_reputation_subject_detail(subject_id):
 
     conn.close()
 
+
+    # V15.6-A19 fix closed db connection
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    # V15.6-A19 subject detail evidence summary
+    evidence_summary = {
+        "event_count": 0,
+        "high_impact_count": 0,
+        "latest_event_title": "",
+        "latest_event_time": "",
+        "is_complete": False,
+    }
+
+    evidence_row = conn.execute(
+        """
+        SELECT
+            COUNT(DISTINCT e.id) AS event_count,
+            SUM(
+                CASE
+                    WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1
+                    ELSE 0
+                END
+            ) AS high_impact_count,
+            MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+        WHERE r.subject_id = ?
+          AND e.id IS NOT NULL
+        """,
+        (subject_id,),
+    ).fetchone()
+
+    if evidence_row:
+        evidence_summary["event_count"] = int(evidence_row["event_count"] or 0)
+        evidence_summary["high_impact_count"] = int(evidence_row["high_impact_count"] or 0)
+        evidence_summary["latest_event_time"] = evidence_row["latest_event_time"] or ""
+        evidence_summary["is_complete"] = evidence_summary["event_count"] > 0
+
+    latest_event_row = conn.execute(
+        """
+        SELECT e.title, IFNULL(e.event_time, e.created_at) AS event_time
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+        WHERE r.subject_id = ?
+          AND e.id IS NOT NULL
+        ORDER BY IFNULL(e.event_time, e.created_at) DESC, e.id DESC
+        LIMIT 1
+        """,
+        (subject_id,),
+    ).fetchone()
+
+    if latest_event_row:
+        evidence_summary["latest_event_title"] = latest_event_row["title"] or ""
+        evidence_summary["latest_event_time"] = latest_event_row["event_time"] or evidence_summary["latest_event_time"]
+
+    conn.close()
+
     return render_template(
         "reputation_subject_detail.html",
         row=row,
         events=events,
+        evidence_summary=evidence_summary,
         title="信誉主体详情",
     )
 
