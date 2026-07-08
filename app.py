@@ -9860,12 +9860,44 @@ def v156_reputation_events():
         params,
     ).fetchall()
 
+    # V15.6-A16 event relation stats
+    relation_stats = {}
+
+    event_ids = [int(row["id"]) for row in rows]
+
+    if event_ids:
+        placeholders = ",".join(["?"] * len(event_ids))
+
+        relation_rows = conn.execute(
+            f"""
+            SELECT
+                r.event_id,
+                COUNT(r.id) AS relation_count,
+                GROUP_CONCAT(
+                    IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),
+                    '；'
+                ) AS subjects
+            FROM v156_reputation_event_relations r
+            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+            WHERE r.event_id IN ({placeholders})
+            GROUP BY r.event_id
+            """,
+            event_ids,
+        ).fetchall()
+
+        for item in relation_rows:
+            relation_stats[int(item["event_id"])] = {
+                "count": int(item["relation_count"] or 0),
+                "subjects": item["subjects"] or "",
+            }
+
     conn.close()
 
     return render_template(
         "reputation_events.html",
         events=rows,
         rows=rows,
+        relation_stats=relation_stats,
         q=q,
         title="信誉事件",
     )
