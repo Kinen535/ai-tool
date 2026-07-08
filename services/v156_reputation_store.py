@@ -1380,3 +1380,115 @@ def delete_reputation_event_safely(
         "relation_count": 0,
         "message": "事件已删除。",
     }
+
+
+# =========================
+# V15.6-A15 reputation event status quick actions
+# =========================
+
+def update_reputation_event_status_quick(
+    conn: sqlite3.Connection,
+    event_id: int,
+    status: str,
+    note: str = "",
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    status = (status or "").strip()
+    note = (note or "").strip()
+
+    allowed_status = {
+        "recorded": "记录中",
+        "pending": "待核实",
+        "voided": "已作废",
+        "resolved": "已处理",
+    }
+
+    if status not in allowed_status:
+        return {
+            "ok": False,
+            "message": "不支持的事件状态。",
+        }
+
+    event = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE id=?
+        """,
+        (event_id,),
+    ).fetchone()
+
+    if not event:
+        return {
+            "ok": False,
+            "message": "事件不存在。",
+        }
+
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(v156_reputation_events)").fetchall()
+    }
+
+    update_fields = []
+    values = []
+
+    if "status" in cols:
+        update_fields.append("status=?")
+        values.append(status)
+
+    if note and "evidence_note" in cols:
+        old_note = event["evidence_note"] or ""
+        new_note = old_note.strip()
+        append_note = f"状态变更：{allowed_status[status]}｜{note}"
+
+        if new_note:
+            new_note = new_note + "\n\n" + append_note
+        else:
+            new_note = append_note
+
+        update_fields.append("evidence_note=?")
+        values.append(new_note)
+
+    elif note and "note" in cols:
+        old_note = event["note"] or ""
+        new_note = old_note.strip()
+        append_note = f"状态变更：{allowed_status[status]}｜{note}"
+
+        if new_note:
+            new_note = new_note + "\n\n" + append_note
+        else:
+            new_note = append_note
+
+        update_fields.append("note=?")
+        values.append(new_note)
+
+    if "updated_at" in cols:
+        update_fields.append("updated_at=datetime('now','localtime')")
+
+    if not update_fields:
+        return {
+            "ok": False,
+            "message": "事件表缺少可更新字段。",
+        }
+
+    values.append(event_id)
+
+    conn.execute(
+        f"""
+        UPDATE v156_reputation_events
+        SET {", ".join(update_fields)}
+        WHERE id=?
+        """,
+        values,
+    )
+
+    conn.commit()
+
+    return {
+        "ok": True,
+        "event_id": event_id,
+        "status": status,
+        "status_label": allowed_status[status],
+        "message": f"事件状态已更新为：{allowed_status[status]}。",
+    }

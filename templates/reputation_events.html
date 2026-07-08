@@ -5,11 +5,38 @@
 <div style="max-width:1500px;margin:0 auto;padding:24px;">
 
     <!-- V15.6-A14 event delete protection alert -->
+    <!-- V15.6-A15 event status quick action alert -->
+    {% if request.args.get('status_result') == 'success' %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ✅ {{ request.args.get('message') or '事件状态已更新。' }}
+    </div>
+    {% elif request.args.get('status_result') == 'failed' %}
+    <div style="background:#fff7ed;border:1px solid #fed7aa;color:#f97316;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ {{ request.args.get('message') or '事件状态更新失败。' }}
+    </div>
+    {% endif %}
+
     {% if request.args.get('delete_result') == 'blocked' %}
     <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;line-height:1.7;">
         🛡️ 已阻止删除：事件
         {% if request.args.get('title') %}「{{ request.args.get('title') }}」{% endif %}
         仍有关联主体 {{ request.args.get('relations') or 0 }} 个。请先解除关联，或保留事件作为证据记录。
+
+        <!-- V15.6-A14.1 blocked event delete guide -->
+        {% set blocked_event_id = request.args.get('event_id') %}
+        {% if blocked_event_id %}
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="/reputation/events/{{ blocked_event_id }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                查看事件详情 →
+            </a>
+
+            <a href="/reputation/events/{{ blocked_event_id }}/edit#relations"
+               style="background:#fff7ed;color:#f97316;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                进入编辑页解除关联 →
+            </a>
+        </div>
+        {% endif %}
     </div>
     {% elif request.args.get('delete_result') == 'success' %}
     <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
@@ -115,7 +142,33 @@
                             <a href="/reputation/events/{{ row.id }}/edit"
                                style="color:#f97316;text-decoration:none;font-weight:bold;margin-right:8px;">
                                 编辑
-                            </a>
+                            </a>                                <!-- V15.6-A15 event void restore buttons -->
+                                {% if row.status == 'voided' %}
+                                <form method="POST"
+                                      action="/reputation/events/{{ row.id }}/status"
+                                      style="display:inline;">
+                                    <input type="hidden" name="status" value="recorded">
+                                    <input type="hidden" name="note" value="从事件列表恢复为记录中">
+                                    <button type="submit"
+                                            style="background:#dcfce7;color:#16a34a;border:0;border-radius:8px;padding:6px 10px;font-weight:bold;">
+                                        恢复
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form method="POST"
+                                      action="/reputation/events/{{ row.id }}/status"
+                                      style="display:inline;"
+                                      onsubmit="return confirm('确认把该事件标记为已作废？事件不会被删除，关联也会保留。');">
+                                    <input type="hidden" name="status" value="voided">
+                                    <input type="hidden" name="note" value="从事件列表标记为已作废">
+                                    <button type="submit"
+                                            style="background:#fef3c7;color:#d97706;border:0;border-radius:8px;padding:6px 10px;font-weight:bold;">
+                                        作废
+                                    </button>
+                                </form>
+                                {% endif %}
+
+
 
                             <form method="POST"
                                   action="/reputation/events/{{ row.id }}/delete"
