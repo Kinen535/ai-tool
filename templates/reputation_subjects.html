@@ -89,6 +89,7 @@
                         <th style="padding:10px;text-align:left;">信任</th>
                         <th style="padding:10px;text-align:left;">风险</th>
                         <th style="padding:10px;text-align:left;">状态</th>
+                        <th style="padding:10px;text-align:left;">关联事件</th>
                         <th style="padding:10px;text-align:left;">操作</th>
                     </tr>
 
@@ -123,6 +124,33 @@
                         </td>
 
                         <td style="padding:10px;color:#64748b;">{{ row.status }}</td>
+
+                        <!-- V15.6-A17 subject event relation column -->
+                        <td style="padding:10px;">
+                            {% set stat = subject_event_stats.get(row.id) %}
+                            {% if stat and stat.count > 0 %}
+                                <div style="font-weight:bold;color:#16a34a;">
+                                    已关联 {{ stat.count }} 个
+                                </div>
+                                <div style="font-size:12px;color:#64748b;line-height:1.5;max-width:260px;white-space:normal;">
+                                    {{ stat.events }}
+                                </div>
+                            {% else %}
+                                {% if row.risk_level in ['danger', 'black'] or row.trust_level in ['black', 'blacklist'] %}
+                                    <div style="font-weight:bold;color:#dc2626;">
+                                        ⚠️ 高风险未关联
+                                    </div>
+                                {% else %}
+                                    <div style="font-weight:bold;color:#f97316;">
+                                        未关联事件
+                                    </div>
+                                {% endif %}
+                                <a href="/reputation/search?q={{ row.display_name }}"
+                                   style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:bold;">
+                                    去检索 →
+                                </a>
+                            {% endif %}
+                        </td>
 
                         <td style="padding:10px;white-space:nowrap;">
                             <a href="/reputation/subjects/{{ row.id }}"

@@ -9322,6 +9322,39 @@ def v156_reputation_subjects():
 
     rows = list_reputation_subjects(conn, q=q, limit=100)
 
+
+    # V15.6-A17 subject event relation stats
+    subject_event_stats = {}
+
+    subject_ids = [int(row["id"]) for row in rows]
+
+    if subject_ids:
+        placeholders = ",".join(["?"] * len(subject_ids))
+
+        stat_rows = conn.execute(
+            f"""
+            SELECT
+                r.subject_id,
+                COUNT(DISTINCT r.event_id) AS event_count,
+                GROUP_CONCAT(
+                    IFNULL(e.title, '未知事件') || '｜' || IFNULL(e.impact_level, '-'),
+                    '；'
+                ) AS events
+            FROM v156_reputation_event_relations r
+            LEFT JOIN v156_reputation_events e ON e.id = r.event_id
+            WHERE r.subject_id IN ({placeholders})
+            GROUP BY r.subject_id
+            """,
+            subject_ids,
+        ).fetchall()
+
+        for item in stat_rows:
+            subject_event_stats[int(item["subject_id"])] = {
+                "count": int(item["event_count"] or 0),
+                "events": item["events"] or "",
+            }
+
+
     conn.close()
 
     return render_template(
@@ -9330,6 +9363,7 @@ def v156_reputation_subjects():
         q=q,
         prefill=prefill,
         title="信誉主体",
+        subject_event_stats=subject_event_stats,
     )
 
 
