@@ -96,6 +96,7 @@
                         <th style="padding:10px;text-align:left;">影响</th>
                         <th style="padding:10px;text-align:left;">状态</th>
                         <th style="padding:10px;text-align:left;">事件时间</th>
+                        <th style="padding:10px;text-align:left;">关联主体</th>
                         <th style="padding:10px;text-align:left;">操作</th>
                     </tr>
 
@@ -141,6 +142,27 @@
                         </td>
 
                         <td style="padding:10px;color:#64748b;">{{ row.event_time or row.created_at }}</td>
+
+                        <!-- V15.6-A16B event relation column -->
+                        <td style="padding:10px;">
+                            {% set rel = relation_stats.get(row.id) %}
+                            {% if rel and rel.count > 0 %}
+                                <div style="font-weight:bold;color:#16a34a;">
+                                    已关联 {{ rel.count }} 个
+                                </div>
+                                <div style="font-size:12px;color:#64748b;line-height:1.5;max-width:240px;white-space:normal;">
+                                    {{ rel.subjects }}
+                                </div>
+                            {% else %}
+                                <div style="font-weight:bold;color:#f97316;">
+                                    ⚠️ 未关联
+                                </div>
+                                <a href="/reputation/events/{{ row.id }}/edit#relations"
+                                   style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:bold;">
+                                    去关联 →
+                                </a>
+                            {% endif %}
+                        </td>
 
                         <td style="padding:10px;white-space:nowrap;">
                             <a href="/reputation/events/{{ row.id }}"
