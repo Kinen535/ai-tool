@@ -57,6 +57,11 @@
                 返回档案首页
             </a>
 
+            <a href="/reputation/events/new"
+               style="background:#ecfdf5;color:#16a34a;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                新增事件
+            </a>
+
             <a href="/reputation/search"
                style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
                 信誉检索
@@ -84,7 +89,7 @@
             </form>
 
             {% if rows %}
-                <table style="width:100%;border-collapse:collapse;">
+                <div style="overflow-x:auto;"><table style="width:100%;min-width:760px;border-collapse:collapse;">
                     <tr style="background:#f3f4f6;">
                         <th style="padding:10px;text-align:left;">事件</th>
                         <th style="padding:10px;text-align:left;">类型</th>
@@ -212,7 +217,7 @@
                     <option value="other">其他</option>
                 </select>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="display:grid;grid-template-columns:minmax(720px, 1.6fr) minmax(360px, 0.9fr);gap:10px;">
                     <div>
                         <label style="font-weight:bold;">影响等级</label>
                         <select name="impact_level"
@@ -259,5 +264,25 @@
         </div>
     </div>
 </div>
+
+
+<!-- V15.6-A15C hide inline event create panel -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3"));
+    for (const h of headings) {
+        if ((h.textContent || "").includes("新增信誉事件")) {
+            const panel =
+                h.closest("div[style*='border-left']") ||
+                h.closest("div[style*='background']") ||
+                h.parentElement;
+
+            if (panel) {
+                panel.style.display = "none";
+            }
+        }
+    }
+});
+</script>
 
 {% endblock %}

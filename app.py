@@ -9904,3 +9904,18 @@ def v156_reputation_event_status_quick(event_id):
     })
 
     return redirect("/reputation/events?" + params)
+
+
+
+# =========================
+# V15.6-A15C reputation event new page
+# =========================
+
+@app.route("/reputation/events/new")
+def v156_reputation_event_new():
+    from flask import render_template
+
+    return render_template(
+        "reputation_event_new.html",
+        title="新增信誉事件",
+    )

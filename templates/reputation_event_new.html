@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px;margin:0 auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>📌 新增信誉事件</h1>
+
+        <div style="display:flex;gap:10px;">
+            <a href="/reputation/events"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                返回事件列表
+            </a>
+
+            <a href="/reputation/search"
+               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
+                信誉检索
+            </a>
+        </div>
+    </div>
+
+    <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:24px;">
+        <h2>① 事件资料</h2>
+        <p style="color:#64748b;line-height:1.8;">
+            这里用于新增长期信誉事件。建议写事实经过、时间线、证据来源，不要只写情绪化判断。
+        </p>
+
+        <form method="POST" action="/reputation/events" style="margin-top:18px;">
+            <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+                <div>
+                    <label style="font-weight:bold;">事件标题</label>
+                    <input name="title"
+                           placeholder="例如：某玩家背刺事件 / 资源纠纷 / 合作履约"
+                           style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                    <div>
+                        <label style="font-weight:bold;">事件类型</label>
+                        <select name="event_type"
+                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+                            <option value="normal">普通记录</option>
+                            <option value="betrayal">背刺 / 反水</option>
+                            <option value="resource_dispute">资源纠纷</option>
+                            <option value="contract_break">合作履约问题</option>
+                            <option value="fraud">欺诈 / 恶意行为</option>
+                            <option value="positive">正向信誉记录</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-weight:bold;">影响等级</label>
+                        <select name="impact_level"
+                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+                            <option value="low">低</option>
+                            <option value="medium">中</option>
+                            <option value="high">高</option>
+                            <option value="critical">严重</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-weight:bold;">处理状态</label>
+                        <select name="status"
+                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+                            <option value="recorded">记录中</option>
+                            <option value="pending">待核实</option>
+                            <option value="resolved">已处理</option>
+                            <option value="voided">已作废</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-weight:bold;">事件时间</label>
+                    <input name="event_time"
+                           placeholder="例如：2026-07-01 或 S24 决战期"
+                           style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+                </div>
+
+                <div>
+                    <label style="font-weight:bold;">事件摘要</label>
+                    <textarea name="summary"
+                              rows="5"
+                              placeholder="简要描述事件经过，尽量写事实，不写情绪化定性。"
+                              style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;"></textarea>
+                </div>
+
+                <div>
+                    <label style="font-weight:bold;">证据备注</label>
+                    <textarea name="evidence_note"
+                              rows="5"
+                              placeholder="记录截图、聊天记录、时间线、证人、来源等。"
+                              style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;"></textarea>
+                </div>
+
+                <div style="display:flex;gap:10px;">
+                    <button type="submit"
+                            style="background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;">
+                        保存信誉事件
+                    </button>
+
+                    <a href="/reputation/events"
+                       style="background:#f1f5f9;color:#334155;border-radius:10px;padding:12px 18px;text-decoration:none;font-weight:bold;">
+                        取消
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
