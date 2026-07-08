@@ -23,23 +23,32 @@ REQUIRED_TEMPLATES = [
     "templates/reputation_home.html",
     "templates/reputation_search.html",
     "templates/reputation_subjects.html",
+    "templates/reputation_subject_new.html",
     "templates/reputation_subject_edit.html",
     "templates/reputation_subject_detail.html",
     "templates/reputation_events.html",
+    "templates/reputation_event_new.html",
     "templates/reputation_event_edit.html",
     "templates/reputation_event_detail.html",
+    "templates/reputation_duplicates.html",
+    "templates/reputation_merge_logs.html",
 ]
 
 REQUIRED_ROUTES = [
     '@app.route("/reputation")',
     '@app.route("/reputation/search")',
     '@app.route("/reputation/subjects"',
+    '@app.route("/reputation/subjects/new"',
     '@app.route("/reputation/subjects/<int:subject_id>")',
     '@app.route("/reputation/subjects/<int:subject_id>/edit"',
     '@app.route("/reputation/events"',
+    '@app.route("/reputation/events/new"',
     '@app.route("/reputation/events/<int:event_id>")',
     '@app.route("/reputation/events/<int:event_id>/edit"',
     '@app.route("/reputation/events/<int:event_id>/relations/save"',
+    '@app.route("/reputation/events/<int:event_id>/status"',
+    '@app.route("/reputation/duplicates"',
+    '@app.route("/reputation/merge-logs"',
 ]
 
 
@@ -61,7 +70,7 @@ def count_one(conn: sqlite3.Connection, sql: str, args: tuple = ()) -> int:
 
 
 def main() -> int:
-    print("V15.6 Reputation Health Check")
+    print("V15.6 Reputation Health Check\n# V15.6-A18 reputation health check extended routes/templates")
     print("=" * 48)
 
     fatal = 0
