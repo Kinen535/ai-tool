@@ -9869,3 +9869,38 @@ def v156_reputation_events():
         q=q,
         title="信誉事件",
     )
+
+
+# =========================
+# V15.6-A15 reputation event status quick actions
+# =========================
+
+@app.route("/reputation/events/<int:event_id>/status", methods=["POST"])
+def v156_reputation_event_status_quick(event_id):
+    import sqlite3
+    from urllib.parse import urlencode
+    from flask import request, redirect
+    from services.v156_reputation_store import update_reputation_event_status_quick
+
+    status = request.form.get("status", "").strip()
+    note = request.form.get("note", "").strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    result = update_reputation_event_status_quick(
+        conn,
+        event_id=event_id,
+        status=status,
+        note=note,
+    )
+
+    conn.close()
+
+    params = urlencode({
+        "status_result": "success" if result.get("ok") else "failed",
+        "event_id": event_id,
+        "message": result.get("message", ""),
+    })
+
+    return redirect("/reputation/events?" + params)
