@@ -25,7 +25,54 @@
     </div>
 
     <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 事件概况</h2>
+        
+    <!-- V15.6-A20 event detail subject summary card -->
+    <div style="background:white;border-radius:18px;padding:22px;margin-bottom:20px;">
+        <h2 style="margin-top:0;">👥 关联主体摘要</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">关联主体数</div>
+                <div style="font-size:28px;font-weight:bold;color:#0f172a;">
+                    {{ subject_summary.subject_count if subject_summary else 0 }}
+                </div>
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">高风险主体</div>
+                <div style="font-size:28px;font-weight:bold;color:#dc2626;">
+                    {{ subject_summary.high_risk_count if subject_summary else 0 }}
+                </div>
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">证据链状态</div>
+                {% if subject_summary and subject_summary.is_complete %}
+                    <div style="font-size:22px;font-weight:bold;color:#16a34a;">完整</div>
+                {% else %}
+                    <div style="font-size:22px;font-weight:bold;color:#dc2626;">缺失</div>
+                {% endif %}
+            </div>
+
+            <div style="background:#f8fafc;border-radius:14px;padding:16px;">
+                <div style="color:#64748b;font-size:13px;">处理建议</div>
+                {% if subject_summary and subject_summary.is_complete %}
+                    <div style="font-size:18px;font-weight:bold;color:#16a34a;">可追溯</div>
+                {% else %}
+                    <div style="font-size:18px;font-weight:bold;color:#dc2626;">需补关联</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-top:14px;color:#64748b;line-height:1.7;">
+            关联主体：
+            <strong style="color:#0f172a;">
+                {{ subject_summary.main_subjects or '暂无关联主体' if subject_summary else '暂无关联主体' }}
+            </strong>
+        </div>
+    </div>
+
+<h2>① 事件概况</h2>
 
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">

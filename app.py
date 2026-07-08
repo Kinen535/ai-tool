@@ -9708,6 +9708,45 @@ def v156_reputation_event_detail(event_id):
 
     relations = list_reputation_event_relations(conn, event_id)
 
+
+    # V15.6-A20 event detail subject summary
+    subject_summary = {
+        "subject_count": 0,
+        "high_risk_count": 0,
+        "main_subjects": "",
+        "is_complete": False,
+    }
+
+    summary_row = conn.execute(
+        """
+        SELECT
+            COUNT(DISTINCT s.id) AS subject_count,
+            SUM(
+                CASE
+                    WHEN s.risk_level IN ('danger', 'black')
+                      OR s.trust_level IN ('black', 'risky')
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS high_risk_count,
+            GROUP_CONCAT(
+                IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),
+                '；'
+            ) AS main_subjects
+        FROM v156_reputation_event_relations r
+        LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
+        WHERE r.event_id = ?
+          AND s.id IS NOT NULL
+        """,
+        (event_id,),
+    ).fetchone()
+
+    if summary_row:
+        subject_summary["subject_count"] = int(summary_row["subject_count"] or 0)
+        subject_summary["high_risk_count"] = int(summary_row["high_risk_count"] or 0)
+        subject_summary["main_subjects"] = summary_row["main_subjects"] or ""
+        subject_summary["is_complete"] = subject_summary["subject_count"] > 0
+
     conn.close()
 
     return render_template(
@@ -9715,6 +9754,7 @@ def v156_reputation_event_detail(event_id):
         row=row,
         relations=relations,
         title="信誉事件详情",
+        subject_summary=subject_summary,
     )
 
 
