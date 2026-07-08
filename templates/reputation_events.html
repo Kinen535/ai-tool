@@ -125,15 +125,19 @@
                         </td>
 
                         <td style="padding:10px;">
-                            {% if row.status == "verified" %}
-                                <span style="color:#16a34a;font-weight:bold;">已核实</span>
-                            {% elif row.status == "disputed" %}
-                                <span style="color:#f97316;font-weight:bold;">有争议</span>
-                            {% elif row.status == "archived" %}
-                                <span style="color:#64748b;">已归档</span>
-                            {% else %}
+                            <!-- V15.6-A15D event status display mapping -->
+                            {% if row.status == 'recorded' or row.status == 'verified' %}
                                 <span style="color:#2563eb;">记录中</span>
+                            {% elif row.status == 'pending' or row.status == 'disputed' %}
+                                <span style="color:#f97316;">待核实</span>
+                            {% elif row.status == 'voided' or row.status == 'archived' %}
+                                <span style="color:#64748b;">已作废</span>
+                            {% elif row.status == 'resolved' %}
+                                <span style="color:#16a34a;">已处理</span>
+                            {% else %}
+                                <span style="color:#64748b;">{{ row.status or '-' }}</span>
                             {% endif %}
+
                         </td>
 
                         <td style="padding:10px;color:#64748b;">{{ row.event_time or row.created_at }}</td>
