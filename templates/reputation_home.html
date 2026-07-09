@@ -2,6 +2,40 @@
 
 {% block content %}
 
+{# V15.6-A37 reputation home chinese status mapping #}
+{% set trust_map = {
+    "unknown": "未知",
+    "trusted": "可信",
+    "risky": "风险",
+    "black": "黑名单"
+} %}
+
+{% set risk_map = {
+    "normal": "正常",
+    "warning": "预警",
+    "danger": "高危",
+    "black": "黑名单"
+} %}
+
+{% set impact_map = {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "severe": "严重",
+    "critical": "极严重"
+} %}
+
+{% set status_map = {
+    "pending": "待核实",
+    "disputed": "有争议",
+    "recorded": "已记录",
+    "verified": "已核实",
+    "resolved": "已处理",
+    "voided": "已作废",
+    "archived": "已归档"
+} %}
+
+
 <!-- V15.6-A33 reputation backup status entry -->
 <div style="
     background:#fff;
@@ -110,7 +144,7 @@
                         {% for e in report.unlinked_events %}
                         <tr style="border-bottom:1px solid #e5e7eb;">
                             <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
-                            <td style="padding:8px;color:#f97316;">{{ e.impact_level or '-' }}</td>
+                            <td style="padding:8px;color:#f97316;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</td>
                             <td style="padding:8px;">
                                 <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">处理 →</a>
                             </td>
@@ -140,7 +174,7 @@
                         {% for e in report.pending_events %}
                         <tr style="border-bottom:1px solid #e5e7eb;">
                             <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
-                            <td style="padding:8px;color:#f97316;">{{ e.status or '-' }}</td>
+                            <td style="padding:8px;color:#f97316;">{{ status_map.get(e.status, e.status or '-') }}</td>
                             <td style="padding:8px;">
                                 <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">核实 →</a>
                             </td>
@@ -179,8 +213,8 @@
                             {% endif %}
                         </td>
                         <td style="padding:10px;color:#64748b;">{{ s.game_id or '-' }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ s.trust_level }}</td>
-                        <td style="padding:10px;color:#dc2626;font-weight:bold;">{{ s.risk_level }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ trust_map.get(s.trust_level, s.trust_level or '-') }}</td>
+                        <td style="padding:10px;color:#dc2626;font-weight:bold;">{{ risk_map.get(s.risk_level, s.risk_level or '-') }}</td>
                         <td style="padding:10px;">
                             <a href="/reputation/subjects/{{ s.id }}"
                                style="color:#2563eb;text-decoration:none;font-weight:bold;">
@@ -222,13 +256,13 @@
 
                         <td style="padding:10px;">
                             {% if e.impact_level in ["high", "severe"] %}
-                                <span style="color:#f97316;font-weight:bold;">{{ e.impact_level }}</span>
+                                <span style="color:#f97316;font-weight:bold;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</span>
                             {% else %}
-                                <span style="color:#64748b;">{{ e.impact_level }}</span>
+                                <span style="color:#64748b;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</span>
                             {% endif %}
                         </td>
 
-                        <td style="padding:10px;color:#64748b;">{{ e.status }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ status_map.get(e.status, e.status or '-') }}</td>
 
                         <td style="padding:10px;">
                             <a href="/reputation/events/{{ e.id }}"
