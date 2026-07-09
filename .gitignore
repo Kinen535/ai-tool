@@ -24,3 +24,12 @@ app_before_*.py
 *_html.txt
 alliance_check.txt
 data/security_admin_token.txt
+
+# V15.6-A23 temporary backup files
+app_before_*.py
+app_*_before_*.py
+services/*_before_*.py
+scripts/*_before_*.py
+templates/*_before_*.html
+*_before_*.bak
+*_broken_*.py
