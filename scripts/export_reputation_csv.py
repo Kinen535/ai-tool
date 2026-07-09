@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import csv
 import sqlite3
+import zipfile
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -47,6 +49,39 @@ def export_table(conn: sqlite3.Connection, table: str, out_dir: Path) -> int:
     return len(rows)
 
 
+
+# V15.6-A25 reputation export zip package
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_checksums(out_dir: Path) -> Path:
+    checksum_file = out_dir / "CHECKSUMS.sha256"
+    lines = []
+
+    for p in sorted(out_dir.glob("*")):
+        if p.is_file() and p.name != "CHECKSUMS.sha256":
+            lines.append(f"{sha256_file(p)}  {p.name}")
+
+    checksum_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return checksum_file
+
+
+def make_zip(out_dir: Path) -> Path:
+    zip_path = out_dir.with_suffix(".zip")
+
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(out_dir.glob("*")):
+            if p.is_file():
+                z.write(p, arcname=p.name)
+
+    return zip_path
+
+
 def main() -> int:
     print("V15.6 Reputation CSV Export")
     print("=" * 56)
@@ -81,9 +116,14 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    checksum_file = write_checksums(out_dir)
+    zip_path = make_zip(out_dir)
+
     conn.close()
 
     print("-" * 56)
+    print(f"✅ 校验清单：{checksum_file}")
+    print(f"✅ ZIP 包：{zip_path}")
     print(f"✅ 导出完成：{out_dir}")
     return 0
 
