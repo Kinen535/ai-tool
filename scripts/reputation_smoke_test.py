@@ -186,7 +186,7 @@ def main() -> int:
                     url,
                     required_texts,
                     headers={"X-Admin-Token": backup_status_token},
-                    display_url="/reputation/backup-status [admin-token-hidden]",
+                    display_url="[protected-maintenance-page] [admin-token-hidden]",
                 )
             else:
                 fatal += check_page(client, url, required_texts)
