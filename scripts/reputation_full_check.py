@@ -23,6 +23,53 @@ def run(cmd: list[str], title: str) -> None:
         raise SystemExit(f"❌ 失败：{title}")
 
 
+
+# V15.6-A32G backup status sensitive content check
+def check_backup_status_security() -> None:
+    from app import app
+
+    token_path = ROOT / "data" / "security_admin_token.txt"
+    token = token_path.read_text(encoding="utf-8").strip() if token_path.exists() else ""
+
+    with app.test_client() as c:
+        r1 = c.get("/reputation/backup-status")
+        if r1.status_code != 404:
+            raise SystemExit("❌ 备份状态页无 token 访问未拦截")
+
+        r2 = c.get("/reputation/backup-status", headers={"X-Admin-Token": token})
+        html = r2.data.decode("utf-8", errors="ignore")
+
+        if r2.status_code != 200:
+            raise SystemExit("❌ 备份状态页 token 访问失败")
+
+        required = [
+            "信誉档案库安全备份",
+            "最近一次安全备份",
+            "维护命令已隐藏",
+        ]
+
+        forbidden = [
+            "/home/admin",
+            "exports/reputation",
+            "python3 scripts/",
+            "reputation_export_",
+            "security_admin_token",
+            "backup_reputation.py",
+            "reputation_full_check.py",
+            "cleanup_reputation_exports.py",
+        ]
+
+        for key in required:
+            if key not in html:
+                raise SystemExit(f"❌ 备份状态页缺少必要内容：{key}")
+
+        for key in forbidden:
+            if key in html:
+                raise SystemExit(f"❌ 备份状态页暴露敏感内容：{key}")
+
+    print("✅ 备份状态页安全检查通过：无 token 拦截，敏感内容未暴露")
+
+
 def latest_zip() -> Path | None:
     zips = sorted(EXPORT_ROOT.glob("reputation_export_*.zip"))
     return zips[-1] if zips else None
@@ -51,17 +98,22 @@ def main() -> int:
 
     run(
         [sys.executable, "scripts/reputation_smoke_test.py"],
-        "Step 2/6：信誉档案库页面烟测",
+        "Step 2/7：信誉档案库页面烟测",
     )
+
+    print("=" * 70)
+    print("Step 3/7：备份状态页安全检查")
+    print("=" * 70)
+    check_backup_status_security()
 
     run(
         [sys.executable, "scripts/reputation_health_check.py"],
-        "Step 3/6：信誉档案库数据体检",
+        "Step 4/7：信誉档案库数据体检",
     )
 
     run(
         [sys.executable, "scripts/backup_reputation.py"],
-        "Step 4/6：一键备份导出",
+        "Step 5/7：一键备份导出",
     )
 
     zip_path = latest_zip()
@@ -71,12 +123,12 @@ def main() -> int:
 
     run(
         [sys.executable, "scripts/verify_reputation_export.py", str(zip_path)],
-        "Step 5/6：ZIP 备份包校验",
+        "Step 6/7：ZIP 备份包校验",
     )
 
     run(
         [sys.executable, "scripts/preview_reputation_restore.py", str(zip_path)],
-        "Step 6/6：恢复前预检",
+        "Step 7/7：恢复前预检",
     )
 
     print("=" * 70)

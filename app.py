@@ -7796,7 +7796,7 @@ def reputation_backup_status():
 """
     # V15.6-A32F final scrub backup status html
     # 最后一层兜底：不允许页面暴露服务器路径、备份文件名、维护脚本名
-    html_body = _re.sub(r"reputation_export_\\d{8}-\\d{6}(?:\\.zip)?", "备份记录已隐藏", html_body)
+    html_body = _re.sub(r"reputation_export_\d{8}-\d{6}(?:\.zip)?", "备份记录已隐藏", html_body)
     html_body = html_body.replace("/home/admin", "路径已隐藏")
     html_body = html_body.replace("exports/reputation", "路径已隐藏")
     html_body = html_body.replace("python3 scripts/", "维护命令已隐藏：")
