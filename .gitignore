@@ -33,3 +33,6 @@ scripts/*_before_*.py
 templates/*_before_*.html
 *_before_*.bak
 *_broken_*.py
+
+# V15.6-A23B gitignore backup files
+.gitignore_before_*
