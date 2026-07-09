@@ -119,7 +119,7 @@ def main() -> int:
             "scripts/backup_reputation.py",
             "scripts/preview_reputation_restore.py",
         ],
-        "Step 1/6：Python 语法编译检查",
+        "Step 1/7：Python 语法编译检查",
     )
 
     run(
