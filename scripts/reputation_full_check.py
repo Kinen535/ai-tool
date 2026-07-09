@@ -66,6 +66,10 @@ def check_reputation_home_security() -> None:
             "信誉档案",
             "安全备份",
             "维护页已保护",
+            "今日处理重点",
+            "未关联事件",
+            "待核实事件",
+            "证据链完整率",
         ]
 
         forbidden = [

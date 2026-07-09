@@ -41,7 +41,7 @@
     <div style="background:white;border-radius:18px;padding:22px;margin-bottom:18px;">
         <h2>② 档案概况</h2>
 
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:14px;">
             <div style="background:#f8fafc;border-radius:14px;padding:18px;text-align:center;">
                 <div>信誉主体</div>
                 <h2>{{ report.stats.subject_total }}</h2>
@@ -71,12 +71,94 @@
                 <div>已关联事件</div>
                 <h2>{{ report.stats.relation_total }}</h2>
             </div>
+
+            <div style="background:#fef2f2;border-radius:14px;padding:18px;text-align:center;">
+                <div>未关联事件</div>
+                <h2 style="color:#dc2626;">{{ report.stats.unlinked_event_total }}</h2>
+            </div>
+
+            <div style="background:#fff7ed;border-radius:14px;padding:18px;text-align:center;">
+                <div>待核实事件</div>
+                <h2 style="color:#f97316;">{{ report.stats.pending_event_total }}</h2>
+            </div>
+
+            <div style="background:#eef2ff;border-radius:14px;padding:18px;text-align:center;">
+                <div>证据链完整率</div>
+                <h2 style="color:#4f46e5;">{{ report.stats.evidence_complete_rate }}%</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- V15.6-A36 reputation home business dashboard -->
+    <div style="background:#f8fafc;border-left:6px solid #475569;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>③ 今日处理重点</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;align-items:start;">
+            <div style="background:white;border-radius:14px;padding:16px;">
+                <h3 style="margin-top:0;">未关联事件</h3>
+                <p style="color:#64748b;line-height:1.7;">
+                    这些事件还没有绑定具体主体，证据链不完整，建议优先补关联对象。
+                </p>
+
+                {% if report.unlinked_events %}
+                    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                        <tr style="background:#f3f4f6;">
+                            <th style="padding:8px;text-align:left;">事件</th>
+                            <th style="padding:8px;text-align:left;">影响</th>
+                            <th style="padding:8px;text-align:left;">入口</th>
+                        </tr>
+                        {% for e in report.unlinked_events %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
+                            <td style="padding:8px;color:#f97316;">{{ e.impact_level or '-' }}</td>
+                            <td style="padding:8px;">
+                                <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">处理 →</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <div style="background:#ecfdf5;border-radius:12px;padding:12px;color:#166534;margin-top:10px;">
+                        当前没有未关联事件。
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:16px;">
+                <h3 style="margin-top:0;">待核实事件</h3>
+                <p style="color:#64748b;line-height:1.7;">
+                    这些事件还处于待确认状态，建议补充证据、备注或确认状态。
+                </p>
+
+                {% if report.pending_events %}
+                    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                        <tr style="background:#f3f4f6;">
+                            <th style="padding:8px;text-align:left;">事件</th>
+                            <th style="padding:8px;text-align:left;">状态</th>
+                            <th style="padding:8px;text-align:left;">入口</th>
+                        </tr>
+                        {% for e in report.pending_events %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
+                            <td style="padding:8px;color:#f97316;">{{ e.status or '-' }}</td>
+                            <td style="padding:8px;">
+                                <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">核实 →</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <div style="background:#ecfdf5;border-radius:12px;padding:12px;color:#166534;margin-top:10px;">
+                        当前没有待核实事件。
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;">
         <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
-            <h2>③ 高风险主体</h2>
+            <h2>④ 高风险主体</h2>
 
             {% if report.high_risk_subjects %}
                 <table style="width:100%;border-collapse:collapse;margin-top:12px;">
@@ -116,7 +198,7 @@
         </div>
 
         <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
-            <h2>④ 最近信誉事件</h2>
+            <h2>⑤ 最近信誉事件</h2>
 
             {% if report.recent_events %}
                 <table style="width:100%;border-collapse:collapse;margin-top:12px;">
@@ -166,7 +248,7 @@
     </div>
 
     <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-top:18px;">
-        <h2>⑤ 当前建议阶段</h2>
+        <h2>⑥ 当前建议阶段</h2>
         <p style="color:#475569;line-height:1.8;">{{ report.stage_tip }}</p>
 
         <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">

@@ -745,6 +745,36 @@ def build_reputation_home_report(conn: sqlite3.Connection) -> dict[str, Any]:
 
     relation_total = one("SELECT COUNT(*) FROM v156_reputation_event_relations")
 
+    # V15.6-A36 reputation home business dashboard
+    unlinked_event_total = one(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_events e
+        LEFT JOIN v156_reputation_event_relations r ON r.event_id = e.id
+        WHERE r.id IS NULL
+          AND IFNULL(e.status, '') NOT IN ('voided', 'archived')
+        """
+    )
+
+    pending_event_total = one(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_events
+        WHERE IFNULL(status, '') IN ('pending', 'disputed')
+        """
+    )
+
+    linked_subject_total = one(
+        """
+        SELECT COUNT(DISTINCT subject_id)
+        FROM v156_reputation_event_relations
+        """
+    )
+
+    evidence_complete_rate = 0
+    if subject_total > 0:
+        evidence_complete_rate = round(linked_subject_total * 100 / subject_total, 1)
+
     high_risk_subjects = conn.execute(
         """
         SELECT *
@@ -772,6 +802,28 @@ def build_reputation_home_report(conn: sqlite3.Connection) -> dict[str, Any]:
         FROM v156_reputation_events
         ORDER BY updated_at DESC, id DESC
         LIMIT 8
+        """
+    ).fetchall()
+
+    unlinked_events = conn.execute(
+        """
+        SELECT e.*
+        FROM v156_reputation_events e
+        LEFT JOIN v156_reputation_event_relations r ON r.event_id = e.id
+        WHERE r.id IS NULL
+          AND IFNULL(e.status, '') NOT IN ('voided', 'archived')
+        ORDER BY e.updated_at DESC, e.id DESC
+        LIMIT 6
+        """
+    ).fetchall()
+
+    pending_events = conn.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE IFNULL(status, '') IN ('pending', 'disputed')
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 6
         """
     ).fetchall()
 
@@ -811,9 +863,15 @@ def build_reputation_home_report(conn: sqlite3.Connection) -> dict[str, Any]:
             "event_total": event_total,
             "severe_event_total": severe_event_total,
             "relation_total": relation_total,
+            "unlinked_event_total": unlinked_event_total,
+            "pending_event_total": pending_event_total,
+            "linked_subject_total": linked_subject_total,
+            "evidence_complete_rate": evidence_complete_rate,
         },
         "high_risk_subjects": high_risk_subjects,
         "recent_events": recent_events,
+        "unlinked_events": unlinked_events,
+        "pending_events": pending_events,
         "recent_relations": recent_relations,
         "stage_tip": stage_tip,
     }
