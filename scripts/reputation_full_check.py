@@ -11,6 +11,10 @@ from pathlib import Path
 ROOT = Path("/home/admin/ai-tool")
 EXPORT_ROOT = ROOT / "exports" / "reputation"
 
+# V15.6-A32H full check app import path
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 
 def run(cmd: list[str], title: str) -> None:
     print("=" * 70)
