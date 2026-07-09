@@ -39,3 +39,6 @@ templates/*_before_*.html
 
 # V15.6-A24 reputation export files
 exports/reputation/
+
+# V15.6-A32I security token backup files
+data/security_admin_token_before_*.txt
