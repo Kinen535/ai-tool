@@ -7582,8 +7582,9 @@ def reputation_backup_status():
         if not p.with_suffix(".zip").exists()
     ]
 
-    latest_zip_text = str(latest_zip) if latest_zip else "暂无 ZIP 备份"
-    latest_dir_text = str(latest_dir) if latest_dir else "暂无导出目录"
+    # V15.6-A32C hide backup absolute paths
+    latest_zip_text = latest_zip.name if latest_zip else "暂无可恢复备份包"
+    latest_dir_text = latest_dir.name if latest_dir else "暂无备份目录"
     latest_zip_size = f"{latest_zip.stat().st_size / 1024:.1f} KB" if latest_zip else "-"
 
 
@@ -7606,7 +7607,7 @@ def reputation_backup_status():
     orphan_html = ""
     if orphan_dirs:
         orphan_html = "<ul>" + "".join(
-            f"<li>{esc(p)}</li>" for p in orphan_dirs
+            f"<li>{esc(p.name)}</li>" for p in orphan_dirs
         ) + "</ul>"
     else:
         orphan_html = "<p class='ok'>没有发现旧格式备份说明。</p>"
@@ -7615,7 +7616,7 @@ def reputation_backup_status():
     recent_items = sorted(list(backup_dirs) + list(backup_zips))[-12:]
     if recent_items:
         recent_html = "<ul>" + "".join(
-            f"<li>{esc(p)}</li>" for p in recent_items
+            f"<li>{esc(p.name)}</li>" for p in recent_items
         ) + "</ul>"
     else:
         recent_html = "<p>暂无备份记录。</p>"
@@ -7625,7 +7626,7 @@ def reputation_backup_status():
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>信誉档案库安全备份</title>
+    <title>信誉档案库安全备份</title>\n    <meta name="robots" content="noindex,nofollow,noarchive">
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -7743,7 +7744,8 @@ def reputation_backup_status():
         <p>这个页面主要用于确认信誉档案库是否已经安全备份，不是日常录入页面。</p>
         <p>正常情况下，你只需要看三件事：可恢复备份包是否大于 0、最近一次安全备份是否存在、档案数据概况数量是否正常。</p>
         <p><strong>可恢复备份包：</strong><code>{esc(latest_zip_text)}</code></p>
-        <p><strong>备份目录：</strong><code>{esc(latest_dir_text)}</code></p>
+        <p><strong>备份记录：</strong><code>{esc(latest_dir_text)}</code></p>
+        <p style="color:#666;">说明：为避免暴露服务器内部路径，本页面只显示备份名称，不显示真实服务器目录。</p>
     </div>
 
     <div class="section">
