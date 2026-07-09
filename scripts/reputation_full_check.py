@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import re
 from pathlib import Path
 
 
@@ -16,12 +17,33 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+# V15.6-A34 full check safe output scrub
+def scrub_output(text: str) -> str:
+    text = text.replace(str(ROOT), "[PROJECT_ROOT]")
+    text = text.replace("/home/admin", "[HOME]")
+    text = text.replace("exports/reputation", "[EXPORT_DIR]")
+    text = re.sub(r"reputation_export_\d{8}-\d{6}(?:\.zip)?", "reputation_export_[hidden]", text)
+    text = re.sub(r"token=[A-Za-z0-9_\-\.]+", "token=[hidden]", text)
+    return text
+
+
 def run(cmd: list[str], title: str) -> None:
     print("=" * 70)
     print(title)
     print("=" * 70)
 
-    result = subprocess.run(cmd, cwd=str(ROOT))
+    result = subprocess.run(
+        cmd,
+        cwd=str(ROOT),
+        text=True,
+        capture_output=True,
+    )
+
+    if result.stdout:
+        print(scrub_output(result.stdout), end="" if result.stdout.endswith("\n") else "\n")
+
+    if result.stderr:
+        print(scrub_output(result.stderr), end="" if result.stderr.endswith("\n") else "\n")
 
     if result.returncode != 0:
         raise SystemExit(f"❌ 失败：{title}")
@@ -137,7 +159,7 @@ def main() -> int:
 
     print("=" * 70)
     print("✅ V15.6 信誉档案库全链路自检通过")
-    print(f"✅ 最新备份包：{zip_path}")
+    print(f"✅ 最新备份包：{scrub_output(str(zip_path))}")
     print("=" * 70)
 
     return 0
