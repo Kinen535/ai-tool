@@ -56,7 +56,7 @@ def init_security_tables(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def cleanup_security_logs(conn: sqlite3.Connection, keep_days: int = 7) -> None:
+def _cleanup_security_logs_by_days(conn: sqlite3.Connection, keep_days: int = 7) -> None:
     init_security_tables(conn)
 
     conn.execute(
@@ -727,7 +727,7 @@ def build_security_cleanup_report(conn: sqlite3.Connection) -> Dict[str, Any]:
     }
 
 
-def cleanup_security_logs(conn: sqlite3.Connection, action: str) -> Dict[str, Any]:
+def _cleanup_security_logs_by_action(conn: sqlite3.Connection, action: str) -> Dict[str, Any]:
     ensure_security_cleanup_tables(conn)
 
     action = str(action or "").strip()
@@ -1103,3 +1103,24 @@ def get_ip_detail_report(conn: sqlite3.Connection, ip: str, limit: int = 300) ->
         "user_agents": user_agents,
         "logs": [dict(row) for row in logs_cur.fetchall()],
     }
+
+# V15.5-S0B unified cleanup_security_logs wrapper
+def cleanup_security_logs(conn, action=None, keep_days=7, **kwargs):
+    """
+    兼容两种历史调用：
+    1. cleanup_security_logs(conn, keep_days=7)
+    2. cleanup_security_logs(conn, action)
+    """
+    if action is None:
+        result = _cleanup_security_logs_by_days(conn, keep_days=keep_days)
+        if isinstance(result, dict):
+            return result
+        return {
+            "ok": True,
+            "action": "keep_days",
+            "keep_days": keep_days,
+            "message": "security logs cleanup by keep_days completed",
+        }
+
+    return _cleanup_security_logs_by_action(conn, action)
+
