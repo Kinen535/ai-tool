@@ -7520,11 +7520,25 @@ init_db()
 # V15.6-A32 reputation backup status dashboard
 @app.route("/reputation/backup-status")
 def reputation_backup_status():
+    # V15.6-A32D backup status security hardening
     from pathlib import Path
     import sqlite3
     import html as _html
+    from flask import request, abort, make_response
 
     root = Path("/home/admin/ai-tool")
+
+    # 维护页访问保护：必须带 token 才允许访问
+    token_path = root / "data" / "security_admin_token.txt"
+    expected_token = token_path.read_text(encoding="utf-8").strip() if token_path.exists() else ""
+    provided_token = (
+        request.args.get("token", "").strip()
+        or request.headers.get("X-Admin-Token", "").strip()
+    )
+
+    if expected_token and provided_token != expected_token:
+        abort(404)
+
     db_path = root / "data" / "snapshots.db"
     export_root = root / "exports" / "reputation"
 
@@ -7615,13 +7629,11 @@ def reputation_backup_status():
     recent_html = ""
     recent_items = sorted(list(backup_dirs) + list(backup_zips))[-12:]
     if recent_items:
-        recent_html = "<ul>" + "".join(
-            f"<li>{esc(p.name)}</li>" for p in recent_items
-        ) + "</ul>"
+        recent_html = f"<p>最近共有 {len(recent_items)} 条备份记录。为降低信息泄露风险，具体备份文件名已隐藏。</p>"
     else:
         recent_html = "<p>暂无备份记录。</p>"
 
-    return f"""
+    html_body = f"""
 <!doctype html>
 <html lang="zh-CN">
 <head>
@@ -7743,8 +7755,8 @@ def reputation_backup_status():
         <h2>最近一次安全备份</h2>
         <p>这个页面主要用于确认信誉档案库是否已经安全备份，不是日常录入页面。</p>
         <p>正常情况下，你只需要看三件事：可恢复备份包是否大于 0、最近一次安全备份是否存在、档案数据概况数量是否正常。</p>
-        <p><strong>可恢复备份包：</strong><code>{esc(latest_zip_text)}</code></p>
-        <p><strong>备份记录：</strong><code>{esc(latest_dir_text)}</code></p>
+        <p><strong>可恢复备份包：</strong><code>{ "已生成" if latest_zip else "暂无可恢复备份包" }</code></p>
+        <p><strong>备份记录：</strong><code>{ "已生成" if latest_dir else "暂无备份记录" }</code></p>
         <p style="color:#666;">说明：为避免暴露服务器内部路径，本页面只显示备份名称，不显示真实服务器目录。</p>
     </div>
 
@@ -7774,15 +7786,20 @@ def reputation_backup_status():
     </div>
 
     <div class="section">
-        <h2>维护命令</h2>
-        <p><code>python3 scripts/reputation_full_check.py</code></p>
-        <p><code>python3 scripts/backup_reputation.py</code></p>
-        <p><code>python3 scripts/cleanup_reputation_exports.py --keep 10</code></p>
+        <h2>维护说明</h2>
+        <p>维护命令已隐藏。备份、校验、清理等操作只允许在服务器终端执行，不在网页公开展示。</p>
     </div>
 </div>
 </body>
 </html>
 """
+    resp = make_response(html_body)
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
 
 
 if __name__ == "__main__":

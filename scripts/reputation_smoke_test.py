@@ -28,6 +28,13 @@ def bad(msg: str) -> None:
     print(f"❌ {msg}")
 
 
+def get_backup_status_token() -> str:
+    token_path = ROOT / "data" / "security_admin_token.txt"
+    if token_path.exists():
+        return token_path.read_text(encoding="utf-8").strip()
+    return ""
+
+
 def fetch_sample_data() -> dict:
     data = {
         "subject_id": None,
@@ -118,6 +125,7 @@ def main() -> int:
         return 1
 
     sample = fetch_sample_data()
+    backup_status_token = get_backup_status_token()
 
     targets: list[tuple[str, list[str]]] = [
         ("/reputation", ["信誉档案", "安全备份"]),
@@ -128,7 +136,7 @@ def main() -> int:
         ("/reputation/events/new", []),
         ("/reputation/duplicates", []),
         ("/reputation/merge-logs", []),
-        ("/reputation/backup-status", ["信誉档案库安全备份", "最近一次安全备份"]),
+        (f"/reputation/backup-status?token={backup_status_token}", ["信誉档案库安全备份", "最近一次安全备份"]),
     ]
 
     if sample["subject_game_id"]:
