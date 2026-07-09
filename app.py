@@ -7516,6 +7516,263 @@ def error_500(e):
 # =========================
 init_db()
 
+
+# V15.6-A32 reputation backup status dashboard
+@app.route("/reputation/backup-status")
+def reputation_backup_status():
+    from pathlib import Path
+    import sqlite3
+    import html as _html
+
+    root = Path("/home/admin/ai-tool")
+    db_path = root / "data" / "snapshots.db"
+    export_root = root / "exports" / "reputation"
+
+    tables = [
+        "v156_reputation_subjects",
+        "v156_reputation_events",
+        "v156_reputation_event_relations",
+        "v156_reputation_merge_logs",
+    ]
+
+    def esc(value):
+        return _html.escape(str(value if value is not None else ""))
+
+    def count_table(conn, table):
+        exists = conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone()[0]
+
+        if not exists:
+            return "缺表"
+
+        return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+    db_counts = {}
+
+    if db_path.exists():
+        conn = sqlite3.connect(str(db_path))
+        try:
+            for table in tables:
+                db_counts[table] = count_table(conn, table)
+        finally:
+            conn.close()
+    else:
+        for table in tables:
+            db_counts[table] = "数据库不存在"
+
+    export_root.mkdir(parents=True, exist_ok=True)
+
+    backup_dirs = sorted(
+        p for p in export_root.glob("reputation_export_*")
+        if p.is_dir()
+    )
+
+    backup_zips = sorted(
+        p for p in export_root.glob("reputation_export_*.zip")
+        if p.is_file()
+    )
+
+    latest_zip = backup_zips[-1] if backup_zips else None
+    latest_dir = backup_dirs[-1] if backup_dirs else None
+
+    orphan_dirs = [
+        p for p in backup_dirs
+        if not p.with_suffix(".zip").exists()
+    ]
+
+    latest_zip_text = str(latest_zip) if latest_zip else "暂无 ZIP 备份"
+    latest_dir_text = str(latest_dir) if latest_dir else "暂无导出目录"
+    latest_zip_size = f"{latest_zip.stat().st_size / 1024:.1f} KB" if latest_zip else "-"
+
+    table_rows = ""
+    for table in tables:
+        table_rows += (
+            "<tr>"
+            f"<td>{esc(table)}</td>"
+            f"<td>{esc(db_counts.get(table))}</td>"
+            "</tr>"
+        )
+
+    orphan_html = ""
+    if orphan_dirs:
+        orphan_html = "<ul>" + "".join(
+            f"<li>{esc(p)}</li>" for p in orphan_dirs
+        ) + "</ul>"
+    else:
+        orphan_html = "<p class='ok'>没有发现无 ZIP 的旧备份目录。</p>"
+
+    recent_html = ""
+    recent_items = sorted(list(backup_dirs) + list(backup_zips))[-12:]
+    if recent_items:
+        recent_html = "<ul>" + "".join(
+            f"<li>{esc(p)}</li>" for p in recent_items
+        ) + "</ul>"
+    else:
+        recent_html = "<p>暂无备份记录。</p>"
+
+    return f"""
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>信誉档案库备份状态</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            background: #f6f7fb;
+            margin: 0;
+            padding: 24px;
+            color: #222;
+        }}
+        .wrap {{
+            max-width: 1180px;
+            margin: 0 auto;
+        }}
+        .top {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }}
+        .top a {{
+            color: #2563eb;
+            text-decoration: none;
+            margin-left: 12px;
+        }}
+        .grid {{
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }}
+        .card {{
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+        }}
+        .card .label {{
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }}
+        .card .value {{
+            font-size: 24px;
+            font-weight: 700;
+        }}
+        .section {{
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+        }}
+        th, td {{
+            border-bottom: 1px solid #eee;
+            padding: 10px;
+            text-align: left;
+        }}
+        th {{
+            background: #fafafa;
+        }}
+        code {{
+            background: #f2f4f8;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }}
+        .ok {{
+            color: #15803d;
+            font-weight: 600;
+        }}
+        .warn {{
+            color: #b45309;
+            font-weight: 600;
+        }}
+        ul {{
+            line-height: 1.8;
+        }}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <h1>信誉档案库备份状态</h1>
+        <div>
+            <a href="/reputation">返回信誉档案库</a>
+            <a href="/reputation/search">信誉检索</a>
+            <a href="/reputation/subjects">信誉主体</a>
+            <a href="/reputation/events">信誉事件</a>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">导出目录数量</div>
+            <div class="value">{len(backup_dirs)}</div>
+        </div>
+        <div class="card">
+            <div class="label">ZIP 备份数量</div>
+            <div class="value">{len(backup_zips)}</div>
+        </div>
+        <div class="card">
+            <div class="label">无 ZIP 旧目录</div>
+            <div class="value">{len(orphan_dirs)}</div>
+        </div>
+        <div class="card">
+            <div class="label">最新 ZIP 大小</div>
+            <div class="value">{esc(latest_zip_size)}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>最新备份包</h2>
+        <p><strong>ZIP：</strong><code>{esc(latest_zip_text)}</code></p>
+        <p><strong>目录：</strong><code>{esc(latest_dir_text)}</code></p>
+    </div>
+
+    <div class="section">
+        <h2>数据库核心表行数</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>数据表</th>
+                    <th>当前行数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>无 ZIP 的旧备份目录</h2>
+        {orphan_html}
+    </div>
+
+    <div class="section">
+        <h2>最近备份记录</h2>
+        {recent_html}
+    </div>
+
+    <div class="section">
+        <h2>常用命令</h2>
+        <p><code>python3 scripts/reputation_full_check.py</code></p>
+        <p><code>python3 scripts/backup_reputation.py</code></p>
+        <p><code>python3 scripts/cleanup_reputation_exports.py --keep 10</code></p>
+    </div>
+</div>
+</body>
+</html>
+"""
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
 
