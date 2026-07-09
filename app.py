@@ -7586,11 +7586,19 @@ def reputation_backup_status():
     latest_dir_text = str(latest_dir) if latest_dir else "暂无导出目录"
     latest_zip_size = f"{latest_zip.stat().st_size / 1024:.1f} KB" if latest_zip else "-"
 
+
+    table_name_map = {
+        "v156_reputation_subjects": "信誉对象数量",
+        "v156_reputation_events": "信誉事件数量",
+        "v156_reputation_event_relations": "证据链关联数量",
+        "v156_reputation_merge_logs": "合并记录数量",
+    }
+
     table_rows = ""
     for table in tables:
         table_rows += (
             "<tr>"
-            f"<td>{esc(table)}</td>"
+            f"<td>{esc(table_name_map.get(table, table))}</td>"
             f"<td>{esc(db_counts.get(table))}</td>"
             "</tr>"
         )
@@ -7601,7 +7609,7 @@ def reputation_backup_status():
             f"<li>{esc(p)}</li>" for p in orphan_dirs
         ) + "</ul>"
     else:
-        orphan_html = "<p class='ok'>没有发现无 ZIP 的旧备份目录。</p>"
+        orphan_html = "<p class='ok'>没有发现旧格式备份说明。</p>"
 
     recent_html = ""
     recent_items = sorted(list(backup_dirs) + list(backup_zips))[-12:]
@@ -7617,7 +7625,7 @@ def reputation_backup_status():
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>信誉档案库备份状态</title>
+    <title>信誉档案库安全备份</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -7702,7 +7710,7 @@ def reputation_backup_status():
 <body>
 <div class="wrap">
     <div class="top">
-        <h1>信誉档案库备份状态</h1>
+        <h1>信誉档案库安全备份</h1>
         <div>
             <a href="/reputation">返回信誉档案库</a>
             <a href="/reputation/search">信誉检索</a>
@@ -7713,36 +7721,38 @@ def reputation_backup_status():
 
     <div class="grid">
         <div class="card">
-            <div class="label">导出目录数量</div>
+            <div class="label">备份记录数</div>
             <div class="value">{len(backup_dirs)}</div>
         </div>
         <div class="card">
-            <div class="label">ZIP 备份数量</div>
+            <div class="label">可恢复备份包</div>
             <div class="value">{len(backup_zips)}</div>
         </div>
         <div class="card">
-            <div class="label">无 ZIP 旧目录</div>
+            <div class="label">旧格式备份</div>
             <div class="value">{len(orphan_dirs)}</div>
         </div>
         <div class="card">
-            <div class="label">最新 ZIP 大小</div>
+            <div class="label">最新备份大小</div>
             <div class="value">{esc(latest_zip_size)}</div>
         </div>
     </div>
 
     <div class="section">
-        <h2>最新备份包</h2>
-        <p><strong>ZIP：</strong><code>{esc(latest_zip_text)}</code></p>
-        <p><strong>目录：</strong><code>{esc(latest_dir_text)}</code></p>
+        <h2>最近一次安全备份</h2>
+        <p>这个页面主要用于确认信誉档案库是否已经安全备份，不是日常录入页面。</p>
+        <p>正常情况下，你只需要看三件事：可恢复备份包是否大于 0、最近一次安全备份是否存在、档案数据概况数量是否正常。</p>
+        <p><strong>可恢复备份包：</strong><code>{esc(latest_zip_text)}</code></p>
+        <p><strong>备份目录：</strong><code>{esc(latest_dir_text)}</code></p>
     </div>
 
     <div class="section">
-        <h2>数据库核心表行数</h2>
+        <h2>档案数据概况</h2>
         <table>
             <thead>
                 <tr>
-                    <th>数据表</th>
-                    <th>当前行数</th>
+                    <th>项目</th>
+                    <th>当前数量</th>
                 </tr>
             </thead>
             <tbody>
@@ -7752,7 +7762,7 @@ def reputation_backup_status():
     </div>
 
     <div class="section">
-        <h2>无 ZIP 的旧备份目录</h2>
+        <h2>旧格式备份说明</h2>
         {orphan_html}
     </div>
 
@@ -7762,7 +7772,7 @@ def reputation_backup_status():
     </div>
 
     <div class="section">
-        <h2>常用命令</h2>
+        <h2>维护命令</h2>
         <p><code>python3 scripts/reputation_full_check.py</code></p>
         <p><code>python3 scripts/backup_reputation.py</code></p>
         <p><code>python3 scripts/cleanup_reputation_exports.py --keep 10</code></p>

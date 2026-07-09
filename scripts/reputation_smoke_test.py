@@ -128,7 +128,7 @@ def main() -> int:
         ("/reputation/events/new", []),
         ("/reputation/duplicates", []),
         ("/reputation/merge-logs", []),
-        ("/reputation/backup-status", ["信誉档案库备份状态", "最新备份包"]),
+        ("/reputation/backup-status", ["信誉档案库安全备份", "最近一次安全备份"]),
     ]
 
     if sample["subject_game_id"]:
