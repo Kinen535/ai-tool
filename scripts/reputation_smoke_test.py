@@ -120,7 +120,7 @@ def main() -> int:
     sample = fetch_sample_data()
 
     targets: list[tuple[str, list[str]]] = [
-        ("/reputation", ["信誉档案"]),
+        ("/reputation", ["信誉档案", "安全备份"]),
         ("/reputation/search", []),
         ("/reputation/subjects", ["主体列表", "关联事件"]),
         ("/reputation/subjects/new", []),
