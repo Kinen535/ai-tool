@@ -36,3 +36,6 @@ templates/*_before_*.html
 
 # V15.6-A23B gitignore backup files
 .gitignore_before_*
+
+# V15.6-A24 reputation export files
+exports/reputation/
