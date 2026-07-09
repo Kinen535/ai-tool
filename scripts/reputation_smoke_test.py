@@ -87,16 +87,19 @@ def fetch_sample_data() -> dict:
     return data
 
 
-def check_page(client, url: str, required_texts: list[str] | None = None) -> int:
+# V15.6-A32E smoke test hide admin token
+def check_page(client, url: str, required_texts: list[str] | None = None, headers: dict | None = None, display_url: str | None = None) -> int:
     required_texts = required_texts or []
+    headers = headers or {}
+    display_url = display_url or url
 
-    r = client.get(url)
+    r = client.get(url, headers=headers)
     status = r.status_code
 
     if status == 200:
-        ok(f"{url} -> 200")
+        ok(f"{display_url} -> 200")
     else:
-        bad(f"{url} -> {status}")
+        bad(f"{display_url} -> {status}")
         print(r.data.decode("utf-8", errors="ignore")[:2000])
         return 1
 
@@ -106,9 +109,9 @@ def check_page(client, url: str, required_texts: list[str] | None = None) -> int
 
     for text in required_texts:
         if text in html:
-            ok(f"{url} 包含关键内容：{text}")
+            ok(f"{display_url} 包含关键内容：{text}")
         else:
-            bad(f"{url} 缺少关键内容：{text}")
+            bad(f"{display_url} 缺少关键内容：{text}")
             fatal += 1
 
     return fatal
@@ -136,7 +139,7 @@ def main() -> int:
         ("/reputation/events/new", []),
         ("/reputation/duplicates", []),
         ("/reputation/merge-logs", []),
-        (f"/reputation/backup-status?token={backup_status_token}", ["信誉档案库安全备份", "最近一次安全备份"]),
+        ("/reputation/backup-status", ["信誉档案库安全备份", "最近一次安全备份"]),
     ]
 
     if sample["subject_game_id"]:
@@ -177,7 +180,16 @@ def main() -> int:
 
     with app.test_client() as client:
         for url, required_texts in targets:
-            fatal += check_page(client, url, required_texts)
+            if url == "/reputation/backup-status":
+                fatal += check_page(
+                    client,
+                    url,
+                    required_texts,
+                    headers={"X-Admin-Token": backup_status_token},
+                    display_url="/reputation/backup-status [admin-token-hidden]",
+                )
+            else:
+                fatal += check_page(client, url, required_texts)
 
     print("=" * 52)
 

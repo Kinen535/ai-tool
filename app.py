@@ -7525,6 +7525,7 @@ def reputation_backup_status():
     import sqlite3
     import html as _html
     from flask import request, abort, make_response
+    import re as _re
 
     root = Path("/home/admin/ai-tool")
 
@@ -7793,6 +7794,16 @@ def reputation_backup_status():
 </body>
 </html>
 """
+    # V15.6-A32F final scrub backup status html
+    # 最后一层兜底：不允许页面暴露服务器路径、备份文件名、维护脚本名
+    html_body = _re.sub(r"reputation_export_\\d{8}-\\d{6}(?:\\.zip)?", "备份记录已隐藏", html_body)
+    html_body = html_body.replace("/home/admin", "路径已隐藏")
+    html_body = html_body.replace("exports/reputation", "路径已隐藏")
+    html_body = html_body.replace("python3 scripts/", "维护命令已隐藏：")
+    html_body = html_body.replace("backup_reputation.py", "维护脚本已隐藏")
+    html_body = html_body.replace("reputation_full_check.py", "维护脚本已隐藏")
+    html_body = html_body.replace("cleanup_reputation_exports.py", "维护脚本已隐藏")
+
     resp = make_response(html_body)
     resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
