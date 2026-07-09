@@ -47,6 +47,16 @@ def main() -> int:
     print(f"当前备份数量：{len(items)}")
     print(f"保留最近数量：{args.keep}")
 
+    # V15.6-A31B detect export dirs without zip
+    missing_zip_items = [item for item in items if not item.get("zip")]
+
+    if missing_zip_items:
+        print("-" * 60)
+        print("⚠️ 发现无 ZIP 的旧备份目录：")
+        for item in missing_zip_items:
+            print(f" - {item['dir']}")
+        print("说明：这些通常是 A25 之前生成的旧格式 CSV 目录，不影响当前备份链路。")
+
     if len(items) <= args.keep:
         print("✅ 不需要清理")
         return 0
