@@ -9661,6 +9661,20 @@ def v156_reputation_search():
 
 
 # V15.6-A3 reputation subject CRUD routes
+
+# V15.6-A38C subject event stats chinese impact
+def _v156_reputation_impact_cn(value):
+    mapping = {
+        "low": "低",
+        "normal": "普通",
+        "medium": "中",
+        "high": "高",
+        "severe": "严重",
+        "critical": "极严重",
+    }
+    value = (value or "").strip()
+    return mapping.get(value, value or "-")
+
 @app.route("/reputation/subjects", methods=["GET", "POST"])
 def v156_reputation_subjects():
     import sqlite3
@@ -9723,7 +9737,16 @@ def v156_reputation_subjects():
                 r.subject_id,
                 COUNT(DISTINCT r.event_id) AS event_count,
                 GROUP_CONCAT(
-                    IFNULL(e.title, '未知事件') || '｜' || IFNULL(e.impact_level, '-'),
+                    IFNULL(e.title, '未知事件') || '｜' ||
+                    CASE IFNULL(e.impact_level, '')
+                        WHEN 'low' THEN '低'
+                        WHEN 'normal' THEN '普通'
+                        WHEN 'medium' THEN '中'
+                        WHEN 'high' THEN '高'
+                        WHEN 'severe' THEN '严重'
+                        WHEN 'critical' THEN '极严重'
+                        ELSE IFNULL(e.impact_level, '-')
+                    END,
                     '；'
                 ) AS events
             FROM v156_reputation_event_relations r
