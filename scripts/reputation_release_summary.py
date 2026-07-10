@@ -108,7 +108,7 @@ def main():
     lines.append("")
     lines.append("## 五、核心自检命令")
     lines.append("")
-    lines.append("cd /home/admin/ai-tool")
+    lines.append("cd [PROJECT_ROOT]")
     lines.append("python3 scripts/reputation_full_check.py")
     lines.append("")
     lines.append("通过标准：")
