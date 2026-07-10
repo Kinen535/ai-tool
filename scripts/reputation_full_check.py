@@ -248,6 +248,50 @@ def check_reputation_detail_chinese_visible() -> None:
 
     print("✅ 详情页与检索页中文化检查通过：可见文字未发现英文状态")
 
+
+# V15.6-A40 reputation core page security check
+def check_reputation_core_pages_security() -> None:
+    from app import app
+
+    pages = [
+        "/reputation",
+        "/reputation/search",
+        "/reputation/search?q=315789798",
+        "/reputation/subjects",
+        "/reputation/subjects/new",
+        "/reputation/subjects/8",
+        "/reputation/subjects/8/edit",
+        "/reputation/events",
+        "/reputation/events/new",
+        "/reputation/events/3",
+        "/reputation/events/3/edit",
+        "/reputation/duplicates",
+        "/reputation/merge-logs",
+    ]
+
+    forbidden = [
+        "/home/admin",
+        "reputation_export_",
+        "token=",
+        "security_admin_token",
+        "/reputation/backup-status",
+        "python3 scripts/",
+    ]
+
+    with app.test_client() as c:
+        for url in pages:
+            r = c.get(url)
+            html = r.data.decode("utf-8", errors="ignore")
+
+            if r.status_code != 200:
+                raise SystemExit(f"❌ 信誉档案库核心页面异常：{url} -> {r.status_code}")
+
+            for key in forbidden:
+                if key in html:
+                    raise SystemExit(f"❌ 信誉档案库核心页面暴露敏感内容：{url} -> {key}")
+
+    print("✅ 核心页面巡检通过：页面可访问，未发现敏感内容")
+
 def main() -> int:
     print("V15.6 Reputation Full Chain Check")
     print("=" * 70)
@@ -293,6 +337,11 @@ def main() -> int:
     print("详情页与检索页中文化检查")
     print("=" * 70)
     check_reputation_detail_chinese_visible()
+
+    print("=" * 70)
+    print("核心页面巡检")
+    print("=" * 70)
+    check_reputation_core_pages_security()
 
     run(
         [sys.executable, "scripts/reputation_health_check.py"],
