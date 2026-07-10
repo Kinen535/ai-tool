@@ -144,6 +144,58 @@ def latest_zip() -> Path | None:
     return zips[-1] if zips else None
 
 
+
+# V15.6-A38D reputation list chinese visible check
+def check_reputation_list_chinese_visible() -> None:
+    from app import app
+    import re
+
+    pages = [
+        "/reputation/subjects",
+        "/reputation/events",
+        "/reputation/duplicates",
+    ]
+
+    forbidden_visible = [
+        "black",
+        "danger",
+        "severe",
+        "recorded",
+        "pending",
+        "disputed",
+        "verified",
+        "voided",
+        "archived",
+    ]
+
+    def visible_text(html: str) -> str:
+        html = re.sub(r"<script[\s\S]*?</script>", "", html, flags=re.I)
+        html = re.sub(r"<style[\s\S]*?</style>", "", html, flags=re.I)
+        html = re.sub(r"<[^>]+>", " ", html)
+        return re.sub(r"\s+", " ", html)
+
+    with app.test_client() as c:
+        combined = ""
+
+        for url in pages:
+            r = c.get(url)
+            html = r.data.decode("utf-8", errors="ignore")
+            text = visible_text(html)
+            combined += "\n" + text
+
+            if r.status_code != 200:
+                raise SystemExit(f"❌ 列表页访问失败：{url}")
+
+            for key in forbidden_visible:
+                if key in text:
+                    raise SystemExit(f"❌ 列表页可见文字仍出现英文状态：{url} -> {key}")
+
+        for key in ["黑名单", "严重"]:
+            if key not in combined:
+                raise SystemExit(f"❌ 列表页缺少中文状态：{key}")
+
+    print("✅ 列表页中文化检查通过：可见文字未发现英文状态")
+
 def main() -> int:
     print("V15.6 Reputation Full Chain Check")
     print("=" * 70)
@@ -179,6 +231,11 @@ def main() -> int:
     print("Step 4/8：备份状态页安全检查")
     print("=" * 70)
     check_backup_status_security()
+
+    print("=" * 70)
+    print("列表页中文化检查")
+    print("=" * 70)
+    check_reputation_list_chinese_visible()
 
     run(
         [sys.executable, "scripts/reputation_health_check.py"],
