@@ -196,6 +196,58 @@ def check_reputation_list_chinese_visible() -> None:
 
     print("✅ 列表页中文化检查通过：可见文字未发现英文状态")
 
+
+# V15.6-A39 reputation detail chinese visible check
+def check_reputation_detail_chinese_visible() -> None:
+    from app import app
+    import re
+
+    pages = [
+        "/reputation/subjects/8",
+        "/reputation/events/3",
+        "/reputation/search?q=315789798",
+    ]
+
+    forbidden_visible = [
+        "black",
+        "danger",
+        "severe",
+        "recorded",
+        "pending",
+        "disputed",
+        "verified",
+        "voided",
+        "archived",
+    ]
+
+    def visible_text(html: str) -> str:
+        html = re.sub(r"<script[\s\S]*?</script>", "", html, flags=re.I)
+        html = re.sub(r"<style[\s\S]*?</style>", "", html, flags=re.I)
+        html = re.sub(r"<[^>]+>", " ", html)
+        return re.sub(r"\s+", " ", html)
+
+    with app.test_client() as c:
+        combined = ""
+
+        for url in pages:
+            r = c.get(url)
+            html = r.data.decode("utf-8", errors="ignore")
+            text = visible_text(html)
+            combined += "\n" + text
+
+            if r.status_code != 200:
+                raise SystemExit(f"❌ 详情/检索页访问失败：{url}")
+
+            for key in forbidden_visible:
+                if key in text:
+                    raise SystemExit(f"❌ 详情/检索页可见文字仍出现英文状态：{url} -> {key}")
+
+        for key in ["证据链", "严重"]:
+            if key not in combined:
+                raise SystemExit(f"❌ 详情/检索页缺少中文关键内容：{key}")
+
+    print("✅ 详情页与检索页中文化检查通过：可见文字未发现英文状态")
+
 def main() -> int:
     print("V15.6 Reputation Full Chain Check")
     print("=" * 70)
@@ -236,6 +288,11 @@ def main() -> int:
     print("列表页中文化检查")
     print("=" * 70)
     check_reputation_list_chinese_visible()
+
+    print("=" * 70)
+    print("详情页与检索页中文化检查")
+    print("=" * 70)
+    check_reputation_detail_chinese_visible()
 
     run(
         [sys.executable, "scripts/reputation_health_check.py"],
