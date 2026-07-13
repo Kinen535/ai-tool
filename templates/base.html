@@ -200,6 +200,136 @@ html[data-theme="dark"] .compare-table-shell tbody tr.row-yellow {
 }
 </style>
 
+
+<!-- V15.7-H5B dark contrast fix -->
+<style>
+/* 对比分析表格：深夜模式下彻底覆盖浅色单元格 */
+html[data-theme="dark"] .compare-table-shell {
+    background: #0d1728 !important;
+    border-color: #334155 !important;
+    scrollbar-color: #52627a #0d1728;
+}
+
+html[data-theme="dark"] .compare-table-shell .table {
+    background: #0d1728 !important;
+}
+
+html[data-theme="dark"] .compare-table-shell thead th {
+    background: #22314a !important;
+    color: #f8fafc !important;
+    border-color: #40506a !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.38) !important;
+}
+
+/* 普通数据行 */
+html[data-theme="dark"] .compare-table-shell tbody tr {
+    --compare-row-bg: #121e31 !important;
+}
+
+/* 红色风险行 */
+html[data-theme="dark"] .compare-table-shell tbody tr.row-red {
+    --compare-row-bg: #3a2028 !important;
+}
+
+/* 黄色预警行 */
+html[data-theme="dark"] .compare-table-shell tbody tr.row-yellow {
+    --compare-row-bg: #382f1d !important;
+}
+
+/* 所有数据单元格强制使用深色背景 */
+html[data-theme="dark"] .compare-table-shell tbody td {
+    background: var(--compare-row-bg) !important;
+    color: #e8eef8 !important;
+    border-color: #34445e !important;
+}
+
+/* 固定成员列 */
+html[data-theme="dark"] .compare-table-shell tbody td:first-child {
+    background: var(--compare-row-bg) !important;
+    color: #ffffff !important;
+    border-right-color: #53627a !important;
+    box-shadow: 3px 0 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* 鼠标经过时整行同步高亮 */
+html[data-theme="dark"] .compare-table-shell tbody tr:hover {
+    --compare-row-bg: #20304a !important;
+}
+
+html[data-theme="dark"] .compare-table-shell tbody tr.row-red:hover {
+    --compare-row-bg: #4a2932 !important;
+}
+
+html[data-theme="dark"] .compare-table-shell tbody tr.row-yellow:hover {
+    --compare-row-bg: #493d24 !important;
+}
+
+/* 修复表格中写死的浅色模式文字 */
+html[data-theme="dark"]
+.compare-table-shell [style*="color:#2c3e50"],
+html[data-theme="dark"]
+.compare-table-shell [style*="color: #2c3e50"] {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"]
+.compare-table-shell [style*="color:#d48806"],
+html[data-theme="dark"]
+.compare-table-shell [style*="color: #d48806"] {
+    color: #fbbf24 !important;
+}
+
+html[data-theme="dark"]
+.compare-table-shell [style*="color:#64748b"],
+html[data-theme="dark"]
+.compare-table-shell [style*="color: #64748b"],
+html[data-theme="dark"]
+.compare-table-shell [style*="color:#475569"],
+html[data-theme="dark"]
+.compare-table-shell [style*="color: #475569"] {
+    color: #b5c2d6 !important;
+}
+
+/* 深夜模式普通按钮 */
+html[data-theme="dark"] .btn:not(.primary):not(.btn-primary),
+html[data-theme="dark"] .btn-secondary {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+    border: 1px solid #3b4b65 !important;
+}
+
+/* 主按钮继续保持蓝色 */
+html[data-theme="dark"] .btn.primary,
+html[data-theme="dark"] .btn-primary {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+/* 禁用按钮也要能够看清 */
+html[data-theme="dark"] button:disabled,
+html[data-theme="dark"] .btn:disabled {
+    background: #1b2739 !important;
+    color: #8492a8 !important;
+    border-color: #334155 !important;
+    opacity: 1 !important;
+}
+
+/* 修复常见写死的深色文字 */
+html[data-theme="dark"] [style*="color:#0f172a"],
+html[data-theme="dark"] [style*="color: #0f172a"],
+html[data-theme="dark"] [style*="color:#334155"],
+html[data-theme="dark"] [style*="color: #334155"],
+html[data-theme="dark"] [style*="color:#475569"],
+html[data-theme="dark"] [style*="color: #475569"] {
+    color: #dce6f5 !important;
+}
+
+html[data-theme="dark"] [style*="color:#64748b"],
+html[data-theme="dark"] [style*="color: #64748b"] {
+    color: #a9b6ca !important;
+}
+</style>
+
 </head>
 
 <body>
