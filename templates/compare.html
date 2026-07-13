@@ -1,5 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+/* V15.7-H4 sticky compare table */
+.compare-table-shell {
+    position: relative;
+    max-height: 68vh;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    scrollbar-gutter: stable;
+}
+
+.compare-table-shell .table {
+    min-width: 1900px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.compare-table-shell thead th {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    white-space: nowrap;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.compare-table-shell thead th:first-child {
+    left: 0;
+    z-index: 15;
+    min-width: 160px;
+}
+
+.compare-table-shell tbody tr {
+    --compare-row-bg: var(--bg-card);
+}
+
+.compare-table-shell tbody tr.row-red {
+    --compare-row-bg: #fef2f2;
+}
+
+.compare-table-shell tbody tr.row-yellow {
+    --compare-row-bg: #fffbeb;
+}
+
+.compare-table-shell tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    min-width: 160px;
+    white-space: nowrap;
+    font-weight: 800;
+    background: var(--compare-row-bg);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 5px rgba(15, 23, 42, 0.05);
+}
+</style>
+
 <h1 class="page-title">对比分析（A+B）</h1>
 
 <div class="card">
@@ -177,7 +238,11 @@
 <div class="card">
     <div class="card-title">成员明细（完整版）</div>
 
-    <div class="table-container">
+    <div style="color:var(--text-sub);font-size:13px;margin-bottom:12px;">
+        表头与成员列已固定，可在表格区域内上下、左右滚动。
+    </div>
+
+    <div class="table-container compare-table-shell">
         <table class="table">
             <thead>
                 <tr>
