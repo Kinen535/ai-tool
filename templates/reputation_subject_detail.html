@@ -2,6 +2,46 @@
 
 {% block content %}
 
+<style>
+.reputation-subject-assessment {
+    background: var(--assessment-bg);
+    border-left: 6px solid var(--assessment-color);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 20px;
+}
+
+.reputation-subject-assessment-metric,
+.reputation-subject-assessment-panel {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.reputation-subject-assessment-metric {
+    text-align: center;
+}
+
+html[data-theme="dark"] .reputation-subject-assessment {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"]
+.reputation-subject-assessment-metric,
+html[data-theme="dark"]
+.reputation-subject-assessment-panel {
+    background: #1d2d47 !important;
+    color: #e8eef8 !important;
+    border: 1px solid #364760;
+}
+
+html[data-theme="dark"]
+.reputation-subject-assessment-muted {
+    color: #a9b7cc !important;
+}
+</style>
+
 <div style="max-width:1300px;margin:0 auto;padding:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
         <h1>👤 信誉主体详情</h1>
@@ -69,6 +109,199 @@
             </strong>
         </div>
     </div>
+
+    <!-- V15.7-A5 subject comprehensive assessment card -->
+    {% if comprehensive_assessment %}
+    <div class="reputation-subject-assessment"
+         style="
+            --assessment-color:{{ comprehensive_assessment.color }};
+            --assessment-bg:{{ comprehensive_assessment.bg }};
+         ">
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:16px;
+            margin-bottom:16px;
+        ">
+            <div>
+                <h2 style="margin:0 0 7px 0;">
+                    🧠 综合风险研判
+                </h2>
+
+                <div style="
+                    font-size:24px;
+                    font-weight:bold;
+                    color:{{ comprehensive_assessment.color }};
+                ">
+                    {{ comprehensive_assessment.title }}
+                </div>
+            </div>
+
+            <div style="
+                background:{{ comprehensive_assessment.color }};
+                color:white;
+                border-radius:999px;
+                padding:8px 16px;
+                font-weight:bold;
+                white-space:nowrap;
+            ">
+                {{ comprehensive_assessment.level }}
+            </div>
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:12px;
+            margin-bottom:16px;
+        ">
+            <div class="reputation-subject-assessment-metric">
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:13px;">
+                    综合风险等级
+                </div>
+                <div style="
+                    margin-top:7px;
+                    font-size:20px;
+                    font-weight:bold;
+                    color:{{ comprehensive_assessment.color }};
+                ">
+                    {{ comprehensive_assessment.level }}
+                </div>
+            </div>
+
+            <div class="reputation-subject-assessment-metric">
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:13px;">
+                    关联事件
+                </div>
+                <div style="margin-top:5px;font-size:25px;font-weight:bold;">
+                    {{ comprehensive_assessment.event_count }}
+                </div>
+            </div>
+
+            <div class="reputation-subject-assessment-metric">
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:13px;">
+                    严重事件
+                </div>
+                <div style="
+                    margin-top:5px;
+                    font-size:25px;
+                    font-weight:bold;
+                    color:#dc2626;
+                ">
+                    {{ comprehensive_assessment.severe_event_count }}
+                </div>
+            </div>
+
+            <div class="reputation-subject-assessment-metric">
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:13px;">
+                    已核实事件
+                </div>
+                <div style="
+                    margin-top:5px;
+                    font-size:25px;
+                    font-weight:bold;
+                    color:#16a34a;
+                ">
+                    {{ comprehensive_assessment.verified_event_count }}
+                </div>
+            </div>
+
+            <div class="reputation-subject-assessment-metric">
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:13px;">
+                    证据链
+                </div>
+                <div style="
+                    margin-top:7px;
+                    font-size:20px;
+                    font-weight:bold;
+                    color:{{ comprehensive_assessment.color }};
+                ">
+                    {{ comprehensive_assessment.evidence_label }}
+                </div>
+                <div class="reputation-subject-assessment-muted"
+                     style="color:#64748b;font-size:12px;margin-top:3px;">
+                    强度：{{ comprehensive_assessment.evidence_strength }}
+                </div>
+            </div>
+        </div>
+
+        <div class="reputation-subject-assessment-panel"
+             style="margin-bottom:14px;">
+            <div style="
+                font-size:16px;
+                font-weight:bold;
+                line-height:1.8;
+            ">
+                <b>主体当前结论：</b>
+                {{ comprehensive_assessment.summary }}
+            </div>
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(
+                auto-fit,
+                minmax(250px, 1fr)
+            );
+            gap:14px;
+        ">
+            <div class="reputation-subject-assessment-panel">
+                <h3 style="margin-top:0;">
+                    📌 主要判断依据
+                </h3>
+
+                <ul style="
+                    margin:0;
+                    padding-left:20px;
+                    line-height:1.9;
+                ">
+                    {% for item in comprehensive_assessment.basis %}
+                        <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="reputation-subject-assessment-panel">
+                <h3 style="margin-top:0;">
+                    🧩 证据缺口
+                </h3>
+
+                <ul style="
+                    margin:0;
+                    padding-left:20px;
+                    line-height:1.9;
+                ">
+                    {% for item in comprehensive_assessment.evidence_gaps %}
+                        <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="reputation-subject-assessment-panel">
+                <h3 style="margin-top:0;">
+                    🎯 建议管理动作
+                </h3>
+
+                <ul style="
+                    margin:0;
+                    padding-left:20px;
+                    line-height:1.9;
+                ">
+                    {% for item in comprehensive_assessment.actions %}
+                        <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- V15.7-A1 subject disposal advice card -->
     {% if disposal_advice %}

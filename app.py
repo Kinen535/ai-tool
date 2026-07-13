@@ -10599,6 +10599,273 @@ def v156_reputation_subject_detail(subject_id):
     if high_impact_count > 0:
         disposal_advice["actions"].append("已存在高影响事件，后续复核时应优先查看事件详情。")
 
+    # V15.7-A5 subject comprehensive risk assessment
+    severe_event_count = 0
+    severe_verified_count = 0
+    disputed_event_count = 0
+    verified_event_count = 0
+    archived_event_count = 0
+
+    def event_value(item, key, default=""):
+        try:
+            value = item[key]
+        except Exception:
+            try:
+                value = item.get(key, default)
+            except Exception:
+                value = default
+
+        return value if value is not None else default
+
+    for item in events or []:
+        item_impact = str(
+            event_value(item, "impact_level", "")
+        ).strip()
+
+        item_status = str(
+            event_value(item, "status", "")
+        ).strip()
+
+        if item_impact in ("severe", "critical"):
+            severe_event_count += 1
+
+            if item_status == "verified":
+                severe_verified_count += 1
+
+        if item_status == "disputed":
+            disputed_event_count += 1
+
+        if item_status == "verified":
+            verified_event_count += 1
+
+        if item_status == "archived":
+            archived_event_count += 1
+
+    black_mark = (
+        trust_level in ("black", "blacklist")
+        or risk_level == "black"
+    )
+
+    high_risk_mark = (
+        risk_level == "danger"
+        or trust_level == "risky"
+    )
+
+    warning_mark = risk_level == "warning"
+
+    evidence_label = (
+        "完整"
+        if event_count > 0
+        else "缺失"
+    )
+
+    evidence_strength = "较低"
+
+    if event_count == 0:
+        evidence_strength = "较低"
+    elif verified_event_count > 0:
+        evidence_strength = "较高"
+    elif disputed_event_count == event_count:
+        evidence_strength = "待复核"
+    else:
+        evidence_strength = "中等"
+
+    basis = []
+    evidence_gaps = []
+
+    trust_cn = {
+        "trusted": "可信",
+        "risky": "存疑",
+        "black": "黑名单",
+        "blacklist": "黑名单",
+        "unknown": "未知",
+    }.get(trust_level, trust_level or "未知")
+
+    risk_cn = {
+        "normal": "正常",
+        "warning": "预警",
+        "danger": "高危",
+        "black": "黑名单",
+    }.get(risk_level, risk_level or "未知")
+
+    basis.append(
+        f"主体信任等级为“{trust_cn}”，风险等级为“{risk_cn}”。"
+    )
+
+    if event_count > 0:
+        basis.append(
+            f"当前共关联 {event_count} 条信誉事件，其中高影响事件 {high_impact_count} 条。"
+        )
+    else:
+        basis.append(
+            "当前尚未关联信誉事件，主体风险标记缺少事件证据支撑。"
+        )
+
+    if severe_event_count > 0:
+        basis.append(
+            f"关联事件中包含 {severe_event_count} 条严重或极严重事件。"
+        )
+
+    if verified_event_count > 0:
+        basis.append(
+            f"已有 {verified_event_count} 条事件完成核实。"
+        )
+
+    if disputed_event_count > 0:
+        basis.append(
+            f"另有 {disputed_event_count} 条事件仍处于争议状态。"
+        )
+
+    if event_count == 0:
+        evidence_gaps.append(
+            "尚无关联信誉事件，无法核对风险标记的具体事实依据。"
+        )
+
+    if high_impact_count > 0 and verified_event_count == 0:
+        evidence_gaps.append(
+            "存在高影响事件，但目前没有已核实事件，结论仍需人工确认。"
+        )
+
+    if disputed_event_count > 0:
+        evidence_gaps.append(
+            f"存在 {disputed_event_count} 条争议事件，不能单独作为最终处置依据。"
+        )
+
+    if not (row["game_id"] or "").strip():
+        evidence_gaps.append(
+            "主体游戏编号缺失，存在同名或身份误判风险。"
+        )
+
+    if black_mark:
+        comprehensive_assessment = {
+            "level": "极高风险",
+            "title": "黑名单综合研判",
+            "summary": "该主体已经具有明确黑名单标记，应当作为最高优先级风险对象管理。",
+            "actions": [
+                "暂停直接吸纳、合作、回流和关键资源分配。",
+                "核对游戏编号、曾用名和历史关联事件，确认主体身份。",
+                "解除黑名单前必须保留人工复核记录及有效反证。",
+            ],
+            "color": "#dc2626",
+            "bg": "#fef2f2",
+        }
+
+    elif high_risk_mark and severe_verified_count > 0:
+        comprehensive_assessment = {
+            "level": "重点风险",
+            "title": "严重事件已印证风险",
+            "summary": "该主体的高风险标记已经被已核实的严重事件进一步印证，建议纳入重点风险管理。",
+            "actions": [
+                "限制关键权限或重要管理岗位安排。",
+                "优先复核已核实的严重事件和责任关系。",
+                "后续招募、合作或回流必须由管理层人工确认。",
+            ],
+            "color": "#dc2626",
+            "bg": "#fef2f2",
+        }
+
+    elif high_risk_mark:
+        comprehensive_assessment = {
+            "level": "高危复核",
+            "title": "高风险标记待进一步核实",
+            "summary": "该主体存在危险或存疑标记，但仍需结合事件证据和核实状态形成最终结论。",
+            "actions": [
+                "查看全部关联事件及主体责任关系。",
+                "补充游戏编号、曾用名和身份核验资料。",
+                "复核完成前保持观察并限制关键权限。",
+            ],
+            "color": "#f97316",
+            "bg": "#fff7ed",
+        }
+
+    elif severe_verified_count > 0:
+        comprehensive_assessment = {
+            "level": "高影响风险",
+            "title": "存在已核实严重事件",
+            "summary": "该主体虽然没有直接高危标记，但关联了已核实的严重事件，不能按普通主体处理。",
+            "actions": [
+                "核对主体在严重事件中的责任角色。",
+                "根据责任程度考虑调整主体风险等级。",
+                "在管理决策中保留高影响事件提示。",
+            ],
+            "color": "#f97316",
+            "bg": "#fff7ed",
+        }
+
+    elif disputed_event_count > 0 and verified_event_count == 0:
+        comprehensive_assessment = {
+            "level": "争议待定",
+            "title": "当前证据尚未形成稳定结论",
+            "summary": "该主体关联的事件仍以争议记录为主，不宜直接升级为最终风险处置。",
+            "actions": [
+                "补充不同来源的证据和反证材料。",
+                "记录争议双方陈述及核实过程。",
+                "事件完成复核后重新进行综合研判。",
+            ],
+            "color": "#d97706",
+            "bg": "#fffbeb",
+        }
+
+    elif warning_mark or high_impact_count > 0:
+        comprehensive_assessment = {
+            "level": "持续观察",
+            "title": "存在需要持续关注的风险信号",
+            "summary": "该主体存在预警标记或高影响事件，但现阶段尚不足以直接列为高危主体。",
+            "actions": [
+                "持续补充后续行为和事件记录。",
+                "重点关注是否出现重复负面事件。",
+                "出现新的严重证据时及时升级风险等级。",
+            ],
+            "color": "#d97706",
+            "bg": "#fffbeb",
+        }
+
+    elif event_count == 0:
+        comprehensive_assessment = {
+            "level": "证据不足",
+            "title": "主体档案尚未形成证据闭环",
+            "summary": "当前没有关联事件，无法仅凭主体基础标记形成可靠的综合结论。",
+            "actions": [
+                "至少补充一条可核实的关联事件。",
+                "完善主体游戏编号、曾用名和来源信息。",
+                "证据补齐前仅作为基础档案保留。",
+            ],
+            "color": "#2563eb",
+            "bg": "#eff6ff",
+        }
+
+    else:
+        comprehensive_assessment = {
+            "level": "一般记录",
+            "title": "暂未发现明显综合风险",
+            "summary": "该主体当前没有明显高风险标记，现有事件也未形成严重风险组合。",
+            "actions": [
+                "继续保持主体资料和事件关系完整。",
+                "如后续出现新的高影响事件，再重新评估。",
+            ],
+            "color": "#16a34a",
+            "bg": "#ecfdf5",
+        }
+
+    if not evidence_gaps:
+        evidence_gaps.append(
+            "当前主体身份与事件证据基本完整，暂未发现明显证据缺口。"
+        )
+
+    comprehensive_assessment.update({
+        "basis": basis,
+        "evidence_gaps": evidence_gaps,
+        "event_count": event_count,
+        "high_impact_count": high_impact_count,
+        "severe_event_count": severe_event_count,
+        "severe_verified_count": severe_verified_count,
+        "verified_event_count": verified_event_count,
+        "disputed_event_count": disputed_event_count,
+        "archived_event_count": archived_event_count,
+        "evidence_label": evidence_label,
+        "evidence_strength": evidence_strength,
+    })
+
     conn.close()
 
     return render_template(
@@ -10607,6 +10874,7 @@ def v156_reputation_subject_detail(subject_id):
         events=events,
         evidence_summary=evidence_summary,
         disposal_advice=disposal_advice,
+        comprehensive_assessment=comprehensive_assessment,
         title="信誉主体详情",
     )
 

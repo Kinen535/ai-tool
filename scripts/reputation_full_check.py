@@ -251,6 +251,12 @@ def check_reputation_detail_chinese_visible() -> None:
             "评估结论",
             "检索风险结论",
             "风险结论",
+            "综合风险研判",
+            "综合风险等级",
+            "主体当前结论",
+            "主要判断依据",
+            "证据缺口",
+            "建议管理动作",
         ]:
             if key not in combined:
                 raise SystemExit(f"❌ 详情/检索页缺少中文关键内容：{key}")
