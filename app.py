@@ -374,7 +374,18 @@ def extract_snapshot_time(filename: str) -> str:
 
 def load_game_csv(file_storage) -> pd.DataFrame:
     df = read_csv_flexible(file_storage)
-    df.columns = [str(c).strip() for c in df.columns]
+
+    # V15.7-A2 csv header compatibility
+    # 兼容新旧赛季 CSV：
+    # 1）字段名前后空格
+    # 2）BOM 隐藏字符
+    # 3）同盟贡献排行 -> 贡献排行
+    # 4）所属阵营 -> 所属州
+    # 5）门阀 -> 分组
+    df.columns = [
+        str(c).replace("\ufeff", "").strip()
+        for c in df.columns
+    ]
 
     print("📊 原始列名:", df.columns.tolist())
 
@@ -383,6 +394,15 @@ def load_game_csv(file_storage) -> pd.DataFrame:
         if unnamed_cols:
             df = df.rename(columns={unnamed_cols[0]: "成员"})
 
+    alias_cols = {
+        "同盟贡献排行": "贡献排行",
+        "所属阵营": "所属州",
+    }
+
+    for src, dst in alias_cols.items():
+        if dst not in df.columns and src in df.columns:
+            df[dst] = df[src]
+
     if "门阀" in df.columns and "分组" not in df.columns:
         df["分组"] = df["门阀"]
 
@@ -390,14 +410,21 @@ def load_game_csv(file_storage) -> pd.DataFrame:
         "成员", "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
         "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值", "所属州", "分组",
     ]
+
     missing = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(f"周表缺少字段：{', '.join(missing)}")
+        raise ValueError(
+            "周表缺少字段："
+            + ", ".join(missing)
+            + "；当前识别到字段："
+            + ", ".join([str(c) for c in df.columns])
+        )
 
     numeric_cols = [
         "贡献排行", "贡献本周", "战功本周", "助攻本周", "捐献本周",
         "贡献总量", "战功总量", "助攻总量", "捐献总量", "势力值",
     ]
+
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
@@ -408,6 +435,7 @@ def load_game_csv(file_storage) -> pd.DataFrame:
 
     print("✅ 清洗后行数:", len(df))
     return df
+
 
 def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "") -> bool:
 
