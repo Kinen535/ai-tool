@@ -10487,6 +10487,95 @@ def v156_reputation_event_detail(event_id):
         subject_summary["main_subjects"] = summary_row["main_subjects"] or ""
         subject_summary["is_complete"] = subject_summary["subject_count"] > 0
 
+    # V15.7-A3 event impact assessment
+    impact_level = (row["impact_level"] or "").strip()
+    event_status = (row["status"] or "").strip()
+    subject_count = int(subject_summary.get("subject_count") or 0)
+    high_risk_count = int(subject_summary.get("high_risk_count") or 0)
+
+    if subject_count == 0:
+        impact_assessment = {
+            "level": "证据待补",
+            "title": "关联主体缺失",
+            "summary": "当前事件尚未关联信誉主体，证据链不完整，暂不适合形成最终风险结论。",
+            "actions": [
+                "优先补充涉及的玩家、账号、同盟或团体。",
+                "明确各主体在事件中的责任或关联角色。",
+                "补齐关联后重新评估事件影响。",
+            ],
+            "color": "#dc2626",
+            "bg": "#fef2f2",
+        }
+
+    elif event_status == "disputed":
+        impact_assessment = {
+            "level": "争议复核",
+            "title": "事件结论存在争议",
+            "summary": "该事件仍处于争议状态，不建议直接作为最终处置依据。",
+            "actions": [
+                "补充不同来源的证据或说明。",
+                "记录争议双方的陈述和反证。",
+                "完成复核后再调整事件状态及相关主体风险等级。",
+            ],
+            "color": "#f59e0b",
+            "bg": "#fffbeb",
+        }
+
+    elif impact_level in ("severe", "critical") and high_risk_count > 0:
+        impact_assessment = {
+            "level": "重点风险",
+            "title": "重点风险事件",
+            "summary": "该事件影响严重且关联高风险主体，建议列入重点风险档案并优先人工复核。",
+            "actions": [
+                "核对事件证据、时间和责任关系是否完整。",
+                "优先查看关联高风险主体的历史档案。",
+                "后续招募、回流或管理决策时重点提示。",
+            ],
+            "color": "#dc2626",
+            "bg": "#fef2f2",
+        }
+
+    elif impact_level in ("severe", "critical"):
+        impact_assessment = {
+            "level": "高影响",
+            "title": "高影响事件",
+            "summary": "该事件影响等级较高，建议保留完整证据并进行人工复核。",
+            "actions": [
+                "确认事件摘要和证据备注是否充分。",
+                "复核关联主体及其责任关系是否完整。",
+                "复核后决定是否提升相关主体风险等级。",
+            ],
+            "color": "#f97316",
+            "bg": "#fff7ed",
+        }
+
+    elif impact_level == "high" and high_risk_count > 0:
+        impact_assessment = {
+            "level": "风险复核",
+            "title": "高风险关联事件",
+            "summary": "该事件影响较高，并关联高风险主体，建议持续关注并人工复核。",
+            "actions": [
+                "检查高风险主体是否存在重复负面记录。",
+                "保留本事件作为后续风险判断依据。",
+                "如出现新的严重证据，再升级事件等级。",
+            ],
+            "color": "#f97316",
+            "bg": "#fff7ed",
+        }
+
+    else:
+        impact_assessment = {
+            "level": "历史留档",
+            "title": "普通信誉事件",
+            "summary": "该事件目前适合作为历史信誉记录保留，暂无需升级处置。",
+            "actions": [
+                "保持事件资料和关联主体完整。",
+                "如出现新证据，再重新评估影响等级。",
+            ],
+            "color": "#16a34a",
+            "bg": "#ecfdf5",
+        }
+
     conn.close()
 
     return render_template(
@@ -10495,6 +10584,7 @@ def v156_reputation_event_detail(event_id):
         relations=relations,
         title="信誉事件详情",
         subject_summary=subject_summary,
+        impact_assessment=impact_assessment,
     )
 
 
