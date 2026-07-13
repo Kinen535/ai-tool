@@ -3044,6 +3044,52 @@ def filter_result_df(
     return out.copy()
 
 
+# V15.7-H3 compare real pagination
+def paginate_compare_payload(
+    payload: dict,
+    page=1,
+    per_page: int = 50,
+) -> dict:
+    data = dict(payload or {})
+
+    all_rows = data.get("all_data")
+
+    if not isinstance(all_rows, list):
+        all_rows = data.get("data") or []
+
+    try:
+        page = int(page)
+    except (TypeError, ValueError):
+        page = 1
+
+    try:
+        per_page = int(per_page)
+    except (TypeError, ValueError):
+        per_page = 50
+
+    per_page = max(1, per_page)
+
+    total_rows = len(all_rows)
+    total_pages = max(
+        1,
+        (total_rows + per_page - 1) // per_page,
+    )
+
+    page = max(1, min(page, total_pages))
+
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    data["all_data"] = all_rows
+    data["data"] = all_rows[start:end]
+    data["page"] = page
+    data["total_pages"] = total_pages
+    data["total_rows"] = total_rows
+    data["per_page"] = per_page
+
+    return data
+
+
 # =========================
 # 路由
 # =========================
@@ -3342,6 +3388,17 @@ def compare():
                 print("✅ compare GET 使用 SQLite 分页结果")
 
                 cached_data = json.loads(row[0])
+
+                requested_page = request.args.get(
+                    "page",
+                    "1",
+                )
+
+                cached_data = paginate_compare_payload(
+                    cached_data,
+                    page=requested_page,
+                    per_page=50,
+                )
 
                 return render_template(
                     "compare.html",
@@ -3677,6 +3734,11 @@ def compare():
             "donate_max": donate_max,
 
             "data": result_rows,
+
+            # 保存完整筛选结果，供 GET 分页读取
+            "all_data": all_rows,
+
+            "total_rows": len(all_rows),
 
             "groups": group_rows,
 

@@ -284,6 +284,27 @@
                     {% endfor %}
                 </tbody>
         </table>
+        <div class="pagination" style="margin-top:20px;text-align:center;">
+
+            {% if page > 1 %}
+                <a href="/compare?page={{ page - 1 }}"
+                   class="btn">
+                   上一页
+                </a>
+            {% endif %}
+        
+            <span style="margin:0 15px;">
+                第 {{ page }} / {{ total_pages }} 页
+            </span>
+        
+            {% if page < total_pages %}
+                <a href="/compare?page={{ page + 1 }}"
+                   class="btn">
+                   下一页
+                </a>
+            {% endif %}
+        
+        </div>
     </div>
 </div>
 
