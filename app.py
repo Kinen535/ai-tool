@@ -2974,15 +2974,55 @@ def load_outputs():
     return result, groups, advice
 
 
-def filter_result_df(df: pd.DataFrame, team_keyword: str = "", pg_min=None, pg_max=None) -> pd.DataFrame:
+def filter_result_df(
+    df: pd.DataFrame,
+    team_keyword: str = "",
+    pg_min=None,
+    pg_max=None,
+    war_min=None,
+    war_max=None,
+    assist_min=None,
+    assist_max=None,
+    donate_min=None,
+    donate_max=None,
+) -> pd.DataFrame:
+    # V15.7-H1 compare multidimensional filter
     out = df.copy()
+
     if team_keyword and "分组" in out.columns:
-        out = out[out["分组"].astype(str).str.contains(team_keyword, na=False)]
-    if pg_min is not None and "势力增长" in out.columns:
-        out = out[out["势力增长"] >= pg_min]
-    if pg_max is not None and "势力增长" in out.columns:
-        out = out[out["势力增长"] <= pg_max]
-    return out
+        out = out[
+            out["分组"]
+            .astype(str)
+            .str.contains(team_keyword, na=False)
+        ]
+
+    range_filters = [
+        ("势力增长", pg_min, pg_max),
+        ("战功增长", war_min, war_max),
+        ("助攻增长", assist_min, assist_max),
+        ("捐献增长", donate_min, donate_max),
+    ]
+
+    for column, min_value, max_value in range_filters:
+        if column not in out.columns:
+            continue
+
+        values = pd.to_numeric(
+            out[column],
+            errors="coerce",
+        ).fillna(0)
+
+        mask = pd.Series(True, index=out.index)
+
+        if min_value is not None:
+            mask &= values >= min_value
+
+        if max_value is not None:
+            mask &= values <= max_value
+
+        out = out[mask]
+
+    return out.copy()
 
 
 # =========================
@@ -3233,6 +3273,12 @@ def compare():
     team_keyword = ""
     power_growth_min = ""
     power_growth_max = ""
+    war_min = ""
+    war_max = ""
+    assist_min = ""
+    assist_max = ""
+    donate_min = ""
+    donate_max = ""
 
     kick_text = ""
 
@@ -3334,6 +3380,30 @@ def compare():
             "power_growth_max", ""
         ).strip()
 
+        war_min = request.form.get(
+            "war_min", ""
+        ).strip()
+
+        war_max = request.form.get(
+            "war_max", ""
+        ).strip()
+
+        assist_min = request.form.get(
+            "assist_min", ""
+        ).strip()
+
+        assist_max = request.form.get(
+            "assist_max", ""
+        ).strip()
+
+        donate_min = request.form.get(
+            "donate_min", ""
+        ).strip()
+
+        donate_max = request.form.get(
+            "donate_max", ""
+        ).strip()
+
         compare_mode = request.form.get(
             "compare_mode",
             "auto"
@@ -3407,18 +3477,50 @@ def compare():
         )
 
         # ==================================================
-        # 势力过滤
+        # 多维增长过滤
         # ==================================================
-        pg_min = (
-            int(power_growth_min)
-            if power_growth_min
-            else None
-        )
+        def parse_optional_number(raw_value, field_label):
+            if raw_value == "":
+                return None
 
-        pg_max = (
-            int(power_growth_max)
-            if power_growth_max
-            else None
+            try:
+                return float(raw_value)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"{field_label}必须填写数字"
+                )
+
+        pg_min = parse_optional_number(
+            power_growth_min,
+            "势力增长最小值",
+        )
+        pg_max = parse_optional_number(
+            power_growth_max,
+            "势力增长最大值",
+        )
+        war_min_value = parse_optional_number(
+            war_min,
+            "战功增长最小值",
+        )
+        war_max_value = parse_optional_number(
+            war_max,
+            "战功增长最大值",
+        )
+        assist_min_value = parse_optional_number(
+            assist_min,
+            "助攻增长最小值",
+        )
+        assist_max_value = parse_optional_number(
+            assist_max,
+            "助攻增长最大值",
+        )
+        donate_min_value = parse_optional_number(
+            donate_min,
+            "捐献增长最小值",
+        )
+        donate_max_value = parse_optional_number(
+            donate_max,
+            "捐献增长最大值",
         )
 
         result = filter_result_df(
@@ -3426,7 +3528,46 @@ def compare():
             team_keyword=team_keyword,
             pg_min=pg_min,
             pg_max=pg_max,
+            war_min=war_min_value,
+            war_max=war_max_value,
+            assist_min=assist_min_value,
+            assist_max=assist_max_value,
+            donate_min=donate_min_value,
+            donate_max=donate_max_value,
         )
+
+        # 筛选后同步重算自动管理建议和分组统计
+        if result.empty:
+            advice = empty_advice()
+            groups = pd.DataFrame(
+                columns=["分组", "人数"]
+            )
+        else:
+            advice = {
+                "清理名单": result[
+                    result["分类"] == "清理名单"
+                ]["成员"].tolist(),
+                "警告名单": result[
+                    result["分类"] == "警告名单"
+                ]["成员"].tolist(),
+                "核心成员": result[
+                    result["分类"] == "核心成员"
+                ]["成员"].tolist(),
+                "未执行名单": result[
+                    result["执行状态"] == "完全摆烂"
+                ]["成员"].tolist(),
+            }
+
+            if "分组" in result.columns:
+                groups = (
+                    result.groupby("分组")
+                    .size()
+                    .reset_index(name="人数")
+                )
+            else:
+                groups = pd.DataFrame(
+                    columns=["分组", "人数"]
+                )
 
         # ==================================================
         # 排序
@@ -3499,6 +3640,13 @@ def compare():
 
             "power_growth_max":
             power_growth_max,
+
+            "war_min": war_min,
+            "war_max": war_max,
+            "assist_min": assist_min,
+            "assist_max": assist_max,
+            "donate_min": donate_min,
+            "donate_max": donate_max,
 
             "data": result_rows,
 
