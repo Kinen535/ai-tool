@@ -330,9 +330,343 @@ html[data-theme="dark"] [style*="color: #64748b"] {
 }
 </style>
 
+
+<!-- V15.7-H5C module dark adaptation -->
+<style>
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+) {
+    --module-surface: #152238;
+    --module-surface-hover: #1d2d47;
+    --module-surface-soft: #1a2941;
+    --module-border: #34445e;
+    --module-text: #e8eef8;
+    --module-muted: #aab7ca;
+    --module-number: #75a1ff;
+}
+
+/* 五个模块的白色业务卡片 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+:is(
+    .stat-card,
+    .radar-card,
+    .dashboard-box,
+    .health-box
+) {
+    background: var(--module-surface) !important;
+    color: var(--module-text) !important;
+    border: 1px solid var(--module-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* 模板中直接写死的纯白背景 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="background:white"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="background: white"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="background:#ffffff"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="background: #ffffff"] {
+    background: var(--module-surface) !important;
+    color: var(--module-text) !important;
+    border-color: var(--module-border) !important;
+}
+
+/* 卡片主数字 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+:is(
+    .stat-value,
+    .radar-number,
+    .dashboard-big,
+    .health-score
+) {
+    color: var(--module-number) !important;
+}
+
+/* 卡片标题和说明 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+:is(
+    .stat-title,
+    .radar-title,
+    .radar-pct,
+    .health-level,
+    .health-desc,
+    .page-desc
+) {
+    color: var(--module-muted) !important;
+}
+
+/* 统计卡片中的普通标题及数字 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+.stat-card {
+    color: var(--module-muted) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+.stat-card h2 {
+    color: var(--module-number) !important;
+}
+
+/* 驾驶舱列表行 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/staff"]
+)
+.dashboard-row {
+    color: var(--module-text) !important;
+    border-color: var(--module-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/staff"]
+)
+.dashboard-row:hover {
+    background: var(--module-surface-hover) !important;
+}
+
+/* 模板中写死的灰色说明文字 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#666"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color: #666"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#888"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#999"] {
+    color: var(--module-muted) !important;
+}
+
+/* 列表分隔线 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="border-bottom:1px solid #eee"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="border-bottom: 1px solid #eee"] {
+    border-bottom-color: var(--module-border) !important;
+}
+
+/* 风险、身份、人才模块链接 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"]
+)
+:is(.stat-card, .radar-card, .dashboard-box) a {
+    color: #9dc2ff;
+}
+
+/* AI幕僚中心顶部紫色推演区域 */
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background:#faf5ff"],
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background: #faf5ff"] {
+    background: #241d38 !important;
+    color: var(--module-text) !important;
+    border-color: #7651b5 !important;
+}
+
+/* AI幕僚中心浅灰表头和标签 */
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background:#f5f7fa"],
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background: #f5f7fa"],
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background:#f3f4f6"],
+html[data-theme="dark"]
+body[data-page-path="/staff"]
+[style*="background: #f3f4f6"] {
+    background: #22314a !important;
+    color: var(--module-text) !important;
+}
+
+/* AI日报横线 */
+html[data-theme="dark"]
+body[data-page-path="/ai/daily"] hr {
+    border-color: var(--module-border) !important;
+}
+
+/* 深夜模式中仍保持风险语义色 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#dc2626"] {
+    color: #ff6b6b !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#d97706"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#d48806"] {
+    color: #fbbf24 !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#22c55e"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/risk"],
+    [data-page-path^="/identity"],
+    [data-page-path="/talent"],
+    [data-page-path="/ai/daily"],
+    [data-page-path="/staff"]
+)
+[style*="color:#16a34a"] {
+    color: #4ade80 !important;
+}
+</style>
+
 </head>
 
-<body>
+<body data-page-path="{{ request.path }}">
 
 <!-- 手机端遮罩 -->
 <div class="mobile-overlay"
