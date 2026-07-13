@@ -21,6 +21,185 @@
 <!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
+
+<!-- V15.7-H5 global dark theme -->
+<script>
+(function () {
+    try {
+        var saved = localStorage.getItem("alliance-ui-theme");
+        var systemDark = window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        document.documentElement.dataset.theme =
+            saved || (systemDark ? "dark" : "light");
+    } catch (error) {
+        document.documentElement.dataset.theme = "light";
+    }
+})();
+</script>
+
+<style>
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg-main: #08111f;
+    --bg-card: #111b2e;
+    --bg-soft: #18243a;
+
+    --text-main: #e8eef8;
+    --text-sub: #a9b6ca;
+    --text-light: #7f8ca3;
+
+    --border-color: #2a3850;
+    --primary-soft: rgba(76, 124, 255, 0.15);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.32);
+    --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .layout,
+html[data-theme="dark"] .main-wrapper,
+html[data-theme="dark"] .main-content {
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+html[data-theme="dark"] .topbar {
+    background: rgba(11, 20, 35, 0.92);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel-card,
+html[data-theme="dark"] .dashboard-card {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+html[data-theme="dark"] .input,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background: #0e192a;
+    color: var(--text-main);
+    border-color: #33435d;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #77859d;
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] th,
+html[data-theme="dark"] td {
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] thead th {
+    background: #1a2840;
+}
+
+html[data-theme="dark"] tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:#ffffff"],
+html[data-theme="dark"] [style*="background: #ffffff"] {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] [style*="background:#f8fafc"],
+html[data-theme="dark"] [style*="background: #f8fafc"],
+html[data-theme="dark"] [style*="background:#f3f4f6"],
+html[data-theme="dark"] [style*="background: #f3f4f6"],
+html[data-theme="dark"] [style*="background:#eff6ff"],
+html[data-theme="dark"] [style*="background: #eff6ff"] {
+    background: var(--bg-soft) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] [style*="background:#fff7ed"],
+html[data-theme="dark"] [style*="background:#fffbeb"] {
+    background: #302719 !important;
+}
+
+html[data-theme="dark"] [style*="background:#fef2f2"],
+html[data-theme="dark"] [style*="background:#fee2e2"] {
+    background: #352027 !important;
+}
+
+html[data-theme="dark"] [style*="background:#ecfdf5"] {
+    background: #163027 !important;
+}
+
+html[data-theme="dark"] .compare-table-shell thead th {
+    background: #1a2840 !important;
+}
+
+html[data-theme="dark"] .compare-table-shell tbody tr {
+    --compare-row-bg: var(--bg-card);
+}
+
+html[data-theme="dark"] .compare-table-shell tbody tr.row-red {
+    --compare-row-bg: #352027;
+}
+
+html[data-theme="dark"] .compare-table-shell tbody tr.row-yellow {
+    --compare-row-bg: #302719;
+}
+
+.theme-toggle-button {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    min-height: 44px;
+    padding: 10px 16px;
+
+    color: var(--text-main);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    box-shadow: var(--shadow-lg);
+
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.theme-toggle-button:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .theme-toggle-button {
+        right: 14px;
+        bottom: 14px;
+        padding: 9px 12px;
+    }
+
+    .theme-toggle-text {
+        display: none;
+    }
+}
+</style>
+
 </head>
 
 <body>
@@ -590,5 +769,66 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <!-- V15.5-A3.4 archive boundary navigation fix -->
+
+<button
+    type="button"
+    id="themeToggleButton"
+    class="theme-toggle-button"
+    aria-label="切换日间或深夜模式"
+    title="切换日间或深夜模式"
+>
+    <span id="themeToggleIcon">🌙</span>
+    <span id="themeToggleText" class="theme-toggle-text">深夜模式</span>
+</button>
+
+<script>
+(function () {
+    var root = document.documentElement;
+    var button = document.getElementById("themeToggleButton");
+    var icon = document.getElementById("themeToggleIcon");
+    var text = document.getElementById("themeToggleText");
+
+    if (!button || !icon || !text) {
+        return;
+    }
+
+    function getTheme() {
+        return root.dataset.theme === "dark" ? "dark" : "light";
+    }
+
+    function updateButton() {
+        var dark = getTheme() === "dark";
+
+        icon.textContent = dark ? "☀️" : "🌙";
+        text.textContent = dark ? "日间模式" : "深夜模式";
+
+        button.setAttribute(
+            "aria-label",
+            dark ? "切换为日间模式" : "切换为深夜模式"
+        );
+    }
+
+    button.addEventListener("click", function () {
+        var nextTheme =
+            getTheme() === "dark" ? "light" : "dark";
+
+        root.dataset.theme = nextTheme;
+
+        try {
+            localStorage.setItem(
+                "alliance-ui-theme",
+                nextTheme
+            );
+        } catch (error) {
+            console.warn("主题偏好保存失败");
+        }
+
+        updateButton();
+    });
+
+    updateButton();
+})();
+</script>
+
 </body>
 </html>
