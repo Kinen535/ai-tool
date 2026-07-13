@@ -242,7 +242,7 @@ def check_reputation_detail_chinese_visible() -> None:
                 if key in text:
                     raise SystemExit(f"❌ 详情/检索页可见文字仍出现英文状态：{url} -> {key}")
 
-        for key in ["证据链", "严重"]:
+        for key in ["证据链", "严重", "处置建议", "建议级别"]:
             if key not in combined:
                 raise SystemExit(f"❌ 详情/检索页缺少中文关键内容：{key}")
 

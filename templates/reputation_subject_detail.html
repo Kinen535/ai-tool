@@ -70,6 +70,38 @@
         </div>
     </div>
 
+    <!-- V15.7-A1 subject disposal advice card -->
+    {% if disposal_advice %}
+    <div style="background:{{ disposal_advice.bg }};border-left:6px solid {{ disposal_advice.color }};border-radius:18px;padding:22px;margin-bottom:20px;">
+        <h2 style="margin-top:0;">🧭 处置建议</h2>
+
+        <div style="display:grid;grid-template-columns:0.35fr 0.65fr;gap:16px;align-items:start;">
+            <div style="background:white;border-radius:14px;padding:16px;text-align:center;">
+                <div style="color:#64748b;font-size:13px;">建议级别</div>
+                <div style="font-size:26px;font-weight:bold;color:{{ disposal_advice.color }};">
+                    {{ disposal_advice.level }}
+                </div>
+                <div style="margin-top:8px;color:#0f172a;font-weight:bold;">
+                    {{ disposal_advice.title }}
+                </div>
+            </div>
+
+            <div style="background:white;border-radius:14px;padding:16px;">
+                <div style="font-weight:bold;color:#0f172a;margin-bottom:10px;">
+                    {{ disposal_advice.summary }}
+                </div>
+
+                <div style="color:#64748b;font-size:13px;margin-bottom:8px;">建议动作：</div>
+                <ul style="margin:0;padding-left:20px;color:#475569;line-height:1.8;">
+                    {% for action in disposal_advice.actions %}
+                        <li>{{ action }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 <h2>① 主体画像</h2>
 
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
@@ -99,9 +131,9 @@
             <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
                 <div>风险等级</div>
                 {% if row.risk_level == "black" %}
-                    <h2 style="color:#dc2626;">黑</h2>
+                    <h2 style="color:#dc2626;">黑名单</h2>
                 {% elif row.risk_level == "danger" %}
-                    <h2 style="color:#dc2626;">危险</h2>
+                    <h2 style="color:#dc2626;">高危</h2>
                 {% elif row.risk_level == "warning" %}
                     <h2 style="color:#f97316;">预警</h2>
                 {% else %}

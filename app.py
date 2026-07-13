@@ -10082,6 +10082,70 @@ def v156_reputation_subject_detail(subject_id):
         evidence_summary["latest_event_title"] = latest_event_row["title"] or ""
         evidence_summary["latest_event_time"] = latest_event_row["event_time"] or evidence_summary["latest_event_time"]
 
+    # V15.7-A1 subject disposal advice
+    trust_level = (row["trust_level"] or "").strip()
+    risk_level = (row["risk_level"] or "").strip()
+    event_count = int(evidence_summary.get("event_count") or 0)
+    high_impact_count = int(evidence_summary.get("high_impact_count") or 0)
+
+    if trust_level in ("black", "blacklist") or risk_level == "black":
+        disposal_advice = {
+            "level": "重点处置",
+            "title": "黑名单主体",
+            "summary": "该主体已进入黑名单范围，建议重点标记，避免重新吸纳或分配关键资源。",
+            "actions": [
+                "保留当前证据链，避免后续遗忘或误判。",
+                "如涉及跨赛季回流，建议先人工复核历史事件。",
+                "不要仅凭口头说明解除风险标记，必须补充反证记录。",
+            ],
+            "color": "#dc2626",
+            "bg": "#fef2f2",
+        }
+    elif risk_level == "danger" or trust_level == "risky" or high_impact_count > 0:
+        disposal_advice = {
+            "level": "高危复核",
+            "title": "高风险主体",
+            "summary": "该主体存在高风险信号，建议人工复核并补充证据，不宜直接放行。",
+            "actions": [
+                "优先核对关联事件是否完整。",
+                "确认是否存在严重事件或多次负面记录。",
+                "复核完成前，建议保持观察或限制关键权限。",
+            ],
+            "color": "#f97316",
+            "bg": "#fff7ed",
+        }
+    elif risk_level == "warning":
+        disposal_advice = {
+            "level": "持续观察",
+            "title": "预警主体",
+            "summary": "该主体目前处于预警状态，建议继续观察，不建议直接处置。",
+            "actions": [
+                "继续补充后续表现记录。",
+                "如出现新负面事件，再升级风险等级。",
+                "暂不建议进入黑名单。",
+            ],
+            "color": "#f59e0b",
+            "bg": "#fffbeb",
+        }
+    else:
+        disposal_advice = {
+            "level": "正常记录",
+            "title": "暂无明显风险",
+            "summary": "该主体当前没有明显高风险信号，建议作为普通信誉档案保留。",
+            "actions": [
+                "保持档案记录完整。",
+                "如后续出现事件，再补充证据链。",
+            ],
+            "color": "#16a34a",
+            "bg": "#ecfdf5",
+        }
+
+    if event_count == 0:
+        disposal_advice["actions"].insert(0, "当前证据链缺失，建议先补充至少一条关联事件。")
+
+    if high_impact_count > 0:
+        disposal_advice["actions"].append("已存在高影响事件，后续复核时应优先查看事件详情。")
+
     conn.close()
 
     return render_template(
@@ -10089,6 +10153,7 @@ def v156_reputation_subject_detail(subject_id):
         row=row,
         events=events,
         evidence_summary=evidence_summary,
+        disposal_advice=disposal_advice,
         title="信誉主体详情",
     )
 
