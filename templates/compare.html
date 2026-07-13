@@ -38,7 +38,26 @@
 
     <div>
         <label>团关键词筛选</label>
-        <input class="input" type="text" name="team_keyword" value="{{ team_keyword }}">
+        <input
+            class="input"
+            type="text"
+            name="team_keyword"
+            value="{{ team_keyword or '' }}"
+            placeholder="输入完整或部分团名"
+        >
+
+        <!-- V15.7-H2 member search input -->
+        <label style="margin-top:14px;">成员姓名搜索</label>
+        <input
+            class="input"
+            type="text"
+            name="member_keyword"
+            value="{{ member_keyword or '' }}"
+            placeholder="输入完整或部分成员名"
+        >
+        <div style="margin-top:6px;font-size:12px;color:#64748b;">
+            支持模糊搜索，可与战功、助攻、捐献、势力范围组合使用。
+        </div>
     </div>
 
     <div>

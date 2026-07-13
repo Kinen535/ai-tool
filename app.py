@@ -2977,6 +2977,7 @@ def load_outputs():
 def filter_result_df(
     df: pd.DataFrame,
     team_keyword: str = "",
+    member_keyword: str = "",
     pg_min=None,
     pg_max=None,
     war_min=None,
@@ -2993,7 +2994,25 @@ def filter_result_df(
         out = out[
             out["分组"]
             .astype(str)
-            .str.contains(team_keyword, na=False)
+            .str.contains(
+                team_keyword,
+                case=False,
+                regex=False,
+                na=False,
+            )
+        ]
+
+    # V15.7-H2 compare member search
+    if member_keyword and "成员" in out.columns:
+        out = out[
+            out["成员"]
+            .astype(str)
+            .str.contains(
+                member_keyword,
+                case=False,
+                regex=False,
+                na=False,
+            )
         ]
 
     range_filters = [
@@ -3271,6 +3290,7 @@ def compare():
     compare_mode = "auto"
 
     team_keyword = ""
+    member_keyword = ""
     power_growth_min = ""
     power_growth_max = ""
     war_min = ""
@@ -3340,6 +3360,8 @@ def compare():
 
             team_keyword="",
 
+            member_keyword="",
+
             power_growth_min="",
 
             power_growth_max="",
@@ -3370,6 +3392,10 @@ def compare():
 
         team_keyword = request.form.get(
             "team_keyword", ""
+        ).strip()
+
+        member_keyword = request.form.get(
+            "member_keyword", ""
         ).strip()
 
         power_growth_min = request.form.get(
@@ -3526,6 +3552,7 @@ def compare():
         result = filter_result_df(
             result,
             team_keyword=team_keyword,
+            member_keyword=member_keyword,
             pg_min=pg_min,
             pg_max=pg_max,
             war_min=war_min_value,
@@ -3634,6 +3661,7 @@ def compare():
             "times": times,
 
             "team_keyword": team_keyword,
+            "member_keyword": member_keyword,
 
             "power_growth_min":
             power_growth_min,
