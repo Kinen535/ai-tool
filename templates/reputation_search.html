@@ -2,6 +2,45 @@
 
 {% block content %}
 
+<style>
+.reputation-search-risk-card {
+    background: var(--risk-bg);
+    border-left: 6px solid var(--risk-color);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+.reputation-search-risk-metric {
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 14px;
+    padding: 15px;
+    text-align: center;
+}
+
+.reputation-search-risk-detail {
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 14px;
+    padding: 18px;
+}
+
+html[data-theme="dark"] .reputation-search-risk-card {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-search-risk-metric,
+html[data-theme="dark"] .reputation-search-risk-detail {
+    background: #1d2d47 !important;
+    color: #e8eef8 !important;
+    border: 1px solid #364760;
+}
+
+html[data-theme="dark"] .reputation-search-risk-muted {
+    color: #a9b7cc !important;
+}
+</style>
+
 <div style="max-width:1500px;margin:0 auto;padding:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
         <h1>🔎 信誉检索</h1>
@@ -36,6 +75,135 @@
         </form>
     </div>
 
+
+    <!-- V15.7-A4 search risk conclusion card -->
+    {% if q and search_risk_conclusion %}
+    <div class="reputation-search-risk-card"
+         style="
+            --risk-color:{{ search_risk_conclusion.color }};
+            --risk-bg:{{ search_risk_conclusion.bg }};
+         ">
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:16px;
+            align-items:flex-start;
+            margin-bottom:16px;
+        ">
+            <div>
+                <h2 style="margin:0 0 6px 0;">
+                    🧭 检索风险结论
+                </h2>
+
+                <div style="
+                    font-size:24px;
+                    font-weight:bold;
+                    color:{{ search_risk_conclusion.color }};
+                ">
+                    {{ search_risk_conclusion.title }}
+                </div>
+            </div>
+
+            <div style="
+                background:{{ search_risk_conclusion.color }};
+                color:white;
+                border-radius:999px;
+                padding:8px 15px;
+                font-weight:bold;
+                white-space:nowrap;
+            ">
+                {{ search_risk_conclusion.level }}
+            </div>
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:12px;
+            margin-bottom:16px;
+        ">
+            <div class="reputation-search-risk-metric">
+                <div class="reputation-search-risk-muted"
+                     style="color:#64748b;font-size:13px;">
+                    匹配主体
+                </div>
+                <div style="font-size:25px;font-weight:bold;margin-top:5px;">
+                    {{ search_risk_conclusion.subject_total }}
+                </div>
+            </div>
+
+            <div class="reputation-search-risk-metric">
+                <div class="reputation-search-risk-muted"
+                     style="color:#64748b;font-size:13px;">
+                    匹配事件
+                </div>
+                <div style="font-size:25px;font-weight:bold;margin-top:5px;">
+                    {{ search_risk_conclusion.event_total }}
+                </div>
+            </div>
+
+            <div class="reputation-search-risk-metric">
+                <div class="reputation-search-risk-muted"
+                     style="color:#64748b;font-size:13px;">
+                    严重事件
+                </div>
+                <div style="
+                    font-size:25px;
+                    font-weight:bold;
+                    margin-top:5px;
+                    color:#dc2626;
+                ">
+                    {{ search_risk_conclusion.severe_event_count }}
+                </div>
+            </div>
+
+            <div class="reputation-search-risk-metric">
+                <div class="reputation-search-risk-muted"
+                     style="color:#64748b;font-size:13px;">
+                    证据链
+                </div>
+                <div style="
+                    font-size:21px;
+                    font-weight:bold;
+                    margin-top:7px;
+                    color:{{ search_risk_conclusion.color }};
+                ">
+                    {{ search_risk_conclusion.evidence_label }}
+                </div>
+            </div>
+        </div>
+
+        <div class="reputation-search-risk-detail">
+            <div style="line-height:1.8;font-weight:600;">
+                <b>风险结论：</b>
+                {{ search_risk_conclusion.summary }}
+            </div>
+
+            <div style="
+                margin-top:10px;
+                line-height:1.8;
+                color:#475569;
+            "
+            class="reputation-search-risk-muted">
+                <b>处置建议：</b>
+                {{ search_risk_conclusion.advice }}
+            </div>
+
+            {% if search_risk_conclusion.disputed_event_count > 0 %}
+            <div style="
+                margin-top:10px;
+                color:#d97706;
+                font-weight:bold;
+            ">
+                ⚠️ 其中包含
+                {{ search_risk_conclusion.disputed_event_count }}
+                条争议事件，暂不宜作为单一最终依据。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- V15.6-A10 quick action panel -->
     {% if q %}

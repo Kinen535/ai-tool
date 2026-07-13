@@ -9914,6 +9914,192 @@ def v156_reputation_search():
     except Exception as e:
         print("⚠️ V15.6-A21 search evidence chain summary error:", e)
 
+    # V15.7-A4 search risk conclusion
+    search_risk_conclusion = None
+
+    if q:
+        subject_rows = result.get("subjects", []) if isinstance(result, dict) else []
+        event_rows = result.get("events", []) if isinstance(result, dict) else []
+
+        def row_value(item, key, default=""):
+            try:
+                value = item[key]
+            except Exception:
+                try:
+                    value = item.get(key, default)
+                except Exception:
+                    value = default
+
+            return value if value is not None else default
+
+        subject_total = len(subject_rows)
+        event_total = len(event_rows)
+
+        black_subject_count = 0
+        high_risk_subject_count = 0
+
+        for item in subject_rows:
+            risk_level = str(row_value(item, "risk_level")).strip()
+            trust_level = str(row_value(item, "trust_level")).strip()
+
+            if risk_level == "black" or trust_level == "black":
+                black_subject_count += 1
+
+            if (
+                risk_level in ("danger", "black")
+                or trust_level in ("risky", "black")
+            ):
+                high_risk_subject_count += 1
+
+        severe_event_count = 0
+        high_impact_event_count = 0
+        disputed_event_count = 0
+
+        for item in event_rows:
+            impact_level = str(row_value(item, "impact_level")).strip()
+            event_status = str(row_value(item, "status")).strip()
+
+            if impact_level in ("severe", "critical"):
+                severe_event_count += 1
+
+            if impact_level in ("high", "severe", "critical"):
+                high_impact_event_count += 1
+
+            if event_status == "disputed":
+                disputed_event_count += 1
+
+        subject_missing_evidence_count = 0
+
+        for item in subject_rows:
+            try:
+                subject_id = int(row_value(item, "id", 0) or 0)
+            except Exception:
+                subject_id = 0
+
+            stat = subject_evidence_map.get(subject_id, {})
+
+            if not stat or not stat.get("is_complete"):
+                subject_missing_evidence_count += 1
+
+        event_missing_subject_count = 0
+
+        for item in event_rows:
+            try:
+                event_id = int(row_value(item, "id", 0) or 0)
+            except Exception:
+                event_id = 0
+
+            stat = event_subject_summary_map.get(event_id, {})
+
+            if not stat or not stat.get("is_complete"):
+                event_missing_subject_count += 1
+
+        evidence_missing_count = (
+            subject_missing_evidence_count
+            + event_missing_subject_count
+        )
+
+        matched_total = subject_total + event_total
+
+        if matched_total == 0:
+            evidence_label = "无档案"
+        elif evidence_missing_count == 0:
+            evidence_label = "完整"
+        else:
+            evidence_label = "待补"
+
+        if matched_total == 0:
+            search_risk_conclusion = {
+                "level": "未命中",
+                "title": "未命中信誉档案",
+                "summary": "当前关键词没有匹配到已有信誉主体或信誉事件。",
+                "advice": "可核对关键词是否准确；如属于新的玩家、账号或事件，可以进入快速处理区建立档案。",
+                "color": "#2563eb",
+                "bg": "#eff6ff",
+            }
+
+        elif black_subject_count > 0:
+            search_risk_conclusion = {
+                "level": "高风险",
+                "title": "命中黑名单主体",
+                "summary": "检索结果命中了黑名单主体，应当视为高优先级风险信号。",
+                "advice": "暂停直接吸纳、合作或回流，优先核对主体身份、历史事件、证据来源和关联责任。",
+                "color": "#dc2626",
+                "bg": "#fef2f2",
+            }
+
+        elif high_risk_subject_count > 0 and severe_event_count > 0:
+            search_risk_conclusion = {
+                "level": "重点风险",
+                "title": "命中重点风险记录",
+                "summary": "检索结果同时包含高风险主体和严重事件，风险信号相互印证。",
+                "advice": "谨慎吸纳或合作，必须完成身份核验、历史事件复核和管理层人工确认。",
+                "color": "#dc2626",
+                "bg": "#fef2f2",
+            }
+
+        elif high_risk_subject_count > 0:
+            search_risk_conclusion = {
+                "level": "风险复核",
+                "title": "命中高风险主体",
+                "summary": "检索结果包含危险、黑名单或低信任主体，需要进一步查看历史证据。",
+                "advice": "不要仅凭名称作最终判断，应结合游戏编号、曾用名、关联事件和证据完整度人工复核。",
+                "color": "#f97316",
+                "bg": "#fff7ed",
+            }
+
+        elif severe_event_count > 0:
+            search_risk_conclusion = {
+                "level": "高影响",
+                "title": "命中严重事件",
+                "summary": "检索结果包含严重或极严重事件，可能对后续招募和管理决策产生重大影响。",
+                "advice": "优先查看事件详情、关联主体及处理状态，完成复核前保持谨慎。",
+                "color": "#f97316",
+                "bg": "#fff7ed",
+            }
+
+        elif disputed_event_count > 0:
+            search_risk_conclusion = {
+                "level": "争议复核",
+                "title": "存在争议事件",
+                "summary": "检索结果包含尚未形成稳定结论的争议事件。",
+                "advice": "暂不直接形成最终处置结论，应补充不同来源证据并完成人工复核。",
+                "color": "#d97706",
+                "bg": "#fffbeb",
+            }
+
+        elif evidence_missing_count > 0:
+            search_risk_conclusion = {
+                "level": "证据待补",
+                "title": "证据链不完整",
+                "summary": "检索结果已命中档案，但部分主体缺少事件依据，或部分事件缺少关联主体。",
+                "advice": "优先补充主体与事件之间的关联关系，再决定是否进行风险升级或处置。",
+                "color": "#d97706",
+                "bg": "#fffbeb",
+            }
+
+        else:
+            search_risk_conclusion = {
+                "level": "一般记录",
+                "title": "命中普通信誉档案",
+                "summary": "当前检索结果以普通历史记录为主，暂未发现明显的高风险组合。",
+                "advice": "可以作为历史参考保留；正式招募或合作前仍应核对游戏编号和主体身份。",
+                "color": "#16a34a",
+                "bg": "#ecfdf5",
+            }
+
+        search_risk_conclusion.update({
+            "subject_total": subject_total,
+            "event_total": event_total,
+            "black_subject_count": black_subject_count,
+            "high_risk_subject_count": high_risk_subject_count,
+            "severe_event_count": severe_event_count,
+            "high_impact_event_count": high_impact_event_count,
+            "disputed_event_count": disputed_event_count,
+            "evidence_missing_count": evidence_missing_count,
+            "evidence_label": evidence_label,
+        })
+
     conn.close()
 
     return render_template(
@@ -9922,6 +10108,7 @@ def v156_reputation_search():
         q=q,
         subject_evidence_map=subject_evidence_map,
         event_subject_summary_map=event_subject_summary_map,
+        search_risk_conclusion=search_risk_conclusion,
         title="信誉检索",
     )
 
