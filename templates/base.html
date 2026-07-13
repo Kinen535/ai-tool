@@ -664,6 +664,517 @@ body:is(
 }
 </style>
 
+
+<!-- V15.7-H5D second module dark adaptation -->
+<style>
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+) {
+    --h5d-surface: #152238;
+    --h5d-surface-2: #192840;
+    --h5d-surface-3: #20304a;
+    --h5d-border: #364760;
+    --h5d-text: #e8eef8;
+    --h5d-muted: #a9b7cc;
+    --h5d-blue: #83adff;
+    --h5d-purple: #2b2340;
+    --h5d-green: #17352c;
+    --h5d-amber: #3a2f1c;
+    --h5d-red: #3b222b;
+    --h5d-indigo: #202b4a;
+}
+
+/* =====================================================
+   通用白色、浅灰、浅蓝业务面板
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+[style*="background:white"],
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+[style*="background: white"],
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+[style*="background:#fff"],
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+[style*="background: #fff"] {
+    background: var(--h5d-surface) !important;
+    color: var(--h5d-text) !important;
+    border-color: var(--h5d-border) !important;
+}
+
+/* 浅灰 / 浅蓝 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+:is(
+    [style*="background:#f8fafc"],
+    [style*="background:#f1f5f9"],
+    [style*="background:#f3f4f6"],
+    [style*="background:#f5f7fa"],
+    [style*="background:#eff6ff"],
+    [style*="background:#eef6ff"]
+) {
+    background: var(--h5d-surface-2) !important;
+    color: var(--h5d-text) !important;
+    border-color: var(--h5d-border) !important;
+}
+
+/* 紫色推演、筛选区域 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"]
+)
+:is(
+    [style*="background:#faf5ff"],
+    [style*="background:#f5f3ff"],
+    [style*="background:#f3e8ff"]
+) {
+    background: var(--h5d-purple) !important;
+    color: var(--h5d-text) !important;
+    border-color: #7454ad !important;
+}
+
+/* 绿色业务区域 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="background:#ecfdf5"],
+    [style*="background:#f0fdf4"]
+) {
+    background: var(--h5d-green) !important;
+    color: var(--h5d-text) !important;
+    border-color: #28765d !important;
+}
+
+/* 橙黄业务区域 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="background:#fff7ed"],
+    [style*="background:#fffbeb"],
+    [style*="background:#ffedd5"]
+) {
+    background: var(--h5d-amber) !important;
+    color: var(--h5d-text) !important;
+    border-color: #8b6426 !important;
+}
+
+/* 红色风险区域 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="background:#fef2f2"],
+    [style*="background:#fee2e2"]
+) {
+    background: var(--h5d-red) !important;
+    color: var(--h5d-text) !important;
+    border-color: #8f495b !important;
+}
+
+/* 淡紫蓝卡片 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+[style*="background:#eef2ff"] {
+    background: var(--h5d-indigo) !important;
+    color: var(--h5d-text) !important;
+    border-color: #5067a3 !important;
+}
+
+/* =====================================================
+   统计卡片
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+.stat-card {
+    background: var(--h5d-surface-2) !important;
+    color: var(--h5d-muted) !important;
+    border: 1px solid var(--h5d-border) !important;
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.22) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+.stat-card h2 {
+    color: var(--h5d-blue) !important;
+}
+
+/* =====================================================
+   渐变面板：战略推演等页面
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+[style*="linear-gradient"] {
+    background: linear-gradient(
+        135deg,
+        #17243a 0%,
+        #211f38 100%
+    ) !important;
+    color: var(--h5d-text) !important;
+    border-color: var(--h5d-border) !important;
+}
+
+/* =====================================================
+   深夜文字对比度
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+:is(
+    [style*="color:#374151"],
+    [style*="color:#475569"],
+    [style*="color:#64748b"],
+    [style*="color:#6b7280"],
+    [style*="color:#666"],
+    [style*="color:#888"],
+    [style*="color:#999"]
+) {
+    color: var(--h5d-muted) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+:is(h1, h2, h3, h4, p, li, td, th, label) {
+    text-shadow: none;
+}
+
+/* 保留语义色，并提高亮度 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+[style*="color:#2563eb"] {
+    color: #75a7ff !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="color:#dc2626"],
+    [style*="color:#b91c1c"],
+    [style*="color:#ef4444"]
+) {
+    color: #ff6f79 !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="color:#f97316"],
+    [style*="color:#ea580c"],
+    [style*="color:#d97706"],
+    [style*="color:#b45309"]
+) {
+    color: #ffb24c !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    [style*="color:#16a34a"],
+    [style*="color:#15803d"],
+    [style*="color:#22c55e"]
+) {
+    color: #52dd8a !important;
+}
+
+/* =====================================================
+   表格
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+table {
+    color: var(--h5d-text);
+    border-color: var(--h5d-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+thead th,
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+tr[style*="background:#f3f4f6"] th {
+    background: #22314a !important;
+    color: #f8fafc !important;
+    border-color: var(--h5d-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+tbody td {
+    color: var(--h5d-text);
+    border-color: var(--h5d-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+tbody tr:hover td {
+    background: var(--h5d-surface-3) !important;
+}
+
+/* =====================================================
+   表单和筛选按钮
+===================================================== */
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+:is(input, select, textarea) {
+    background: #0d192b !important;
+    color: var(--h5d-text) !important;
+    border-color: #40516d !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"]
+)
+:is(
+    a[style*="background:#f3f4f6"],
+    a[style*="background:#fff"],
+    button[style*="background:#fff"]
+) {
+    background: var(--h5d-surface-3) !important;
+    color: var(--h5d-text) !important;
+    border-color: var(--h5d-border) !important;
+}
+
+/* =====================================================
+   战场管理中心
+===================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+.card,
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+.battle-card {
+    background: var(--h5d-surface) !important;
+    color: var(--h5d-text) !important;
+    border-color: var(--h5d-border) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+:is(.muted, small) {
+    color: var(--h5d-muted) !important;
+}
+
+/* =====================================================
+   信誉档案库安全备份卡
+===================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/reputation"]
+[style*="box-shadow:0 8px 24px"] {
+    background: var(--h5d-surface) !important;
+    color: var(--h5d-text) !important;
+    border: 1px solid var(--h5d-border) !important;
+}
+
+/* 页面横线 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path="/reputation"],
+    [data-page-path="/staff"],
+    [data-page-path="/strategic"],
+    [data-page-path="/tasks"],
+    [data-page-path="/leaders"],
+    [data-page-path="/command"],
+    [data-page-path="/battles"]
+)
+hr {
+    border-color: var(--h5d-border) !important;
+}
+</style>
+
 </head>
 
 <body data-page-path="{{ request.path }}">
