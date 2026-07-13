@@ -1175,6 +1175,129 @@ hr {
 }
 </style>
 
+
+<!-- V15.7-H5E dark theme final local fixes -->
+<style>
+
+/* =====================================================
+   战场管理中心：创建新战场区域
+===================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+form[action="/battle/create"],
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+.card:has(form[action="/battle/create"]),
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+div:has(> form[action="/battle/create"]) {
+    background: #152238 !important;
+    color: #e8eef8 !important;
+    border-color: #364760 !important;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.26) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+.card:has(form[action="/battle/create"])
+:is(h2, h3, label),
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+div:has(> form[action="/battle/create"])
+> :is(h2, h3) {
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+form[action="/battle/create"]
+:is(input, select) {
+    background: #0d192b !important;
+    color: #e8eef8 !important;
+    border-color: #40516d !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/battles"]
+form[action="/battle/create"]
+input::placeholder {
+    color: #8391a8 !important;
+}
+
+
+/* =====================================================
+   AI战略推演中心：Simulation Engine 浅蓝面板
+===================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/strategic"]
+:is(
+    [style*="background:#f0f9ff"],
+    [style*="background: #f0f9ff"],
+    [style*="background:#e0f2fe"],
+    [style*="background: #e0f2fe"],
+    [style*="background:#ecfeff"],
+    [style*="background: #ecfeff"],
+    [style*="background:#f0fdfa"],
+    [style*="background: #f0fdfa"]
+) {
+    background: #17273a !important;
+    color: #e8eef8 !important;
+    border-color: #2698c7 !important;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+/* 通过青色左边框精准命中 Simulation Engine 外层 */
+html[data-theme="dark"]
+body[data-page-path="/strategic"]
+:is(
+    [style*="border-left:6px solid #0ea5e9"],
+    [style*="border-left: 6px solid #0ea5e9"],
+    [style*="border-left:6px solid #38bdf8"],
+    [style*="border-left: 6px solid #38bdf8"],
+    [style*="border-left:6px solid #0284c7"],
+    [style*="border-left: 6px solid #0284c7"]
+) {
+    background: #17273a !important;
+    color: #e8eef8 !important;
+    border-color: #2698c7 !important;
+}
+
+/* 只增强外层标题与摘要，不破坏三个方案卡片的语义颜色 */
+html[data-theme="dark"]
+body[data-page-path="/strategic"]
+:is(
+    [style*="border-left:6px solid #0ea5e9"],
+    [style*="border-left: 6px solid #0ea5e9"],
+    [style*="border-left:6px solid #38bdf8"],
+    [style*="border-left: 6px solid #38bdf8"],
+    [style*="border-left:6px solid #0284c7"],
+    [style*="border-left: 6px solid #0284c7"]
+)
+> :is(h2, h3, p) {
+    color: #e8eef8 !important;
+}
+
+/* 原有深蓝标题文字在深色背景上提亮 */
+html[data-theme="dark"]
+body[data-page-path="/strategic"]
+:is(
+    [style*="color:#0369a1"],
+    [style*="color: #0369a1"],
+    [style*="color:#0284c7"],
+    [style*="color: #0284c7"],
+    [style*="color:#0c4a6e"],
+    [style*="color: #0c4a6e"]
+) {
+    color: #7dd3fc !important;
+}
+
+</style>
+
 </head>
 
 <body data-page-path="{{ request.path }}">
