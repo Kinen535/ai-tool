@@ -7,9 +7,14 @@
         <h1>✏️ 编辑信誉事件</h1>
 
         <div style="display:flex;gap:10px;">
-            <a href="/reputation/events"
-               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                返回事件库
+            <!-- V15.7-A6B event edit return context -->
+            <a href="{{ return_to or '/reputation/events' }}"
+               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                {% if return_to %}
+                    ← 返回风险处置工作台
+                {% else %}
+                    返回事件库
+                {% endif %}
             </a>
 
             <a href="/reputation/search"
@@ -23,6 +28,11 @@
         <h2>① 事件信息</h2>
 
         <form method="POST" action="/reputation/events/{{ row.id }}/edit">
+                {% if return_to %}
+                <input type="hidden"
+                       name="return_to"
+                       value="{{ return_to }}">
+                {% endif %}
             <label style="font-weight:bold;">事件标题</label>
             <input name="title"
                    value="{{ row.title or '' }}"
@@ -116,6 +126,11 @@
                             <form method="POST"
                                   action="/reputation/events/{{ row.id }}/relations/{{ r.id }}/delete"
                                   onsubmit="return confirm('确认删除该关联？不会删除主体和事件本身。');">
+                {% if return_to %}
+                <input type="hidden"
+                       name="return_to"
+                       value="{{ return_to }}">
+                {% endif %}
                                 <button type="submit"
                                         style="background:#fee2e2;color:#dc2626;border:0;border-radius:8px;padding:6px 10px;font-weight:bold;">
                                     删除关联
@@ -137,6 +152,11 @@
 
             {% if subjects %}
                 <form method="POST" action="/reputation/events/{{ row.id }}/relations/save">
+                {% if return_to %}
+                <input type="hidden"
+                       name="return_to"
+                       value="{{ return_to }}">
+                {% endif %}
                     <label style="font-weight:bold;">选择主体</label>
                     <select name="subject_id"
                             style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">

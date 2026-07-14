@@ -46,18 +46,26 @@ html[data-theme="dark"]
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
         <h1>👤 信誉主体详情</h1>
 
-        <div style="display:flex;gap:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <!-- V15.7-A6B subject detail return context -->
+            {% if return_to %}
+            <a href="{{ return_to }}"
+               style="background:#fef2f2;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                ← 返回风险处置工作台
+            </a>
+            {% else %}
             <a href="/reputation/search?q={{ row.game_id or row.display_name }}"
                style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
                 返回检索
             </a>
+            {% endif %}
 
             <a href="/reputation/subjects"
                style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
                 主体库
             </a>
 
-            <a href="/reputation/subjects/{{ row.id }}/edit"
+            <a href="/reputation/subjects/{{ row.id }}/edit{% if return_to %}?return_to=%2Freputation%2Fworkbench{% endif %}"
                style="background:#fee2e2;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
                 编辑主体
             </a>

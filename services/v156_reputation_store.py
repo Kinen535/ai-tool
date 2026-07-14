@@ -1550,3 +1550,778 @@ def update_reputation_event_status_quick(
         "status_label": allowed_status[status],
         "message": f"事件状态已更新为：{allowed_status[status]}。",
     }
+
+
+# =========================
+# V15.7-A6 reputation risk workbench
+# =========================
+
+def build_reputation_workbench_report(
+    conn: sqlite3.Connection,
+    limit_per_priority: int = 50,
+) -> dict[str, Any]:
+    from urllib.parse import quote
+
+    ensure_reputation_tables(conn)
+
+    # V15.7-A6B shared workbench return context
+    workbench_return = quote(
+        "/reputation/workbench",
+        safe="",
+    )
+
+    priority_rank = {
+        "P1": 1,
+        "P2": 2,
+        "P3": 3,
+    }
+
+    items: dict[tuple[str, int], dict[str, Any]] = {}
+
+    def add_item(
+        *,
+        priority: str,
+        score: int,
+        object_type: str,
+        object_id: int,
+        name: str,
+        identifier: str,
+        reason: str,
+        evidence_state: str,
+        evidence: str,
+        action: str,
+        detail_href: str,
+        action_href: str,
+        action_label: str,
+        updated_at: str,
+    ) -> None:
+        key = (object_type, object_id)
+
+        item = {
+            "priority": priority,
+            "score": score,
+            "object_type": object_type,
+            "object_label": (
+                "信誉主体"
+                if object_type == "subject"
+                else "信誉事件"
+            ),
+            "object_id": object_id,
+            "name": name or "未命名对象",
+            "identifier": identifier or "-",
+            "reason": reason,
+            "evidence_state": evidence_state,
+            "evidence": evidence,
+            "action": action,
+            "detail_href": detail_href,
+            "action_href": action_href,
+            "action_label": action_label,
+            "updated_at": updated_at or "",
+        }
+
+        current = items.get(key)
+
+        if current is None:
+            items[key] = item
+            return
+
+        if priority_rank[priority] < priority_rank[current["priority"]]:
+            items[key] = item
+            return
+
+        if (
+            priority == current["priority"]
+            and score > int(current.get("score") or 0)
+        ):
+            items[key] = item
+
+    subject_rows = conn.execute(
+        """
+        SELECT
+            s.*,
+            COUNT(DISTINCT r.event_id) AS event_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN e.impact_level IN (
+                        'high',
+                        'severe',
+                        'critical'
+                    )
+                    THEN e.id
+                END
+            ) AS high_impact_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN e.impact_level IN (
+                        'severe',
+                        'critical'
+                    )
+                    THEN e.id
+                END
+            ) AS severe_event_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN e.status = 'verified'
+                    THEN e.id
+                END
+            ) AS verified_event_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN e.status = 'disputed'
+                    THEN e.id
+                END
+            ) AS disputed_event_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN e.impact_level IN (
+                        'severe',
+                        'critical'
+                    )
+                    AND e.status = 'verified'
+                    THEN e.id
+                END
+            ) AS severe_verified_count
+        FROM v156_reputation_subjects s
+        LEFT JOIN v156_reputation_event_relations r
+            ON r.subject_id = s.id
+        LEFT JOIN v156_reputation_events e
+            ON e.id = r.event_id
+        GROUP BY s.id
+        ORDER BY s.updated_at DESC, s.id DESC
+        """
+    ).fetchall()
+
+    for row in subject_rows:
+        subject_id = int(row["id"])
+        status = (row["status"] or "").strip()
+
+        if status in ("ignored", "archived"):
+            continue
+
+        display_name = (
+            row["display_name"]
+            or row["game_id"]
+            or f"主体 #{subject_id}"
+        )
+        game_id = (row["game_id"] or "").strip()
+        trust_level = (row["trust_level"] or "").strip()
+        risk_level = (row["risk_level"] or "").strip()
+        updated_at = row["updated_at"] or ""
+
+        event_count = int(row["event_count"] or 0)
+        high_impact_count = int(
+            row["high_impact_count"] or 0
+        )
+        severe_event_count = int(
+            row["severe_event_count"] or 0
+        )
+        verified_event_count = int(
+            row["verified_event_count"] or 0
+        )
+        disputed_event_count = int(
+            row["disputed_event_count"] or 0
+        )
+        severe_verified_count = int(
+            row["severe_verified_count"] or 0
+        )
+
+        black_mark = (
+            risk_level == "black"
+            or trust_level in ("black", "blacklist")
+        )
+
+        high_risk_mark = (
+            risk_level == "danger"
+            or trust_level == "risky"
+        )
+
+        warning_mark = risk_level == "warning"
+
+        evidence_state = (
+            "完整"
+            if event_count > 0
+            else "缺失"
+        )
+
+        # V15.7-A6B workbench return context links
+        subject_detail = (
+            f"/reputation/subjects/{subject_id}"
+            f"?return_to={workbench_return}"
+        )
+        subject_edit = (
+            f"/reputation/subjects/{subject_id}/edit"
+            f"?return_to={workbench_return}"
+        )
+
+        search_keyword = game_id or display_name
+        search_href = (
+            "/reputation/search?q="
+            + quote(str(search_keyword))
+        )
+
+        if black_mark:
+            add_item(
+                priority="P1",
+                score=100,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="主体已被标记为黑名单",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"关联事件 {event_count} 条；"
+                    f"严重事件 {severe_event_count} 条；"
+                    f"已核实事件 {verified_event_count} 条"
+                ),
+                action=(
+                    "暂停直接吸纳、回流和关键资源分配，"
+                    "优先人工复核主体身份与历史事件。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="查看综合研判",
+                updated_at=updated_at,
+            )
+
+        elif high_risk_mark and event_count == 0:
+            add_item(
+                priority="P1",
+                score=97,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="高风险主体尚无关联事件",
+                evidence_state="缺失",
+                evidence=(
+                    "主体已有危险或存疑标记，"
+                    "但当前关联事件为 0 条"
+                ),
+                action=(
+                    "优先补充事件证据和责任关系，"
+                    "证据补齐前不得直接放行。"
+                ),
+                detail_href=subject_detail,
+                action_href=search_href,
+                action_label="补充关联证据",
+                updated_at=updated_at,
+            )
+
+        elif high_risk_mark and severe_verified_count > 0:
+            add_item(
+                priority="P1",
+                score=95,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="高风险标记已被严重核实事件印证",
+                evidence_state="较强",
+                evidence=(
+                    f"已核实严重事件 "
+                    f"{severe_verified_count} 条；"
+                    f"全部关联事件 {event_count} 条"
+                ),
+                action=(
+                    "纳入重点风险管理，后续吸纳、合作或"
+                    "回流必须经过管理层人工确认。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="查看综合研判",
+                updated_at=updated_at,
+            )
+
+        elif high_risk_mark:
+            add_item(
+                priority="P2",
+                score=86,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="主体存在危险或存疑标记",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"关联事件 {event_count} 条；"
+                    f"高影响事件 {high_impact_count} 条；"
+                    f"争议事件 {disputed_event_count} 条"
+                ),
+                action=(
+                    "核对游戏编号、曾用名和全部关联事件，"
+                    "形成稳定结论前保持观察。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="进入风险复核",
+                updated_at=updated_at,
+            )
+
+        elif severe_verified_count > 0:
+            add_item(
+                priority="P2",
+                score=83,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="主体关联了已核实的严重事件",
+                evidence_state="较强",
+                evidence=(
+                    f"已核实严重事件 "
+                    f"{severe_verified_count} 条"
+                ),
+                action=(
+                    "核对主体在严重事件中的责任角色，"
+                    "必要时调整主体风险等级。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="查看严重事件",
+                updated_at=updated_at,
+            )
+
+        elif disputed_event_count > 0 and verified_event_count == 0:
+            add_item(
+                priority="P2",
+                score=80,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="关联事件仍以争议记录为主",
+                evidence_state="待复核",
+                evidence=(
+                    f"争议事件 {disputed_event_count} 条；"
+                    "已核实事件 0 条"
+                ),
+                action=(
+                    "补充不同来源证据与反证，"
+                    "争议结束前暂不形成最终风险结论。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="查看争议记录",
+                updated_at=updated_at,
+            )
+
+        elif high_impact_count > 0 and verified_event_count == 0:
+            add_item(
+                priority="P2",
+                score=77,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="存在高影响事件但缺少核实结论",
+                evidence_state="待核实",
+                evidence=(
+                    f"高影响事件 {high_impact_count} 条；"
+                    "已核实事件 0 条"
+                ),
+                action=(
+                    "优先核实高影响事件的证据、状态和"
+                    "主体责任关系。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="进入证据复核",
+                updated_at=updated_at,
+            )
+
+        elif warning_mark and event_count == 0:
+            add_item(
+                priority="P3",
+                score=68,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="预警主体缺少关联事件",
+                evidence_state="缺失",
+                evidence="主体处于预警状态，但关联事件为 0 条",
+                action=(
+                    "补充至少一条可核实事件，"
+                    "证据不足时仅保留观察。"
+                ),
+                detail_href=subject_detail,
+                action_href=search_href,
+                action_label="补充关联事件",
+                updated_at=updated_at,
+            )
+
+        elif not game_id:
+            add_item(
+                priority="P3",
+                score=63,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier="-",
+                reason="主体游戏编号缺失",
+                evidence_state=evidence_state,
+                evidence=(
+                    "缺少唯一游戏编号，存在同名或身份"
+                    "误判风险"
+                ),
+                action=(
+                    "补充游戏编号并核对曾用名，"
+                    "避免跨赛季检索时识别错误。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_edit,
+                action_label="完善主体资料",
+                updated_at=updated_at,
+            )
+
+        elif warning_mark:
+            add_item(
+                priority="P3",
+                score=58,
+                object_type="subject",
+                object_id=subject_id,
+                name=display_name,
+                identifier=game_id,
+                reason="主体处于预警观察状态",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"关联事件 {event_count} 条；"
+                    f"高影响事件 {high_impact_count} 条"
+                ),
+                action=(
+                    "继续观察并补充后续记录，"
+                    "出现新严重证据时再升级风险。"
+                ),
+                detail_href=subject_detail,
+                action_href=subject_detail,
+                action_label="查看主体档案",
+                updated_at=updated_at,
+            )
+
+    event_rows = conn.execute(
+        """
+        SELECT
+            e.*,
+            COUNT(DISTINCT s.id) AS subject_count,
+            COUNT(
+                DISTINCT CASE
+                    WHEN s.risk_level IN (
+                        'danger',
+                        'black'
+                    )
+                    OR s.trust_level IN (
+                        'risky',
+                        'black',
+                        'blacklist'
+                    )
+                    THEN s.id
+                END
+            ) AS high_risk_subject_count
+        FROM v156_reputation_events e
+        LEFT JOIN v156_reputation_event_relations r
+            ON r.event_id = e.id
+        LEFT JOIN v156_reputation_subjects s
+            ON s.id = r.subject_id
+        GROUP BY e.id
+        ORDER BY e.updated_at DESC, e.id DESC
+        """
+    ).fetchall()
+
+    for row in event_rows:
+        event_id = int(row["id"])
+        status = (row["status"] or "").strip()
+
+        if status in ("voided", "archived", "resolved"):
+            continue
+
+        title = row["title"] or f"事件 #{event_id}"
+        impact_level = (row["impact_level"] or "").strip()
+        updated_at = row["updated_at"] or ""
+
+        subject_count = int(row["subject_count"] or 0)
+        high_risk_subject_count = int(
+            row["high_risk_subject_count"] or 0
+        )
+
+        severe = impact_level in ("severe", "critical")
+        high_impact = impact_level in (
+            "high",
+            "severe",
+            "critical",
+        )
+
+        evidence_state = (
+            "完整"
+            if subject_count > 0
+            else "缺失"
+        )
+
+        event_detail = (
+            f"/reputation/events/{event_id}"
+            f"?return_to={workbench_return}"
+        )
+        event_edit = (
+            f"/reputation/events/{event_id}/edit"
+            f"?return_to={workbench_return}"
+        )
+
+        if severe and subject_count == 0:
+            add_item(
+                priority="P1",
+                score=99,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="严重事件尚未关联责任主体",
+                evidence_state="缺失",
+                evidence=(
+                    "事件影响等级为严重或极严重，"
+                    "但关联主体为 0 个"
+                ),
+                action=(
+                    "立即补充责任主体和关联角色，"
+                    "证据链补齐前不得形成最终处置。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="补充关联主体",
+                updated_at=updated_at,
+            )
+
+        elif severe and status == "verified":
+            add_item(
+                priority="P1",
+                score=96,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="严重事件已经完成核实",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"已关联主体 {subject_count} 个；"
+                    f"其中高风险主体 "
+                    f"{high_risk_subject_count} 个"
+                ),
+                action=(
+                    "优先查看关联主体责任，"
+                    "并将事件纳入后续招募和管理决策。"
+                ),
+                detail_href=event_detail,
+                action_href=event_detail,
+                action_label="查看影响评估",
+                updated_at=updated_at,
+            )
+
+        elif severe:
+            add_item(
+                priority="P2",
+                score=89,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="严重事件尚未完成最终核实",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"当前状态：{status or '未设置'}；"
+                    f"关联主体 {subject_count} 个"
+                ),
+                action=(
+                    "优先核对证据、责任主体和处理状态，"
+                    "完成后再决定是否升级处置。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="进入事件核实",
+                updated_at=updated_at,
+            )
+
+        elif status == "disputed":
+            add_item(
+                priority="P2",
+                score=85,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="事件处于争议状态",
+                evidence_state="待复核",
+                evidence=(
+                    f"已关联主体 {subject_count} 个；"
+                    "当前结论仍有争议"
+                ),
+                action=(
+                    "补充不同来源证据、反证和双方陈述，"
+                    "暂不作为单一最终依据。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="处理争议事件",
+                updated_at=updated_at,
+            )
+
+        elif high_impact and subject_count == 0:
+            add_item(
+                priority="P2",
+                score=82,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="高影响事件缺少关联主体",
+                evidence_state="缺失",
+                evidence=(
+                    "事件影响等级较高，"
+                    "但尚未建立主体责任关系"
+                ),
+                action=(
+                    "补充相关主体、责任角色和关联备注，"
+                    "形成可追溯证据链。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="补充责任关系",
+                updated_at=updated_at,
+            )
+
+        elif high_impact:
+            add_item(
+                priority="P2",
+                score=76,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="事件属于高影响记录",
+                evidence_state=evidence_state,
+                evidence=(
+                    f"已关联主体 {subject_count} 个；"
+                    f"高风险主体 "
+                    f"{high_risk_subject_count} 个"
+                ),
+                action=(
+                    "复核证据完整度和主体责任，"
+                    "必要时调整事件状态或主体风险等级。"
+                ),
+                detail_href=event_detail,
+                action_href=event_detail,
+                action_label="查看影响评估",
+                updated_at=updated_at,
+            )
+
+        elif subject_count == 0:
+            add_item(
+                priority="P3",
+                score=67,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="普通事件尚未关联主体",
+                evidence_state="缺失",
+                evidence="当前关联主体为 0 个",
+                action=(
+                    "补充涉及主体和责任关系，"
+                    "避免事件成为孤立记录。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="补充关联主体",
+                updated_at=updated_at,
+            )
+
+        elif status in ("pending", "recorded"):
+            add_item(
+                priority="P3",
+                score=61,
+                object_type="event",
+                object_id=event_id,
+                name=title,
+                identifier=f"事件 #{event_id}",
+                reason="事件仍处于待核实或记录中",
+                evidence_state=evidence_state,
+                evidence=f"当前已关联主体 {subject_count} 个",
+                action=(
+                    "继续补充证据备注，"
+                    "确认后更新为已核实或其他最终状态。"
+                ),
+                detail_href=event_detail,
+                action_href=event_edit,
+                action_label="完善事件状态",
+                updated_at=updated_at,
+            )
+
+    queues = {
+        "P1": [],
+        "P2": [],
+        "P3": [],
+    }
+
+    for item in items.values():
+        queues[item["priority"]].append(item)
+
+    for priority in queues:
+        queues[priority].sort(
+            key=lambda item: (
+                int(item.get("score") or 0),
+                item.get("updated_at") or "",
+                int(item.get("object_id") or 0),
+            ),
+            reverse=True,
+        )
+
+    raw_counts = {
+        priority: len(queue)
+        for priority, queue in queues.items()
+    }
+
+    shown_queues = {
+        priority: queue[:limit_per_priority]
+        for priority, queue in queues.items()
+    }
+
+    all_items = [
+        item
+        for queue in queues.values()
+        for item in queue
+    ]
+
+    subject_task_count = sum(
+        1
+        for item in all_items
+        if item["object_type"] == "subject"
+    )
+
+    event_task_count = sum(
+        1
+        for item in all_items
+        if item["object_type"] == "event"
+    )
+
+    generated_row = conn.execute(
+        "SELECT datetime('now','localtime')"
+    ).fetchone()
+
+    generated_at = (
+        generated_row[0]
+        if generated_row
+        else ""
+    )
+
+    return {
+        "stats": {
+            "total_count": len(all_items),
+            "p1_count": raw_counts["P1"],
+            "p2_count": raw_counts["P2"],
+            "p3_count": raw_counts["P3"],
+            "subject_count": subject_task_count,
+            "event_count": event_task_count,
+        },
+        "raw_counts": raw_counts,
+        "queues": shown_queues,
+        "limit_per_priority": limit_per_priority,
+        "generated_at": generated_at,
+    }

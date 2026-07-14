@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- V15.7-A6 reputation risk workbench page -->
+<style>
+.reputation-workbench {
+    max-width: 1550px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.reputation-workbench-hero {
+    background: #eff6ff;
+    border-left: 6px solid #2563eb;
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+.reputation-workbench-stat {
+    background: white;
+    border-radius: 14px;
+    padding: 17px;
+    text-align: center;
+}
+
+.reputation-workbench-queue {
+    background: var(--queue-bg);
+    border-left: 6px solid var(--queue-color);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+.reputation-workbench-table-card {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 14px;
+    padding: 14px;
+    overflow-x: auto;
+}
+
+.reputation-workbench-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1180px;
+}
+
+.reputation-workbench-table th {
+    background: #f3f4f6;
+    padding: 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.reputation-workbench-table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.reputation-workbench-badge {
+    display: inline-block;
+    background: var(--queue-color);
+    color: white;
+    border-radius: 999px;
+    padding: 6px 11px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.reputation-workbench-link {
+    display: inline-block;
+    padding: 7px 10px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-weight: bold;
+    margin: 2px 5px 2px 0;
+}
+
+html[data-theme="dark"] .reputation-workbench-hero,
+html[data-theme="dark"] .reputation-workbench-queue {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-workbench-stat,
+html[data-theme="dark"] .reputation-workbench-table-card {
+    background: #1d2d47 !important;
+    color: #e8eef8 !important;
+    border: 1px solid #364760;
+}
+
+html[data-theme="dark"] .reputation-workbench-table th {
+    background: #243650 !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-workbench-table td {
+    border-color: #364760 !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-workbench-muted {
+    color: #a9b7cc !important;
+}
+
+@media (max-width: 900px) {
+    .reputation-workbench {
+        padding: 14px;
+    }
+
+    .reputation-workbench-header {
+        align-items: flex-start !important;
+        flex-direction: column;
+    }
+
+    .reputation-workbench-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+</style>
+
+{% macro render_queue(code, title, description, items, color, bg, icon) %}
+<div class="reputation-workbench-queue"
+     style="--queue-color:{{ color }};--queue-bg:{{ bg }};">
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:14px;
+        margin-bottom:14px;
+    ">
+        <div>
+            <h2 style="margin:0 0 6px 0;">
+                {{ icon }} {{ title }}
+            </h2>
+
+            <div class="reputation-workbench-muted"
+                 style="color:#64748b;line-height:1.7;">
+                {{ description }}
+            </div>
+        </div>
+
+        <span class="reputation-workbench-badge">
+            {{ code }}｜{{ items|length }} 项
+        </span>
+    </div>
+
+    {% if items %}
+    <div class="reputation-workbench-table-card">
+        <table class="reputation-workbench-table">
+            <thead>
+                <tr>
+                    <th>优先级</th>
+                    <th>对象</th>
+                    <th>名称与编号</th>
+                    <th>风险原因</th>
+                    <th>证据状态</th>
+                    <th>推荐动作</th>
+                    <th>处理入口</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        <span class="reputation-workbench-badge">
+                            {{ item.priority }}
+                        </span>
+                    </td>
+
+                    <td style="white-space:nowrap;">
+                        {{ item.object_label }}
+                    </td>
+
+                    <td style="min-width:180px;">
+                        <div style="font-weight:bold;">
+                            {{ item.name }}
+                        </div>
+
+                        <div class="reputation-workbench-muted"
+                             style="
+                                color:#64748b;
+                                font-size:12px;
+                                margin-top:4px;
+                             ">
+                            {{ item.identifier }}
+                        </div>
+                    </td>
+
+                    <td style="min-width:220px;">
+                        <div style="
+                            font-weight:bold;
+                            color:{{ color }};
+                        ">
+                            {{ item.reason }}
+                        </div>
+                    </td>
+
+                    <td style="min-width:220px;">
+                        <div style="font-weight:bold;">
+                            {{ item.evidence_state }}
+                        </div>
+
+                        <div class="reputation-workbench-muted"
+                             style="
+                                color:#64748b;
+                                font-size:12px;
+                                line-height:1.6;
+                                margin-top:4px;
+                             ">
+                            {{ item.evidence }}
+                        </div>
+                    </td>
+
+                    <td style="min-width:250px;line-height:1.7;">
+                        {{ item.action }}
+                    </td>
+
+                    <td style="min-width:190px;">
+                        <a class="reputation-workbench-link"
+                           href="{{ item.detail_href }}"
+                           style="
+                              background:#eff6ff;
+                              color:#2563eb;
+                           ">
+                            查看档案
+                        </a>
+
+                        <a class="reputation-workbench-link"
+                           href="{{ item.action_href }}"
+                           style="
+                              background:{{ bg }};
+                              color:{{ color }};
+                              border:1px solid {{ color }};
+                           ">
+                            {{ item.action_label }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="
+        background:rgba(255,255,255,.82);
+        border-radius:12px;
+        padding:14px;
+        color:#64748b;
+    ">
+        当前没有此优先级的待处理项目。
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<div class="reputation-workbench">
+    <div class="reputation-workbench-header"
+         style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:14px;
+            margin-bottom:18px;
+         ">
+        <div>
+            <h1 style="margin:0 0 6px 0;">
+                🧭 信誉风险处置工作台
+            </h1>
+
+            <div class="reputation-workbench-muted"
+                 style="color:#64748b;">
+                生成时间：{{ report.generated_at or '-' }}
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="/reputation"
+               style="
+                  background:#eff6ff;
+                  color:#2563eb;
+                  padding:9px 14px;
+                  border-radius:10px;
+                  text-decoration:none;
+                  font-weight:bold;
+               ">
+                返回信誉档案库
+            </a>
+
+            <a href="/reputation/search"
+               style="
+                  background:#ecfdf5;
+                  color:#15803d;
+                  padding:9px 14px;
+                  border-radius:10px;
+                  text-decoration:none;
+                  font-weight:bold;
+               ">
+                进入信誉检索
+            </a>
+        </div>
+    </div>
+
+    <div class="reputation-workbench-hero">
+        <h2 style="margin-top:0;">工作台定位</h2>
+
+        <p class="reputation-workbench-muted"
+           style="color:#475569;line-height:1.8;">
+            本页面不会修改主体或事件数据，而是根据现有风险标记、
+            事件影响、核实状态和证据链完整度，动态生成处置优先级。
+            处理完成后，队列会随着档案内容自动变化。
+        </p>
+
+        <div class="reputation-workbench-stats"
+             style="
+                display:grid;
+                grid-template-columns:repeat(6,1fr);
+                gap:12px;
+                margin-top:14px;
+             ">
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    待处理总数
+                </div>
+                <div style="font-size:27px;font-weight:bold;">
+                    {{ report.stats.total_count }}
+                </div>
+            </div>
+
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    P1 紧急
+                </div>
+                <div style="
+                    font-size:27px;
+                    font-weight:bold;
+                    color:#dc2626;
+                ">
+                    {{ report.stats.p1_count }}
+                </div>
+            </div>
+
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    P2 重点
+                </div>
+                <div style="
+                    font-size:27px;
+                    font-weight:bold;
+                    color:#f97316;
+                ">
+                    {{ report.stats.p2_count }}
+                </div>
+            </div>
+
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    P3 待完善
+                </div>
+                <div style="
+                    font-size:27px;
+                    font-weight:bold;
+                    color:#d97706;
+                ">
+                    {{ report.stats.p3_count }}
+                </div>
+            </div>
+
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    主体项目
+                </div>
+                <div style="font-size:27px;font-weight:bold;">
+                    {{ report.stats.subject_count }}
+                </div>
+            </div>
+
+            <div class="reputation-workbench-stat">
+                <div class="reputation-workbench-muted"
+                     style="color:#64748b;font-size:13px;">
+                    事件项目
+                </div>
+                <div style="font-size:27px;font-weight:bold;">
+                    {{ report.stats.event_count }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ render_queue(
+        "P1",
+        "紧急处置",
+        "最高优先级：黑名单、高风险无证据、严重事件无主体，以及已核实严重风险。",
+        report.queues["P1"],
+        "#dc2626",
+        "#fef2f2",
+        "🔴"
+    ) }}
+
+    {{ render_queue(
+        "P2",
+        "重点复核",
+        "需要人工判断：危险或存疑主体、高影响事件、严重待核实事件和争议记录。",
+        report.queues["P2"],
+        "#f97316",
+        "#fff7ed",
+        "🟠"
+    ) }}
+
+    {{ render_queue(
+        "P3",
+        "待完善",
+        "基础资料和证据链补充：缺少游戏编号、普通未关联事件和预警观察对象。",
+        report.queues["P3"],
+        "#d97706",
+        "#fffbeb",
+        "🟡"
+    ) }}
+</div>
+
+{% endblock %}

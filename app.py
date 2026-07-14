@@ -9814,6 +9814,49 @@ def v156_reputation_home():
     )
 
 
+# =========================
+# V15.7-A6B safe workbench return context
+# =========================
+
+def _v157_reputation_return_to(value):
+    value = (value or "").strip()
+
+    # 仅允许返回信誉风险处置工作台
+    if value == "/reputation/workbench":
+        return value
+
+    return ""
+
+
+# =========================
+# V15.7-A6 reputation risk workbench route
+# =========================
+
+@app.route("/reputation/workbench")
+def v157_reputation_workbench():
+    import sqlite3
+    from flask import render_template
+    from services.v156_reputation_store import (
+        build_reputation_workbench_report,
+    )
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    report = build_reputation_workbench_report(
+        conn,
+        limit_per_priority=50,
+    )
+
+    conn.close()
+
+    return render_template(
+        "reputation_workbench.html",
+        report=report,
+        title="信誉风险处置工作台",
+    )
+
+
 @app.route("/reputation/search")
 def v156_reputation_search():
     import sqlite3
@@ -10247,6 +10290,10 @@ def v156_reputation_subject_edit(subject_id):
         conn.close()
         abort(404)
 
+    return_to = _v157_reputation_return_to(
+        request.values.get("return_to", "")
+    )
+
     if request.method == "POST":
         data = {
             "subject_type": request.form.get("subject_type", "player"),
@@ -10263,13 +10310,16 @@ def v156_reputation_subject_edit(subject_id):
         update_reputation_subject(conn, subject_id, data)
 
         conn.close()
-        return redirect("/reputation/subjects")
+        return redirect(
+            return_to or "/reputation/subjects"
+        )
 
     conn.close()
 
     return render_template(
         "reputation_subject_edit.html",
         row=row,
+        return_to=return_to,
         title="编辑信誉主体",
     )
 
@@ -10333,6 +10383,10 @@ def v156_reputation_event_edit(event_id):
         conn.close()
         abort(404)
 
+    return_to = _v157_reputation_return_to(
+        request.values.get("return_to", "")
+    )
+
     if request.method == "POST":
         data = {
             "title": request.form.get("title", ""),
@@ -10347,7 +10401,9 @@ def v156_reputation_event_edit(event_id):
         update_reputation_event(conn, event_id, data)
 
         conn.close()
-        return redirect("/reputation/events")
+        return redirect(
+            return_to or "/reputation/events"
+        )
 
     # V15.6-A5 event relation edit context
     relations = list_reputation_event_relations(conn, event_id)
@@ -10360,6 +10416,7 @@ def v156_reputation_event_edit(event_id):
         row=row,
         relations=relations,
         subjects=subjects,
+        return_to=return_to,
         title="编辑信誉事件",
     )
 
@@ -10434,13 +10491,25 @@ def v156_reputation_event_relation_save(event_id):
 
     conn.close()
 
-    return redirect(f"/reputation/events/{event_id}/edit#relations")
+    # V15.7-A6B relation return context
+    return_to = _v157_reputation_return_to(
+        request.form.get("return_to", "")
+    )
+
+    edit_url = f"/reputation/events/{event_id}/edit"
+
+    if return_to:
+        edit_url += (
+            "?return_to=%2Freputation%2Fworkbench"
+        )
+
+    return redirect(edit_url + "#relations")
 
 
 @app.route("/reputation/events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
 def v156_reputation_event_relation_delete(event_id, relation_id):
     import sqlite3
-    from flask import redirect
+    from flask import request, redirect
     from services.v156_reputation_store import delete_reputation_event_relation
 
     conn = sqlite3.connect("data/snapshots.db")
@@ -10450,7 +10519,18 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
 
     conn.close()
 
-    return redirect(f"/reputation/events/{event_id}/edit#relations")
+    return_to = _v157_reputation_return_to(
+        request.form.get("return_to", "")
+    )
+
+    edit_url = f"/reputation/events/{event_id}/edit"
+
+    if return_to:
+        edit_url += (
+            "?return_to=%2Freputation%2Fworkbench"
+        )
+
+    return redirect(edit_url + "#relations")
 
 
 # =========================
@@ -10460,7 +10540,7 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
 @app.route("/reputation/subjects/<int:subject_id>")
 def v156_reputation_subject_detail(subject_id):
     import sqlite3
-    from flask import render_template, abort
+    from flask import request, render_template, abort
     from services.v156_reputation_store import (
         get_reputation_subject,
         list_reputation_events_by_subject,
@@ -10474,6 +10554,10 @@ def v156_reputation_subject_detail(subject_id):
     if not row:
         conn.close()
         abort(404)
+
+    return_to = _v157_reputation_return_to(
+        request.args.get("return_to", "")
+    )
 
     events = list_reputation_events_by_subject(conn, subject_id)
 
@@ -10875,6 +10959,7 @@ def v156_reputation_subject_detail(subject_id):
         evidence_summary=evidence_summary,
         disposal_advice=disposal_advice,
         comprehensive_assessment=comprehensive_assessment,
+        return_to=return_to,
         title="信誉主体详情",
     )
 
@@ -10886,7 +10971,7 @@ def v156_reputation_subject_detail(subject_id):
 @app.route("/reputation/events/<int:event_id>")
 def v156_reputation_event_detail(event_id):
     import sqlite3
-    from flask import render_template, abort
+    from flask import request, render_template, abort
     from services.v156_reputation_store import (
         get_reputation_event,
         list_reputation_event_relations,
@@ -10900,6 +10985,10 @@ def v156_reputation_event_detail(event_id):
     if not row:
         conn.close()
         abort(404)
+
+    return_to = _v157_reputation_return_to(
+        request.args.get("return_to", "")
+    )
 
     relations = list_reputation_event_relations(conn, event_id)
 
@@ -11037,6 +11126,7 @@ def v156_reputation_event_detail(event_id):
         "reputation_event_detail.html",
         row=row,
         relations=relations,
+        return_to=return_to,
         title="信誉事件详情",
         subject_summary=subject_summary,
         impact_assessment=impact_assessment,
