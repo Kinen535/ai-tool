@@ -22,6 +22,8 @@ REQUIRED_FILES = {
     "v156_reputation_events.csv",
     "v156_reputation_event_relations.csv",
     "v156_reputation_merge_logs.csv",
+    # V15.7-A7-4 reputation task export
+    "v157_reputation_tasks.csv",
 }
 
 TABLE_FILES = {
@@ -29,6 +31,8 @@ TABLE_FILES = {
     "v156_reputation_events": "v156_reputation_events.csv",
     "v156_reputation_event_relations": "v156_reputation_event_relations.csv",
     "v156_reputation_merge_logs": "v156_reputation_merge_logs.csv",
+    # V15.7-A7-4 reputation task restore preview
+    "v157_reputation_tasks": "v157_reputation_tasks.csv",
 }
 
 
@@ -93,7 +97,7 @@ def db_count(conn: sqlite3.Connection, table: str) -> int:
 
 
 def main() -> int:
-    print("V15.6 Reputation Restore Preview")
+    print("V15.7 Reputation Restore Preview")
     print("=" * 60)
 
     if len(sys.argv) != 2:

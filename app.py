@@ -9857,6 +9857,229 @@ def v157_reputation_workbench():
     )
 
 
+# =========================
+# V15.7-A7-2 create task from workbench
+# =========================
+
+@app.route(
+    "/reputation/tasks/create",
+    methods=["POST"],
+)
+def v157_reputation_task_create():
+    import sqlite3
+    from urllib.parse import urlencode
+    from flask import request, redirect
+    from services.v156_reputation_store import (
+        create_reputation_task_from_workbench,
+    )
+
+    entity_type = (
+        request.form.get("entity_type", "")
+        or ""
+    ).strip()
+
+    try:
+        entity_id = int(
+            request.form.get("entity_id", "")
+            or 0
+        )
+    except Exception:
+        entity_id = 0
+
+    conn = sqlite3.connect(
+        "data/snapshots.db"
+    )
+    conn.row_factory = sqlite3.Row
+
+    result = create_reputation_task_from_workbench(
+        conn,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+
+    conn.close()
+
+    if result.get("ok"):
+        task_result = "created"
+    elif result.get("duplicate"):
+        task_result = "duplicate"
+    elif result.get("not_found"):
+        task_result = "not_found"
+    else:
+        task_result = "invalid"
+
+    params = {
+        "task_result": task_result,
+    }
+
+    if result.get("task_id"):
+        params["task_id"] = int(
+            result["task_id"]
+        )
+
+    return redirect(
+        "/reputation/workbench?"
+        + urlencode(params)
+    )
+
+
+# =========================
+# V15.7-A7-3 update reputation task
+# =========================
+
+@app.route(
+    "/reputation/tasks/<int:task_id>/update",
+    methods=["POST"],
+)
+def v157_reputation_task_update(task_id):
+    import sqlite3
+    from urllib.parse import urlencode
+    from flask import request, redirect
+    from services.v156_reputation_store import (
+        update_reputation_task,
+    )
+
+    priority = (
+        request.form.get("priority", "")
+        or ""
+    ).strip().upper()
+
+    status = (
+        request.form.get("status", "")
+        or ""
+    ).strip().lower()
+
+    owner = (
+        request.form.get("owner", "")
+        or ""
+    ).strip()
+
+    result_note = (
+        request.form.get("result_note", "")
+        or ""
+    ).strip()
+
+    return_status = (
+        request.form.get("return_status", "")
+        or ""
+    ).strip().lower()
+
+    return_priority = (
+        request.form.get("return_priority", "")
+        or ""
+    ).strip().upper()
+
+    return_q = (
+        request.form.get("return_q", "")
+        or ""
+    ).strip()
+
+    conn = sqlite3.connect(
+        "data/snapshots.db"
+    )
+    conn.row_factory = sqlite3.Row
+
+    result = update_reputation_task(
+        conn,
+        task_id,
+        {
+            "priority": priority,
+            "status": status,
+            "owner": owner,
+            "result_note": result_note,
+        },
+    )
+
+    conn.close()
+
+    if result.get("ok"):
+        task_result = "updated"
+    elif result.get("not_found"):
+        task_result = "not_found"
+    elif result.get("duplicate"):
+        task_result = "duplicate"
+    elif result.get("result_required"):
+        task_result = "result_required"
+    else:
+        task_result = "invalid"
+
+    params = {
+        "task_result": task_result,
+        "task_id": int(task_id),
+    }
+
+    if return_status in {
+        "pending",
+        "processing",
+        "completed",
+        "ignored",
+    }:
+        params["status"] = return_status
+
+    if return_priority in {
+        "P1",
+        "P2",
+        "P3",
+    }:
+        params["priority"] = return_priority
+
+    if return_q:
+        params["q"] = return_q
+
+    return redirect(
+        "/reputation/tasks?"
+        + urlencode(params)
+        + f"#task-{task_id}"
+    )
+
+
+# =========================
+# V15.7-A7-1B reputation task list route
+# =========================
+
+@app.route("/reputation/tasks")
+def v157_reputation_tasks():
+    import sqlite3
+    from flask import request, render_template
+    from services.v156_reputation_store import (
+        build_reputation_task_report,
+    )
+
+    status = (
+        request.args.get("status", "")
+        or ""
+    ).strip().lower()
+
+    priority = (
+        request.args.get("priority", "")
+        or ""
+    ).strip().upper()
+
+    q = (
+        request.args.get("q", "")
+        or ""
+    ).strip()
+
+    conn = sqlite3.connect("data/snapshots.db")
+    conn.row_factory = sqlite3.Row
+
+    report = build_reputation_task_report(
+        conn,
+        status=status,
+        priority=priority,
+        q=q,
+        limit=300,
+    )
+
+    conn.close()
+
+    return render_template(
+        "reputation_tasks.html",
+        report=report,
+        title="信誉风险处置任务",
+    )
+
+
 @app.route("/reputation/search")
 def v156_reputation_search():
     import sqlite3

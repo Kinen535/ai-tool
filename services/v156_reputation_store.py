@@ -80,6 +80,75 @@ def ensure_reputation_tables(conn: sqlite3.Connection) -> None:
         """
     )
 
+    # V15.7-A7-1 reputation task table
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS v157_reputation_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL DEFAULT 'subject',
+            entity_id INTEGER NOT NULL,
+            entity_name TEXT DEFAULT '',
+            entity_identifier TEXT DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'P3',
+            task_reason TEXT DEFAULT '',
+            recommended_action TEXT DEFAULT '',
+            owner TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            result_note TEXT DEFAULT '',
+            source_type TEXT DEFAULT 'workbench',
+            created_at TEXT DEFAULT (
+                datetime('now','localtime')
+            ),
+            updated_at TEXT DEFAULT (
+                datetime('now','localtime')
+            ),
+            completed_at TEXT DEFAULT ''
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v157_rep_task_status
+        ON v157_reputation_tasks(status)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v157_rep_task_priority
+        ON v157_reputation_tasks(priority)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v157_rep_task_entity
+        ON v157_reputation_tasks(
+            entity_type,
+            entity_id
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS
+        idx_v157_rep_task_active_unique
+        ON v157_reputation_tasks(
+            entity_type,
+            entity_id
+        )
+        WHERE status IN (
+            'pending',
+            'processing'
+        )
+        """
+    )
+
     conn.commit()
 
 
@@ -2289,6 +2358,28 @@ def build_reputation_workbench_report(
         for item in queue
     ]
 
+    # V15.7-A7-2 workbench task integration
+    active_task_map = get_active_reputation_task_map(
+        conn
+    )
+
+    active_task_count = 0
+
+    for item in all_items:
+        task_key = (
+            item["object_type"],
+            int(item["object_id"]),
+        )
+
+        active_task = active_task_map.get(
+            task_key
+        )
+
+        item["active_task"] = active_task
+
+        if active_task:
+            active_task_count += 1
+
     subject_task_count = sum(
         1
         for item in all_items
@@ -2319,9 +2410,815 @@ def build_reputation_workbench_report(
             "p3_count": raw_counts["P3"],
             "subject_count": subject_task_count,
             "event_count": event_task_count,
+            "active_task_count": active_task_count,
         },
         "raw_counts": raw_counts,
         "queues": shown_queues,
         "limit_per_priority": limit_per_priority,
         "generated_at": generated_at,
     }
+
+
+# =========================
+# V15.7-A7-1 reputation task storage
+# =========================
+
+_REPUTATION_TASK_ENTITY_TYPES = {
+    "subject",
+    "event",
+}
+
+_REPUTATION_TASK_PRIORITIES = {
+    "P1",
+    "P2",
+    "P3",
+}
+
+_REPUTATION_TASK_STATUSES = {
+    "pending",
+    "processing",
+    "completed",
+    "ignored",
+}
+
+_REPUTATION_TASK_ACTIVE_STATUSES = {
+    "pending",
+    "processing",
+}
+
+_REPUTATION_TASK_CLOSED_STATUSES = {
+    "completed",
+    "ignored",
+}
+
+
+def _get_reputation_task_entity_snapshot(
+    conn: sqlite3.Connection,
+    entity_type: str,
+    entity_id: int,
+) -> dict[str, Any] | None:
+    if entity_type == "subject":
+        row = conn.execute(
+            """
+            SELECT
+                id,
+                display_name,
+                game_id
+            FROM v156_reputation_subjects
+            WHERE id=?
+            """,
+            (entity_id,),
+        ).fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "entity_name": (
+                row["display_name"]
+                or row["game_id"]
+                or f"主体 #{entity_id}"
+            ),
+            "entity_identifier": (
+                row["game_id"]
+                or f"主体 #{entity_id}"
+            ),
+        }
+
+    if entity_type == "event":
+        row = conn.execute(
+            """
+            SELECT
+                id,
+                title
+            FROM v156_reputation_events
+            WHERE id=?
+            """,
+            (entity_id,),
+        ).fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "entity_name": (
+                row["title"]
+                or f"事件 #{entity_id}"
+            ),
+            "entity_identifier": (
+                f"事件 #{entity_id}"
+            ),
+        }
+
+    return None
+
+
+def create_reputation_task(
+    conn: sqlite3.Connection,
+    data: dict[str, Any],
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    entity_type = (
+        data.get("entity_type")
+        or ""
+    ).strip().lower()
+
+    try:
+        entity_id = int(
+            data.get("entity_id")
+            or 0
+        )
+    except Exception:
+        entity_id = 0
+
+    priority = (
+        data.get("priority")
+        or "P3"
+    ).strip().upper()
+
+    task_reason = (
+        data.get("task_reason")
+        or ""
+    ).strip()
+
+    recommended_action = (
+        data.get("recommended_action")
+        or ""
+    ).strip()
+
+    owner = (
+        data.get("owner")
+        or ""
+    ).strip()
+
+    source_type = (
+        data.get("source_type")
+        or "workbench"
+    ).strip()
+
+    if entity_type not in _REPUTATION_TASK_ENTITY_TYPES:
+        return {
+            "ok": False,
+            "message": "任务对象类型无效。",
+        }
+
+    if entity_id <= 0:
+        return {
+            "ok": False,
+            "message": "任务对象编号无效。",
+        }
+
+    if priority not in _REPUTATION_TASK_PRIORITIES:
+        return {
+            "ok": False,
+            "message": "任务优先级无效。",
+        }
+
+    if not task_reason:
+        return {
+            "ok": False,
+            "message": "任务风险原因不能为空。",
+        }
+
+    snapshot = _get_reputation_task_entity_snapshot(
+        conn,
+        entity_type,
+        entity_id,
+    )
+
+    if not snapshot:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "任务对应的主体或事件不存在。",
+        }
+
+    existing = conn.execute(
+        """
+        SELECT
+            id,
+            status
+        FROM v157_reputation_tasks
+        WHERE entity_type=?
+          AND entity_id=?
+          AND status IN (
+              'pending',
+              'processing'
+          )
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (
+            entity_type,
+            entity_id,
+        ),
+    ).fetchone()
+
+    if existing:
+        return {
+            "ok": False,
+            "duplicate": True,
+            "task_id": int(existing["id"]),
+            "status": existing["status"],
+            "message": "该对象已有未闭环处置任务。",
+        }
+
+    try:
+        cursor = conn.execute(
+            """
+            INSERT INTO v157_reputation_tasks (
+                entity_type,
+                entity_id,
+                entity_name,
+                entity_identifier,
+                priority,
+                task_reason,
+                recommended_action,
+                owner,
+                status,
+                result_note,
+                source_type,
+                updated_at,
+                completed_at
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?,
+                'pending', '', ?,
+                datetime('now','localtime'),
+                ''
+            )
+            """,
+            (
+                entity_type,
+                entity_id,
+                snapshot["entity_name"],
+                snapshot["entity_identifier"],
+                priority,
+                task_reason,
+                recommended_action,
+                owner,
+                source_type,
+            ),
+        )
+
+        conn.commit()
+
+    except sqlite3.IntegrityError:
+        return {
+            "ok": False,
+            "duplicate": True,
+            "message": "该对象已有未闭环处置任务。",
+        }
+
+    task_id = int(cursor.lastrowid)
+
+    return {
+        "ok": True,
+        "task_id": task_id,
+        "message": "处置任务已创建。",
+    }
+
+
+def get_reputation_task(
+    conn: sqlite3.Connection,
+    task_id: int,
+):
+    ensure_reputation_tables(conn)
+
+    return conn.execute(
+        """
+        SELECT *
+        FROM v157_reputation_tasks
+        WHERE id=?
+        """,
+        (task_id,),
+    ).fetchone()
+
+
+def list_reputation_tasks(
+    conn: sqlite3.Connection,
+    *,
+    status: str = "",
+    priority: str = "",
+    q: str = "",
+    limit: int = 200,
+) -> list:
+    ensure_reputation_tables(conn)
+
+    status = (status or "").strip().lower()
+    priority = (priority or "").strip().upper()
+    q = (q or "").strip()
+
+    conditions = []
+    params: list[Any] = []
+
+    if status in _REPUTATION_TASK_STATUSES:
+        conditions.append("status=?")
+        params.append(status)
+
+    if priority in _REPUTATION_TASK_PRIORITIES:
+        conditions.append("priority=?")
+        params.append(priority)
+
+    if q:
+        like = f"%{q}%"
+
+        conditions.append(
+            """
+            (
+                IFNULL(entity_name, '') LIKE ?
+                OR IFNULL(entity_identifier, '') LIKE ?
+                OR IFNULL(task_reason, '') LIKE ?
+                OR IFNULL(recommended_action, '') LIKE ?
+                OR IFNULL(owner, '') LIKE ?
+                OR IFNULL(result_note, '') LIKE ?
+            )
+            """
+        )
+
+        params.extend(
+            [
+                like,
+                like,
+                like,
+                like,
+                like,
+                like,
+            ]
+        )
+
+    where_sql = ""
+
+    if conditions:
+        where_sql = (
+            "WHERE "
+            + " AND ".join(conditions)
+        )
+
+    params.append(max(1, int(limit or 200)))
+
+    return conn.execute(
+        f"""
+        SELECT *
+        FROM v157_reputation_tasks
+        {where_sql}
+        ORDER BY
+            CASE
+                WHEN status='processing' THEN 1
+                WHEN status='pending' THEN 2
+                WHEN status='completed' THEN 3
+                WHEN status='ignored' THEN 4
+                ELSE 9
+            END,
+            CASE
+                WHEN priority='P1' THEN 1
+                WHEN priority='P2' THEN 2
+                WHEN priority='P3' THEN 3
+                ELSE 9
+            END,
+            updated_at DESC,
+            id DESC
+        LIMIT ?
+        """,
+        tuple(params),
+    ).fetchall()
+
+
+def update_reputation_task(
+    conn: sqlite3.Connection,
+    task_id: int,
+    data: dict[str, Any],
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    row = get_reputation_task(
+        conn,
+        task_id,
+    )
+
+    if not row:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "处置任务不存在。",
+        }
+
+    priority = (
+        data.get("priority")
+        or row["priority"]
+        or "P3"
+    ).strip().upper()
+
+    status = (
+        data.get("status")
+        or row["status"]
+        or "pending"
+    ).strip().lower()
+
+    owner = (
+        data.get("owner")
+        if data.get("owner") is not None
+        else row["owner"]
+    )
+
+    result_note = (
+        data.get("result_note")
+        if data.get("result_note") is not None
+        else row["result_note"]
+    )
+
+    owner = (owner or "").strip()
+    result_note = (result_note or "").strip()
+
+    if priority not in _REPUTATION_TASK_PRIORITIES:
+        return {
+            "ok": False,
+            "message": "任务优先级无效。",
+        }
+
+    if status not in _REPUTATION_TASK_STATUSES:
+        return {
+            "ok": False,
+            "message": "任务状态无效。",
+        }
+
+    # V15.7-A7-3 task closure validation
+    if len(owner) > 100:
+        return {
+            "ok": False,
+            "message": "负责人名称不能超过100个字符。",
+        }
+
+    if len(result_note) > 2000:
+        return {
+            "ok": False,
+            "message": "处置结果不能超过2000个字符。",
+        }
+
+    if (
+        status in _REPUTATION_TASK_CLOSED_STATUSES
+        and not result_note
+    ):
+        return {
+            "ok": False,
+            "result_required": True,
+            "message": (
+                "完成或忽略任务前，"
+                "必须填写处置结果。"
+            ),
+        }
+
+    try:
+        if status in _REPUTATION_TASK_CLOSED_STATUSES:
+            conn.execute(
+                """
+                UPDATE v157_reputation_tasks
+                SET
+                    priority=?,
+                    owner=?,
+                    status=?,
+                    result_note=?,
+                    updated_at=datetime(
+                        'now',
+                        'localtime'
+                    ),
+                    completed_at=CASE
+                        WHEN IFNULL(
+                            completed_at,
+                            ''
+                        )=''
+                        THEN datetime(
+                            'now',
+                            'localtime'
+                        )
+                        ELSE completed_at
+                    END
+                WHERE id=?
+                """,
+                (
+                    priority,
+                    owner,
+                    status,
+                    result_note,
+                    task_id,
+                ),
+            )
+
+        else:
+            conn.execute(
+                """
+                UPDATE v157_reputation_tasks
+                SET
+                    priority=?,
+                    owner=?,
+                    status=?,
+                    result_note=?,
+                    updated_at=datetime(
+                        'now',
+                        'localtime'
+                    ),
+                    completed_at=''
+                WHERE id=?
+                """,
+                (
+                    priority,
+                    owner,
+                    status,
+                    result_note,
+                    task_id,
+                ),
+            )
+
+        conn.commit()
+
+    except sqlite3.IntegrityError:
+        return {
+            "ok": False,
+            "duplicate": True,
+            "message": "该对象已经存在另一条未闭环任务。",
+        }
+
+    updated = get_reputation_task(
+        conn,
+        task_id,
+    )
+
+    return {
+        "ok": True,
+        "task": updated,
+        "message": "处置任务已更新。",
+    }
+
+
+def build_reputation_task_report(
+    conn: sqlite3.Connection,
+    *,
+    status: str = "",
+    priority: str = "",
+    q: str = "",
+    limit: int = 200,
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    rows = list_reputation_tasks(
+        conn,
+        status=status,
+        priority=priority,
+        q=q,
+        limit=limit,
+    )
+
+    stat_row = conn.execute(
+        """
+        SELECT
+            COUNT(*) AS total_count,
+            SUM(
+                CASE
+                    WHEN status='pending'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS pending_count,
+            SUM(
+                CASE
+                    WHEN status='processing'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS processing_count,
+            SUM(
+                CASE
+                    WHEN status='completed'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS completed_count,
+            SUM(
+                CASE
+                    WHEN status='ignored'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS ignored_count,
+            SUM(
+                CASE
+                    WHEN status IN (
+                        'pending',
+                        'processing'
+                    )
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS active_count,
+            SUM(
+                CASE
+                    WHEN priority='P1'
+                     AND status IN (
+                         'pending',
+                         'processing'
+                     )
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS p1_active_count
+        FROM v157_reputation_tasks
+        """
+    ).fetchone()
+
+    return {
+        "rows": rows,
+        "stats": {
+            "total_count": int(
+                stat_row["total_count"]
+                or 0
+            ),
+            "pending_count": int(
+                stat_row["pending_count"]
+                or 0
+            ),
+            "processing_count": int(
+                stat_row["processing_count"]
+                or 0
+            ),
+            "completed_count": int(
+                stat_row["completed_count"]
+                or 0
+            ),
+            "ignored_count": int(
+                stat_row["ignored_count"]
+                or 0
+            ),
+            "active_count": int(
+                stat_row["active_count"]
+                or 0
+            ),
+            "p1_active_count": int(
+                stat_row["p1_active_count"]
+                or 0
+            ),
+        },
+        "filters": {
+            "status": (
+                status
+                if status
+                in _REPUTATION_TASK_STATUSES
+                else ""
+            ),
+            "priority": (
+                priority
+                if priority
+                in _REPUTATION_TASK_PRIORITIES
+                else ""
+            ),
+            "q": q or "",
+        },
+    }
+
+
+# =========================
+# V15.7-A7-2 workbench task actions
+# =========================
+
+def get_active_reputation_task_map(
+    conn: sqlite3.Connection,
+) -> dict[tuple[str, int], dict[str, Any]]:
+    ensure_reputation_tables(conn)
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM v157_reputation_tasks
+        WHERE status IN (
+            'pending',
+            'processing'
+        )
+        ORDER BY updated_at DESC, id DESC
+        """
+    ).fetchall()
+
+    result: dict[
+        tuple[str, int],
+        dict[str, Any],
+    ] = {}
+
+    for row in rows:
+        entity_type = (
+            row["entity_type"]
+            or ""
+        ).strip()
+
+        try:
+            entity_id = int(
+                row["entity_id"]
+                or 0
+            )
+        except Exception:
+            entity_id = 0
+
+        if (
+            entity_type
+            not in _REPUTATION_TASK_ENTITY_TYPES
+            or entity_id <= 0
+        ):
+            continue
+
+        key = (
+            entity_type,
+            entity_id,
+        )
+
+        if key not in result:
+            result[key] = dict(row)
+
+    return result
+
+
+def create_reputation_task_from_workbench(
+    conn: sqlite3.Connection,
+    *,
+    entity_type: str,
+    entity_id: int,
+) -> dict[str, Any]:
+    ensure_reputation_tables(conn)
+
+    entity_type = (
+        entity_type
+        or ""
+    ).strip().lower()
+
+    try:
+        entity_id = int(
+            entity_id
+            or 0
+        )
+    except Exception:
+        entity_id = 0
+
+    if entity_type not in _REPUTATION_TASK_ENTITY_TYPES:
+        return {
+            "ok": False,
+            "message": "工作台任务对象类型无效。",
+        }
+
+    if entity_id <= 0:
+        return {
+            "ok": False,
+            "message": "工作台任务对象编号无效。",
+        }
+
+    report = build_reputation_workbench_report(
+        conn,
+        limit_per_priority=5000,
+    )
+
+    matched_item = None
+
+    for priority in ("P1", "P2", "P3"):
+        for item in report["queues"].get(
+            priority,
+            [],
+        ):
+            if (
+                item.get("object_type") == entity_type
+                and int(
+                    item.get("object_id")
+                    or 0
+                ) == entity_id
+            ):
+                matched_item = item
+                break
+
+        if matched_item:
+            break
+
+    if not matched_item:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": (
+                "该对象已经不在当前风险处置队列中，"
+                "请刷新工作台后重新确认。"
+            ),
+        }
+
+    return create_reputation_task(
+        conn,
+        {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "priority": (
+                matched_item.get("priority")
+                or "P3"
+            ),
+            "task_reason": (
+                matched_item.get("reason")
+                or ""
+            ),
+            "recommended_action": (
+                matched_item.get("action")
+                or ""
+            ),
+            "source_type": "workbench",
+        },
+    )

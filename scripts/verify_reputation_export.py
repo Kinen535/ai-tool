@@ -17,6 +17,8 @@ REQUIRED_FILES = {
     "v156_reputation_events.csv",
     "v156_reputation_event_relations.csv",
     "v156_reputation_merge_logs.csv",
+    # V15.7-A7-4 reputation task export
+    "v157_reputation_tasks.csv",
 }
 
 
@@ -59,7 +61,7 @@ def parse_checksums(path: Path) -> dict[str, str]:
 
 
 def main() -> int:
-    print("V15.6 Reputation Export Verify")
+    print("V15.7 Reputation Export Verify")
     print("=" * 56)
 
     if len(sys.argv) != 2:

@@ -17,10 +17,14 @@ REQUIRED_TABLES = [
     "v156_reputation_subjects",
     "v156_reputation_events",
     "v156_reputation_event_relations",
+    # V15.7-A7-4B reputation task health check
+    "v157_reputation_tasks",
 ]
 
 REQUIRED_TEMPLATES = [
     "templates/reputation_home.html",
+    "templates/reputation_workbench.html",
+    "templates/reputation_tasks.html",
     "templates/reputation_search.html",
     "templates/reputation_subjects.html",
     "templates/reputation_subject_new.html",
@@ -36,6 +40,10 @@ REQUIRED_TEMPLATES = [
 
 REQUIRED_ROUTES = [
     '@app.route("/reputation")',
+    '@app.route("/reputation/workbench")',
+    '@app.route("/reputation/tasks")',
+    '"/reputation/tasks/create",',
+    '"/reputation/tasks/<int:task_id>/update",',
     '@app.route("/reputation/search")',
     '@app.route("/reputation/subjects"',
     '@app.route("/reputation/subjects/new"',
@@ -70,7 +78,7 @@ def count_one(conn: sqlite3.Connection, sql: str, args: tuple = ()) -> int:
 
 
 def main() -> int:
-    print("V15.6 Reputation Health Check\n# V15.6-A18 reputation health check extended routes/templates")
+    print("V15.7 Reputation Health Check")
     print("=" * 48)
 
     fatal = 0
@@ -132,6 +140,38 @@ def main() -> int:
     event_total = count_one(conn, "SELECT COUNT(*) FROM v156_reputation_events")
     relation_total = count_one(conn, "SELECT COUNT(*) FROM v156_reputation_event_relations")
 
+    task_total = count_one(
+        conn,
+        "SELECT COUNT(*) FROM v157_reputation_tasks",
+    )
+
+    active_task_total = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status IN ('pending','processing')
+        """,
+    )
+
+    completed_task_total = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status='completed'
+        """,
+    )
+
+    ignored_task_total = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status='ignored'
+        """,
+    )
+
     risk_subject_total = count_one(
         conn,
         """
@@ -157,6 +197,10 @@ def main() -> int:
     ok(f"信誉事件数量：{event_total}")
     ok(f"高影响事件数量：{high_impact_event_total}")
     ok(f"事件关联数量：{relation_total}")
+    ok(f"处置任务数量：{task_total}")
+    ok(f"未闭环任务数量：{active_task_total}")
+    ok(f"已完成任务数量：{completed_task_total}")
+    ok(f"已忽略任务数量：{ignored_task_total}")
 
     empty_subjects = count_one(
         conn,
@@ -205,6 +249,146 @@ def main() -> int:
         fatal += 1
     else:
         ok("没有断链关联")
+
+    # V15.7-A7-4B reputation task health check
+    invalid_tasks = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE entity_type NOT IN ('subject','event')
+           OR priority NOT IN ('P1','P2','P3')
+           OR status NOT IN (
+               'pending',
+               'processing',
+               'completed',
+               'ignored'
+           )
+           OR entity_id <= 0
+        """,
+    )
+
+    if invalid_tasks:
+        bad(f"存在字段值非法的处置任务：{invalid_tasks} 条")
+        fatal += 1
+    else:
+        ok("处置任务对象类型、优先级和状态均合法")
+
+    orphan_tasks = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks t
+        LEFT JOIN v156_reputation_subjects s
+          ON t.entity_type='subject'
+         AND s.id=t.entity_id
+        LEFT JOIN v156_reputation_events e
+          ON t.entity_type='event'
+         AND e.id=t.entity_id
+        WHERE (
+            t.entity_type='subject'
+            AND s.id IS NULL
+        )
+        OR (
+            t.entity_type='event'
+            AND e.id IS NULL
+        )
+        """,
+    )
+
+    if orphan_tasks:
+        bad(f"存在对象已经失效的处置任务：{orphan_tasks} 条")
+        fatal += 1
+    else:
+        ok("处置任务均能关联到有效主体或事件")
+
+    duplicate_active_tasks = count_one(
+        conn,
+        """
+        SELECT IFNULL(SUM(c - 1), 0)
+        FROM (
+            SELECT
+                entity_type,
+                entity_id,
+                COUNT(*) AS c
+            FROM v157_reputation_tasks
+            WHERE status IN (
+                'pending',
+                'processing'
+            )
+            GROUP BY
+                entity_type,
+                entity_id
+            HAVING COUNT(*) > 1
+        )
+        """,
+    )
+
+    if duplicate_active_tasks:
+        bad(
+            "存在同一对象的重复未闭环任务："
+            f"{duplicate_active_tasks} 条"
+        )
+        fatal += 1
+    else:
+        ok("没有同一对象的重复未闭环任务")
+
+    closed_without_result = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status IN ('completed','ignored')
+          AND IFNULL(TRIM(result_note),'')=''
+        """,
+    )
+
+    if closed_without_result:
+        bad(
+            "存在没有处置结果的已闭环任务："
+            f"{closed_without_result} 条"
+        )
+        fatal += 1
+    else:
+        ok("已闭环任务均填写了处置结果")
+
+    closed_without_time = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status IN ('completed','ignored')
+          AND IFNULL(TRIM(completed_at),'')=''
+        """,
+    )
+
+    if closed_without_time:
+        bad(
+            "存在没有闭环时间的已闭环任务："
+            f"{closed_without_time} 条"
+        )
+        fatal += 1
+    else:
+        ok("已闭环任务均记录了闭环时间")
+
+    active_with_completed_time = count_one(
+        conn,
+        """
+        SELECT COUNT(*)
+        FROM v157_reputation_tasks
+        WHERE status IN ('pending','processing')
+          AND IFNULL(TRIM(completed_at),'')!=''
+        """,
+    )
+
+    if active_with_completed_time:
+        bad(
+            "存在进行中但已经写入闭环时间的任务："
+            f"{active_with_completed_time} 条"
+        )
+        fatal += 1
+    else:
+        ok("未闭环任务没有错误的闭环时间")
 
     duplicate_game_ids = conn.execute(
         """

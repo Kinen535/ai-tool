@@ -28,7 +28,7 @@ def latest_zip() -> Path | None:
 
 
 def main() -> int:
-    print("V15.6 Reputation One-Click Backup")
+    print("V15.7 Reputation One-Click Backup")
     print("=" * 60)
 
     run(

@@ -239,6 +239,48 @@ html[data-theme="dark"] .reputation-workbench-muted {
                            ">
                             {{ item.action_label }}
                         </a>
+
+                        <!-- V15.7-A7-2 workbench task button -->
+                        {% if item.active_task %}
+                        <a class="reputation-workbench-link"
+                           href="/reputation/tasks#task-{{ item.active_task.id }}"
+                           style="
+                              background:#ecfdf5;
+                              color:#15803d;
+                              border:1px solid #16a34a;
+                           ">
+                            已有任务 #{{ item.active_task.id }}
+                            {% if item.active_task.status == "processing" %}
+                            ｜处理中
+                            {% else %}
+                            ｜待处理
+                            {% endif %}
+                        </a>
+                        {% else %}
+                        <form method="POST"
+                              action="/reputation/tasks/create"
+                              style="display:inline;">
+                            <input type="hidden"
+                                   name="entity_type"
+                                   value="{{ item.object_type }}">
+
+                            <input type="hidden"
+                                   name="entity_id"
+                                   value="{{ item.object_id }}">
+
+                            <button type="submit"
+                                    class="reputation-workbench-link"
+                                    style="
+                                       background:#fff7ed;
+                                       color:#f97316;
+                                       border:1px solid #f97316;
+                                       cursor:pointer;
+                                    "
+                                    onclick="return confirm('确认将该风险项目创建为处置任务？');">
+                                创建处置任务
+                            </button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -291,6 +333,19 @@ html[data-theme="dark"] .reputation-workbench-muted {
                 返回信誉档案库
             </a>
 
+            <!-- V15.7-A7-1B reputation task entry -->
+            <a href="/reputation/tasks"
+               style="
+                  background:#fff7ed;
+                  color:#f97316;
+                  padding:9px 14px;
+                  border-radius:10px;
+                  text-decoration:none;
+                  font-weight:bold;
+               ">
+                查看处置任务
+            </a>
+
             <a href="/reputation/search"
                style="
                   background:#ecfdf5;
@@ -304,6 +359,44 @@ html[data-theme="dark"] .reputation-workbench-muted {
             </a>
         </div>
     </div>
+
+    <!-- V15.7-A7-2 workbench task result -->
+    {% set task_result = request.args.get("task_result", "") %}
+    {% set task_id = request.args.get("task_id", "") %}
+
+    {% if task_result == "created" %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ✅ 处置任务已创建。
+        {% if task_id %}
+        任务编号：#{{ task_id }}。
+        <a href="/reputation/tasks#task-{{ task_id }}"
+           style="color:#15803d;margin-left:8px;">
+            查看任务 →
+        </a>
+        {% endif %}
+    </div>
+
+    {% elif task_result == "duplicate" %}
+    <div style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 该对象已经存在未闭环任务，没有重复创建。
+        {% if task_id %}
+        <a href="/reputation/tasks#task-{{ task_id }}"
+           style="color:#c2410c;margin-left:8px;">
+            查看已有任务 →
+        </a>
+        {% endif %}
+    </div>
+
+    {% elif task_result == "not_found" %}
+    <div style="background:#fffbeb;border:1px solid #fde68a;color:#a16207;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 该对象已经不在当前风险队列，请刷新页面后重新确认。
+    </div>
+
+    {% elif task_result == "invalid" %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ❌ 创建任务失败：请求参数无效。
+    </div>
+    {% endif %}
 
     <div class="reputation-workbench-hero">
         <h2 style="margin-top:0;">工作台定位</h2>

@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- V15.7-A7-1B reputation task list page -->
+{% set status_map = {
+    "pending": "待处理",
+    "processing": "处理中",
+    "completed": "已完成",
+    "ignored": "已忽略"
+} %}
+
+{% set priority_map = {
+    "P1": "P1 紧急",
+    "P2": "P2 重点",
+    "P3": "P3 待完善"
+} %}
+
+{% set entity_map = {
+    "subject": "信誉主体",
+    "event": "信誉事件"
+} %}
+
+<style>
+.reputation-task-page {
+    max-width: 1550px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.reputation-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.reputation-task-summary {
+    background: #eff6ff;
+    border-left: 6px solid #2563eb;
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+.reputation-task-stats {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.reputation-task-stat {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+}
+
+.reputation-task-filter {
+    background: white;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 18px;
+}
+
+.reputation-task-table-card {
+    background: white;
+    border-radius: 18px;
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.reputation-task-table {
+    width: 100%;
+    min-width: 1780px;
+    border-collapse: collapse;
+}
+
+.reputation-task-table th {
+    background: #f3f4f6;
+    padding: 11px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.reputation-task-table td {
+    padding: 12px 11px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.reputation-task-badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.reputation-task-muted {
+    color: #64748b;
+}
+
+/* V15.7-A7-3 task editor */
+.reputation-task-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: white;
+    color: #0f172a;
+}
+
+.reputation-task-result-input {
+    min-width: 250px;
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.reputation-task-save {
+    width: 100%;
+    min-width: 110px;
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 14px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.reputation-task-save:hover {
+    opacity: 0.9;
+}
+
+.reputation-task-table tr:target td {
+    background: #eff6ff;
+}
+
+.reputation-task-help {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #64748b;
+}
+
+html[data-theme="dark"] .reputation-task-control {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+    border-color: #4b5d78 !important;
+}
+
+html[data-theme="dark"] .reputation-task-table tr:target td {
+    background: #273a57 !important;
+}
+
+html[data-theme="dark"] .reputation-task-help {
+    color: #a9b7cc !important;
+}
+
+html[data-theme="dark"] .reputation-task-reset {
+    background: #243650 !important;
+    color: #e8eef8 !important;
+    border: 1px solid #4b5d78 !important;
+}
+
+html[data-theme="dark"] .reputation-task-summary,
+html[data-theme="dark"] .reputation-task-filter,
+html[data-theme="dark"] .reputation-task-table-card,
+html[data-theme="dark"] .reputation-task-stat {
+    background: #1d2d47 !important;
+    color: #e8eef8 !important;
+    border-color: #364760 !important;
+}
+
+html[data-theme="dark"] .reputation-task-table th {
+    background: #243650 !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-task-table td {
+    border-color: #364760 !important;
+    color: #e8eef8 !important;
+}
+
+html[data-theme="dark"] .reputation-task-muted {
+    color: #a9b7cc !important;
+}
+
+html[data-theme="dark"] .reputation-task-filter input,
+html[data-theme="dark"] .reputation-task-filter select {
+    background: #17243a !important;
+    color: #e8eef8 !important;
+    border-color: #4b5d78 !important;
+}
+
+@media (max-width: 1000px) {
+    .reputation-task-page {
+        padding: 14px;
+    }
+
+    .reputation-task-header {
+        flex-direction: column;
+    }
+
+    .reputation-task-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<div class="reputation-task-page">
+    <div class="reputation-task-header">
+        <div>
+            <h1 style="margin:0 0 7px 0;">
+                📋 信誉风险处置任务
+            </h1>
+
+            <div class="reputation-task-muted">
+                将动态风险项目转化为可追踪、可闭环的人工处置任务。
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="/reputation/workbench"
+               style="background:#fef2f2;color:#dc2626;padding:9px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                返回风险处置工作台
+            </a>
+
+            <a href="/reputation"
+               style="background:#eff6ff;color:#2563eb;padding:9px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                返回信誉档案库
+            </a>
+        </div>
+    </div>
+
+    <!-- V15.7-A7-3 task update result -->
+    {% set task_result = request.args.get("task_result", "") %}
+    {% set task_id = request.args.get("task_id", "") %}
+
+    {% if task_result == "updated" %}
+    <div style="background:#ecfdf5;border:1px solid #86efac;color:#15803d;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ✅ 任务 #{{ task_id }} 已保存更新。
+    </div>
+
+    {% elif task_result == "result_required" %}
+    <div style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 任务 #{{ task_id }} 未能闭环：选择“已完成”或“已忽略”时，必须填写处置结果。
+    </div>
+
+    {% elif task_result == "duplicate" %}
+    <div style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ⚠️ 任务 #{{ task_id }} 更新失败：该对象已经存在另一条未闭环任务。
+    </div>
+
+    {% elif task_result == "not_found" %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ❌ 指定任务不存在，可能已经被移除。
+    </div>
+
+    {% elif task_result == "invalid" %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:bold;">
+        ❌ 任务 #{{ task_id }} 更新失败：提交内容不符合系统规则。
+    </div>
+    {% endif %}
+
+    <div class="reputation-task-summary">
+        <h2 style="margin-top:0;">
+            任务闭环概况
+        </h2>
+
+        <div class="reputation-task-muted"
+             style="line-height:1.8;">
+            当前任务已支持从风险工作台创建，
+            并可维护负责人、优先级、处理状态和处置结果。
+            任务完成或忽略后，系统自动记录闭环时间。
+        </div>
+
+        <div class="reputation-task-stats">
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">任务总数</div>
+                <div style="font-size:27px;font-weight:bold;">
+                    {{ report.stats.total_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">未闭环</div>
+                <div style="font-size:27px;font-weight:bold;color:#dc2626;">
+                    {{ report.stats.active_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">P1 未闭环</div>
+                <div style="font-size:27px;font-weight:bold;color:#dc2626;">
+                    {{ report.stats.p1_active_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">待处理</div>
+                <div style="font-size:27px;font-weight:bold;color:#d97706;">
+                    {{ report.stats.pending_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">处理中</div>
+                <div style="font-size:27px;font-weight:bold;color:#2563eb;">
+                    {{ report.stats.processing_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">已完成</div>
+                <div style="font-size:27px;font-weight:bold;color:#16a34a;">
+                    {{ report.stats.completed_count }}
+                </div>
+            </div>
+
+            <div class="reputation-task-stat">
+                <div class="reputation-task-muted">已忽略</div>
+                <div style="font-size:27px;font-weight:bold;color:#64748b;">
+                    {{ report.stats.ignored_count }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reputation-task-filter">
+        <h2 style="margin-top:0;">
+            任务筛选
+        </h2>
+
+        <form method="GET"
+              action="/reputation/tasks"
+              style="display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:10px;align-items:end;">
+
+            <div>
+                <label style="display:block;font-weight:bold;margin-bottom:7px;">
+                    关键词
+                </label>
+
+                <input type="text"
+                       name="q"
+                       value="{{ report.filters.q }}"
+                       placeholder="主体、事件、编号、原因、负责人或结果"
+                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+            </div>
+
+            <div>
+                <label style="display:block;font-weight:bold;margin-bottom:7px;">
+                    状态
+                </label>
+
+                <select name="status"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+                    <option value="">全部状态</option>
+                    <option value="pending"
+                            {% if report.filters.status == "pending" %}selected{% endif %}>
+                        待处理
+                    </option>
+                    <option value="processing"
+                            {% if report.filters.status == "processing" %}selected{% endif %}>
+                        处理中
+                    </option>
+                    <option value="completed"
+                            {% if report.filters.status == "completed" %}selected{% endif %}>
+                        已完成
+                    </option>
+                    <option value="ignored"
+                            {% if report.filters.status == "ignored" %}selected{% endif %}>
+                        已忽略
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display:block;font-weight:bold;margin-bottom:7px;">
+                    优先级
+                </label>
+
+                <select name="priority"
+                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+                    <option value="">全部优先级</option>
+                    <option value="P1"
+                            {% if report.filters.priority == "P1" %}selected{% endif %}>
+                        P1 紧急
+                    </option>
+                    <option value="P2"
+                            {% if report.filters.priority == "P2" %}selected{% endif %}>
+                        P2 重点
+                    </option>
+                    <option value="P3"
+                            {% if report.filters.priority == "P3" %}selected{% endif %}>
+                        P3 待完善
+                    </option>
+                </select>
+            </div>
+
+            <button type="submit"
+                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:11px 18px;font-weight:bold;">
+                筛选
+            </button>
+
+            <a href="/reputation/tasks"
+               class="reputation-task-reset"
+               style="background:#f1f5f9;color:#475569;border-radius:10px;padding:11px 18px;text-decoration:none;text-align:center;font-weight:bold;">
+                重置
+            </a>
+        </form>
+    </div>
+
+    <div class="reputation-task-table-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
+            <h2 style="margin:0;">
+                处置任务列表
+            </h2>
+
+            <div class="reputation-task-muted">
+                当前筛选结果：{{ report.rows|length }} 条
+            </div>
+        </div>
+
+        {% if report.rows %}
+        <table class="reputation-task-table">
+            <thead>
+                <tr>
+                    <th>任务</th>
+                    <th>优先级</th>
+                    <th>对象</th>
+                    <th>风险原因快照</th>
+                    <th>推荐动作快照</th>
+                    <th>负责人</th>
+                    <th>状态</th>
+                    <th>处置结果</th>
+                    <th>更新时间</th>
+                    <th>档案入口</th>
+                    <th>维护操作</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in report.rows %}
+                <tr id="task-{{ row.id }}">
+                    <td style="white-space:nowrap;">
+                        #{{ row.id }}
+                    </td>
+
+                    <td style="min-width:145px;">
+                        <select name="priority"
+                                form="task-form-{{ row.id }}"
+                                class="reputation-task-control">
+                            <option value="P1"
+                                    {% if row.priority == "P1" %}selected{% endif %}>
+                                P1 紧急
+                            </option>
+
+                            <option value="P2"
+                                    {% if row.priority == "P2" %}selected{% endif %}>
+                                P2 重点
+                            </option>
+
+                            <option value="P3"
+                                    {% if row.priority == "P3" %}selected{% endif %}>
+                                P3 待完善
+                            </option>
+                        </select>
+                    </td>
+
+                    <td style="min-width:180px;">
+                        <div style="font-weight:bold;">
+                            {{ row.entity_name or "-" }}
+                        </div>
+
+                        <div class="reputation-task-muted"
+                             style="font-size:12px;margin-top:4px;">
+                            {{ entity_map.get(row.entity_type, row.entity_type) }}
+                            ｜{{ row.entity_identifier or "-" }}
+                        </div>
+                    </td>
+
+                    <td style="min-width:230px;line-height:1.7;">
+                        {{ row.task_reason or "-" }}
+                    </td>
+
+                    <td style="min-width:240px;line-height:1.7;">
+                        {{ row.recommended_action or "-" }}
+                    </td>
+
+                    <td style="min-width:150px;">
+                        <input type="text"
+                               name="owner"
+                               form="task-form-{{ row.id }}"
+                               value="{{ row.owner or '' }}"
+                               maxlength="100"
+                               placeholder="填写负责人"
+                               class="reputation-task-control">
+                    </td>
+
+                    <td style="min-width:145px;">
+                        <select name="status"
+                                form="task-form-{{ row.id }}"
+                                class="reputation-task-control">
+                            <option value="pending"
+                                    {% if row.status == "pending" %}selected{% endif %}>
+                                待处理
+                            </option>
+
+                            <option value="processing"
+                                    {% if row.status == "processing" %}selected{% endif %}>
+                                处理中
+                            </option>
+
+                            <option value="completed"
+                                    {% if row.status == "completed" %}selected{% endif %}>
+                                已完成
+                            </option>
+
+                            <option value="ignored"
+                                    {% if row.status == "ignored" %}selected{% endif %}>
+                                已忽略
+                            </option>
+                        </select>
+
+                        {% if row.completed_at %}
+                        <div class="reputation-task-help">
+                            闭环时间：{{ row.completed_at }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td style="min-width:270px;">
+                        <textarea name="result_note"
+                                  form="task-form-{{ row.id }}"
+                                  maxlength="2000"
+                                  placeholder="记录核查过程、处理结论或忽略原因"
+                                  class="reputation-task-control reputation-task-result-input">{{ row.result_note or '' }}</textarea>
+
+                        <div class="reputation-task-help">
+                            选择“已完成”或“已忽略”时，此项必填。
+                        </div>
+                    </td>
+
+                    <td style="white-space:nowrap;">
+                        {{ row.updated_at or row.created_at or "-" }}
+                    </td>
+
+                    <td style="white-space:nowrap;">
+                        {% if row.entity_type == "subject" %}
+                        <a href="/reputation/subjects/{{ row.entity_id }}"
+                           target="_blank"
+                           rel="noopener"
+                           style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                            新标签查看主体
+                        </a>
+                        {% elif row.entity_type == "event" %}
+                        <a href="/reputation/events/{{ row.entity_id }}"
+                           target="_blank"
+                           rel="noopener"
+                           style="color:#2563eb;text-decoration:none;font-weight:bold;">
+                            新标签查看事件
+                        </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td style="min-width:125px;">
+                        <form id="task-form-{{ row.id }}"
+                              method="POST"
+                              action="/reputation/tasks/{{ row.id }}/update"
+                              onsubmit="return confirm('确认保存任务 #{{ row.id }} 的本次更新？');">
+
+                            <input type="hidden"
+                                   name="return_status"
+                                   value="{{ report.filters.status }}">
+
+                            <input type="hidden"
+                                   name="return_priority"
+                                   value="{{ report.filters.priority }}">
+
+                            <input type="hidden"
+                                   name="return_q"
+                                   value="{{ report.filters.q }}">
+
+                            <button type="submit"
+                                    class="reputation-task-save">
+                                保存更新
+                            </button>
+                        </form>
+
+                        <div class="reputation-task-help">
+                            更新后保留当前筛选条件。
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="background:#f8fafc;border-radius:14px;padding:22px;color:#64748b;line-height:1.8;">
+            当前没有符合条件的处置任务。
+
+            <div style="margin-top:8px;">
+                可从风险处置工作台将 P1、P2、P3 风险项目创建为处置任务。
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

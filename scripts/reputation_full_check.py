@@ -272,6 +272,7 @@ def check_reputation_core_pages_security() -> None:
     pages = [
         "/reputation",
         "/reputation/workbench",
+        "/reputation/tasks",
         "/reputation/search",
         "/reputation/search?q=315789798",
         "/reputation/subjects",
@@ -324,6 +325,25 @@ def check_reputation_core_pages_security() -> None:
                     if required_key not in html:
                         raise SystemExit(
                             "❌ 风险处置工作台缺少必要内容："
+                            f"{required_key}"
+                        )
+
+            # V15.7-A7-4C reputation task page check
+            if url == "/reputation/tasks":
+                required_tasks = [
+                    "信誉风险处置任务",
+                    "任务闭环概况",
+                    "任务总数",
+                    "未闭环",
+                    "处置任务列表",
+                    "保存更新",
+                    "处置结果",
+                ]
+
+                for required_key in required_tasks:
+                    if required_key not in html:
+                        raise SystemExit(
+                            "❌ 处置任务页面缺少必要内容："
                             f"{required_key}"
                         )
 
@@ -557,8 +577,548 @@ def check_reputation_workbench_return_context() -> None:
     )
 
 
+
+# V15.7-A7-4C reputation task lifecycle check
+def check_reputation_task_lifecycle() -> None:
+    import shutil
+    import sqlite3
+    import tempfile
+    import uuid
+    from pathlib import Path
+
+    import services.v156_reputation_store as store
+    from app import app
+
+    root = Path(__file__).resolve().parents[1]
+    source_db = root / "data" / "snapshots.db"
+
+    if not source_db.exists():
+        raise SystemExit(
+            "❌ 任务生命周期检查缺少正式数据库"
+        )
+
+    def clone_row(
+        conn,
+        table,
+        source_row,
+        overrides,
+    ):
+        columns = [
+            row["name"]
+            for row in conn.execute(
+                f"PRAGMA table_info({table})"
+            ).fetchall()
+            if row["name"] != "id"
+        ]
+
+        values = []
+
+        for column in columns:
+            if column in overrides:
+                values.append(
+                    overrides[column]
+                )
+            else:
+                values.append(
+                    source_row[column]
+                )
+
+        placeholders = ",".join(
+            ["?"] * len(columns)
+        )
+
+        column_sql = ",".join(columns)
+
+        cursor = conn.execute(
+            f"""
+            INSERT INTO {table} (
+                {column_sql}
+            )
+            VALUES (
+                {placeholders}
+            )
+            """,
+            tuple(values),
+        )
+
+        return int(cursor.lastrowid)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        temp_db = (
+            Path(tmp)
+            / "reputation_task_check.db"
+        )
+
+        shutil.copy2(
+            source_db,
+            temp_db,
+        )
+
+        conn = sqlite3.connect(
+            str(temp_db)
+        )
+        conn.row_factory = sqlite3.Row
+
+        store.ensure_reputation_tables(conn)
+
+        source_subject = conn.execute(
+            """
+            SELECT *
+            FROM v156_reputation_subjects
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+
+        source_event = conn.execute(
+            """
+            SELECT *
+            FROM v156_reputation_events
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+
+        if not source_subject:
+            conn.close()
+            raise SystemExit(
+                "❌ 任务生命周期检查缺少测试主体"
+            )
+
+        if not source_event:
+            conn.close()
+            raise SystemExit(
+                "❌ 任务生命周期检查缺少测试事件"
+            )
+
+        token = uuid.uuid4().hex[:12]
+
+        subject_id = clone_row(
+            conn,
+            "v156_reputation_subjects",
+            source_subject,
+            {
+                "display_name": (
+                    f"A7全链路测试主体-{token}"
+                ),
+                "game_id": (
+                    f"A7-{token}"
+                ),
+                "trust_level": "black",
+                "risk_level": "black",
+                "status": "active",
+            },
+        )
+
+        event_id = clone_row(
+            conn,
+            "v156_reputation_events",
+            source_event,
+            {
+                "title": (
+                    f"A7全链路测试事件-{token}"
+                ),
+            },
+        )
+
+        conn.commit()
+
+        created = (
+            store.create_reputation_task_from_workbench(
+                conn,
+                entity_type="subject",
+                entity_id=subject_id,
+            )
+        )
+
+        if not created.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 工作台创建处置任务失败："
+                f"{created}"
+            )
+
+        subject_task_id = int(
+            created["task_id"]
+        )
+
+        subject_task = store.get_reputation_task(
+            conn,
+            subject_task_id,
+        )
+
+        if not subject_task:
+            conn.close()
+            raise SystemExit(
+                "❌ 创建后无法读取主体任务"
+            )
+
+        if not (
+            subject_task["task_reason"]
+            and subject_task[
+                "recommended_action"
+            ]
+        ):
+            conn.close()
+            raise SystemExit(
+                "❌ 工作台任务缺少风险原因"
+                "或推荐动作快照"
+            )
+
+        duplicate = (
+            store.create_reputation_task_from_workbench(
+                conn,
+                entity_type="subject",
+                entity_id=subject_id,
+            )
+        )
+
+        if not duplicate.get("duplicate"):
+            conn.close()
+            raise SystemExit(
+                "❌ 同一对象的重复未闭环任务"
+                "没有被拦截"
+            )
+
+        processing = store.update_reputation_task(
+            conn,
+            subject_task_id,
+            {
+                "priority": "P1",
+                "status": "processing",
+                "owner": "A7全链路检查",
+                "result_note": "",
+            },
+        )
+
+        if not processing.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 任务无法进入处理中状态"
+            )
+
+        processing_row = processing["task"]
+
+        if (
+            processing_row["status"]
+            != "processing"
+            or processing_row["owner"]
+            != "A7全链路检查"
+            or processing_row["completed_at"]
+        ):
+            conn.close()
+            raise SystemExit(
+                "❌ 处理中任务字段状态异常"
+            )
+
+        missing_result = (
+            store.update_reputation_task(
+                conn,
+                subject_task_id,
+                {
+                    "priority": "P1",
+                    "status": "completed",
+                    "owner": "A7全链路检查",
+                    "result_note": "",
+                },
+            )
+        )
+
+        if not missing_result.get(
+            "result_required"
+        ):
+            conn.close()
+            raise SystemExit(
+                "❌ 空处置结果的闭环请求"
+                "没有被拦截"
+            )
+
+        completed = store.update_reputation_task(
+            conn,
+            subject_task_id,
+            {
+                "priority": "P1",
+                "status": "completed",
+                "owner": "A7全链路检查",
+                "result_note": (
+                    "全链路检查完成，"
+                    "主体任务闭环正常。"
+                ),
+            },
+        )
+
+        if not completed.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 主体任务无法完成闭环"
+            )
+
+        completed_row = completed["task"]
+
+        if (
+            completed_row["status"]
+            != "completed"
+            or not completed_row["result_note"]
+            or not completed_row["completed_at"]
+        ):
+            conn.close()
+            raise SystemExit(
+                "❌ 已完成主体任务缺少"
+                "结果或闭环时间"
+            )
+
+        next_cycle = (
+            store.create_reputation_task_from_workbench(
+                conn,
+                entity_type="subject",
+                entity_id=subject_id,
+            )
+        )
+
+        if not next_cycle.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 已闭环对象无法创建"
+                "新一轮处置任务"
+            )
+
+        next_cycle_id = int(
+            next_cycle["task_id"]
+        )
+
+        ignored_cycle = (
+            store.update_reputation_task(
+                conn,
+                next_cycle_id,
+                {
+                    "priority": "P1",
+                    "status": "ignored",
+                    "owner": "A7全链路检查",
+                    "result_note": (
+                        "新一轮任务用于验证"
+                        "忽略状态闭环。"
+                    ),
+                },
+            )
+        )
+
+        if not ignored_cycle.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 新一轮主体任务"
+                "无法忽略闭环"
+            )
+
+        event_task = store.create_reputation_task(
+            conn,
+            {
+                "entity_type": "event",
+                "entity_id": event_id,
+                "priority": "P2",
+                "task_reason": (
+                    "全链路测试事件需要复核"
+                ),
+                "recommended_action": (
+                    "核查事件证据并形成结论"
+                ),
+                "source_type": "full_check",
+            },
+        )
+
+        if not event_task.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 事件处置任务创建失败"
+            )
+
+        event_task_id = int(
+            event_task["task_id"]
+        )
+
+        event_closed = (
+            store.update_reputation_task(
+                conn,
+                event_task_id,
+                {
+                    "priority": "P2",
+                    "status": "completed",
+                    "owner": "A7全链路检查",
+                    "result_note": (
+                        "事件任务闭环检查正常。"
+                    ),
+                },
+            )
+        )
+
+        if not event_closed.get("ok"):
+            conn.close()
+            raise SystemExit(
+                "❌ 事件处置任务无法闭环"
+            )
+
+        active_map = (
+            store.get_active_reputation_task_map(
+                conn
+            )
+        )
+
+        if (
+            ("subject", subject_id)
+            in active_map
+            or ("event", event_id)
+            in active_map
+        ):
+            conn.close()
+            raise SystemExit(
+                "❌ 已闭环测试任务仍被识别"
+                "为活动任务"
+            )
+
+        conn.close()
+
+    original_create = (
+        store.create_reputation_task_from_workbench
+    )
+
+    original_update = (
+        store.update_reputation_task
+    )
+
+    try:
+        store.create_reputation_task_from_workbench = (
+            lambda *args, **kwargs: {
+                "ok": True,
+                "task_id": 901,
+            }
+        )
+
+        store.update_reputation_task = (
+            lambda *args, **kwargs: {
+                "ok": True,
+            }
+        )
+
+        with app.test_client() as client:
+            create_response = client.post(
+                "/reputation/tasks/create",
+                data={
+                    "entity_type": "subject",
+                    "entity_id": "8",
+                },
+                follow_redirects=False,
+            )
+
+            create_location = (
+                create_response.headers.get(
+                    "Location",
+                    "",
+                )
+            )
+
+            if create_response.status_code != 302:
+                raise SystemExit(
+                    "❌ 创建任务路由没有重定向"
+                )
+
+            if (
+                "task_result=created"
+                not in create_location
+                or "task_id=901"
+                not in create_location
+            ):
+                raise SystemExit(
+                    "❌ 创建任务路由结果参数异常"
+                )
+
+            update_response = client.post(
+                "/reputation/tasks/901/update",
+                data={
+                    "priority": "P1",
+                    "status": "processing",
+                    "owner": "A7全链路检查",
+                    "result_note": "",
+                    "return_status": "pending",
+                    "return_priority": "P1",
+                    "return_q": "测试",
+                },
+                follow_redirects=False,
+            )
+
+            update_location = (
+                update_response.headers.get(
+                    "Location",
+                    "",
+                )
+            )
+
+            if update_response.status_code != 302:
+                raise SystemExit(
+                    "❌ 更新任务路由没有重定向"
+                )
+
+            if (
+                "task_result=updated"
+                not in update_location
+                or "#task-901"
+                not in update_location
+            ):
+                raise SystemExit(
+                    "❌ 更新任务路由结果参数异常"
+                )
+
+        store.update_reputation_task = (
+            lambda *args, **kwargs: {
+                "ok": False,
+                "result_required": True,
+            }
+        )
+
+        with app.test_client() as client:
+            required_response = client.post(
+                "/reputation/tasks/901/update",
+                data={
+                    "priority": "P1",
+                    "status": "completed",
+                    "owner": "A7全链路检查",
+                    "result_note": "",
+                },
+                follow_redirects=False,
+            )
+
+            required_location = (
+                required_response.headers.get(
+                    "Location",
+                    "",
+                )
+            )
+
+            if (
+                required_response.status_code != 302
+                or "task_result=result_required"
+                not in required_location
+            ):
+                raise SystemExit(
+                    "❌ 闭环结果必填路由映射异常"
+                )
+
+    finally:
+        store.create_reputation_task_from_workbench = (
+            original_create
+        )
+
+        store.update_reputation_task = (
+            original_update
+        )
+
+    print(
+        "✅ 处置任务全生命周期检查通过："
+        "创建、重复拦截、处理中、"
+        "结果必填、完成、忽略、"
+        "新周期和路由均正常"
+    )
+
 def main() -> int:
-    print("V15.6 Reputation Full Chain Check")
+    print("V15.7 Reputation Full Chain Check")
     print("=" * 70)
 
     run(
@@ -574,22 +1134,23 @@ def main() -> int:
             "scripts/verify_reputation_export.py",
             "scripts/backup_reputation.py",
             "scripts/preview_reputation_restore.py",
+            "scripts/reputation_full_check.py",
         ],
-        "Step 1/8：Python 语法编译检查",
+        "Step 1/9：Python 语法编译检查",
     )
 
     run(
         [sys.executable, "scripts/reputation_smoke_test.py"],
-        "Step 2/8：信誉档案库页面烟测",
+        "Step 2/9：信誉档案库页面烟测",
     )
 
     print("=" * 70)
-    print("Step 3/8：信誉档案库首页安全检查")
+    print("Step 3/9：信誉档案库首页安全检查")
     print("=" * 70)
     check_reputation_home_security()
 
     print("=" * 70)
-    print("Step 4/8：备份状态页安全检查")
+    print("Step 4/9：备份状态页安全检查")
     print("=" * 70)
     check_backup_status_security()
 
@@ -613,14 +1174,19 @@ def main() -> int:
     print("=" * 70)
     check_reputation_workbench_return_context()
 
+    print("=" * 70)
+    print("Step 5/9：处置任务全生命周期检查")
+    print("=" * 70)
+    check_reputation_task_lifecycle()
+
     run(
         [sys.executable, "scripts/reputation_health_check.py"],
-        "Step 5/8：信誉档案库数据体检",
+        "Step 6/9：信誉档案库数据体检",
     )
 
     run(
         [sys.executable, "scripts/backup_reputation.py"],
-        "Step 6/8：一键备份导出",
+        "Step 7/9：一键备份导出",
     )
 
     zip_path = latest_zip()
@@ -630,16 +1196,16 @@ def main() -> int:
 
     run(
         [sys.executable, "scripts/verify_reputation_export.py", str(zip_path)],
-        "Step 7/8：ZIP 备份包校验",
+        "Step 8/9：ZIP 备份包校验",
     )
 
     run(
         [sys.executable, "scripts/preview_reputation_restore.py", str(zip_path)],
-        "Step 8/8：恢复前预检",
+        "Step 9/9：恢复前预检",
     )
 
     print("=" * 70)
-    print("✅ V15.6 信誉档案库全链路自检通过")
+    print("✅ V15.7 信誉档案库全链路自检通过")
     print(f"✅ 最新备份包：{scrub_output(str(zip_path))}")
     print("=" * 70)
 

@@ -118,7 +118,7 @@ def check_page(client, url: str, required_texts: list[str] | None = None, header
 
 
 def main() -> int:
-    print("V15.6 Reputation Smoke Test")
+    print("V15.7 Reputation Smoke Test")
     print("=" * 52)
 
     try:
@@ -132,6 +132,23 @@ def main() -> int:
 
     targets: list[tuple[str, list[str]]] = [
         ("/reputation", ["信誉档案", "安全备份"]),
+        # V15.7-A7-4B reputation task smoke pages
+        (
+            "/reputation/workbench",
+            [
+                "信誉风险处置工作台",
+                "风险原因",
+                "查看处置任务",
+            ],
+        ),
+        (
+            "/reputation/tasks",
+            [
+                "信誉风险处置任务",
+                "任务闭环概况",
+                "处置任务列表",
+            ],
+        ),
         ("/reputation/search", []),
         ("/reputation/subjects", ["主体列表", "关联事件"]),
         ("/reputation/subjects/new", []),
@@ -197,7 +214,7 @@ def main() -> int:
         bad(f"烟测失败：{fatal} 个问题")
         return 1
 
-    ok("烟测完成：信誉档案库核心页面全部正常")
+    ok("烟测完成：信誉档案库与处置任务页面全部正常")
     return 0
 
 

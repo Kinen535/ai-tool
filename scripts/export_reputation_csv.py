@@ -21,6 +21,8 @@ TABLES = [
     "v156_reputation_events",
     "v156_reputation_event_relations",
     "v156_reputation_merge_logs",
+    # V15.7-A7-4 reputation task export
+    "v157_reputation_tasks",
 ]
 
 
@@ -83,7 +85,7 @@ def make_zip(out_dir: Path) -> Path:
 
 
 def main() -> int:
-    print("V15.6 Reputation CSV Export")
+    print("V15.7 Reputation CSV Export")
     print("=" * 56)
 
     if not DB_PATH.exists():
@@ -104,7 +106,7 @@ def main() -> int:
     summary_file = out_dir / "README.txt"
     summary_file.write_text(
         "\n".join([
-            "V15.6 Reputation CSV Export",
+            "V15.7 Reputation CSV Export",
             f"Export time: {ts}",
             f"Database: {DB_PATH}",
             f"Total exported rows: {total}",
