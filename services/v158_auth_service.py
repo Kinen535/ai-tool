@@ -203,7 +203,10 @@ def is_security_admin_path(path: str) -> bool:
         return True
 
     if path.startswith("/security/"):
-        return path != "/security/login"
+        return path not in {
+            "/security/login",
+            "/security/logout",
+        }
 
     return False
 

@@ -19,16 +19,22 @@ import traceback
 DB_PATH = "data/snapshots.db"
 
 import pandas as pd
-from flask import Flask, abort, flash, redirect, render_template, request, send_file, session, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from services.v158_auth_config import (
     build_v158_flask_session_config,
 )
 from services.v158_auth_service import (
+    AUTH_SESSION_KEYS,
     CSRF_SESSION_KEY,
     SESSION_USER_ID,
+    SESSION_USERNAME,
+    SESSION_VERSION,
     authenticate_credentials,
     establish_auth_session,
+    is_public_request,
+    is_security_admin_path,
     issue_csrf_token,
+    role_allows,
     safe_next_path,
     validate_auth_session,
     validate_csrf_token,
@@ -7818,16 +7824,8 @@ def reputation_backup_status():
 
     root = Path("/home/admin/ai-tool")
 
-    # 维护页访问保护：必须带 token 才允许访问
-    token_path = root / "data" / "security_admin_token.txt"
-    expected_token = token_path.read_text(encoding="utf-8").strip() if token_path.exists() else ""
-    provided_token = (
-        request.args.get("token", "").strip()
-        or request.headers.get("X-Admin-Token", "").strip()
-    )
-
-    if expected_token and provided_token != expected_token:
-        abort(404)
+    # V15.8：本维护页仅允许已登录的超级管理员访问。
+    # 权限由全局认证钩子统一控制，不再接受Token。
 
     db_path = root / "data" / "snapshots.db"
     export_root = root / "exports" / "reputation"
@@ -8702,17 +8700,7 @@ def v155_security_logs():
     from flask import request, render_template, abort
     from services.v155_security_store import get_security_report_paginated
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
-
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    if not saved_token or (
-        input_token != saved_token
-        and cookie_token != saved_token
-    ):
-        abort(403)
+    # V15.8：安全后台权限由全局认证钩子统一控制。
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
@@ -8916,17 +8904,7 @@ def v155_security_ip_detail():
     from flask import request, render_template, abort
     from services.v155_security_store import get_ip_detail_report
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
-
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    if not saved_token or (
-        input_token != saved_token
-        and cookie_token != saved_token
-    ):
-        abort(403)
+    # V15.8：安全后台权限由全局认证钩子统一控制。
 
     ip = request.args.get("ip", "").strip()
 
@@ -9129,6 +9107,206 @@ def v155_runtime_security_guard_before_request():
     return None
 
 
+V158_SUPER_ADMIN_ONLY_PATHS = {
+    "/reputation/backup-status",
+}
+
+
+@app.before_request
+def v158_authentication_before_request():
+    g.v158_current_user = None
+
+    path = str(
+        request.path
+        or ""
+    )
+
+    if is_public_request(
+        path=path,
+        endpoint=request.endpoint,
+    ):
+        return None
+
+    had_auth_session = any(
+        session.get(key) is not None
+        for key in AUTH_SESSION_KEYS
+    )
+
+    previous_user_id = (
+        session.get(
+            SESSION_USER_ID
+        )
+    )
+
+    previous_username = str(
+        session.get(
+            SESSION_USERNAME
+        )
+        or ""
+    )[:64]
+
+    previous_session_version = (
+        session.get(
+            SESSION_VERSION
+        )
+    )
+
+    try:
+        conn = _v158_open_auth_connection()
+    except sqlite3.Error:
+        return (
+            "认证服务暂时不可用。",
+            503,
+        )
+
+    try:
+        try:
+            auth_result = (
+                validate_auth_session(
+                    conn,
+                    session,
+                )
+            )
+        except sqlite3.Error:
+            return (
+                "认证服务暂时不可用。",
+                503,
+            )
+
+        if not auth_result["ok"]:
+            if had_auth_session:
+                try:
+                    try:
+                        rejected_user_id = int(
+                            previous_user_id
+                        )
+
+                        if rejected_user_id <= 0:
+                            rejected_user_id = None
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+                        rejected_user_id = None
+
+                    try:
+                        rejected_version = int(
+                            previous_session_version
+                        )
+
+                        if rejected_version <= 0:
+                            rejected_version = None
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+                        rejected_version = None
+
+                    conn.execute(
+                        "BEGIN IMMEDIATE"
+                    )
+
+                    record_login_event(
+                        conn,
+                        user_id=rejected_user_id,
+                        username_snapshot=(
+                            previous_username
+                        ),
+                        event_type=(
+                            "session_rejected"
+                        ),
+                        result_status="blocked",
+                        reason_code=str(
+                            auth_result.get(
+                                "reason"
+                            )
+                            or "invalid_session"
+                        )[:64],
+                        ip_address=(
+                            _v158_request_ip()
+                        ),
+                        user_agent=(
+                            request.headers.get(
+                                "User-Agent",
+                                "",
+                            )[:1000]
+                        ),
+                        request_path=path[:255],
+                        session_version=(
+                            rejected_version
+                        ),
+                    )
+
+                    conn.commit()
+
+                except Exception:
+                    if conn.in_transaction:
+                        conn.rollback()
+
+            next_path = path
+
+            if request.query_string:
+                next_path += (
+                    "?"
+                    + request.query_string.decode(
+                        "utf-8",
+                        errors="ignore",
+                    )
+                )
+
+            next_path = safe_next_path(
+                next_path,
+                default="/",
+            )
+
+            return redirect(
+                url_for(
+                    "v158_login",
+                    next=next_path,
+                ),
+                code=(
+                    302
+                    if request.method
+                    in {
+                        "GET",
+                        "HEAD",
+                    }
+                    else 303
+                ),
+            )
+
+        user = auth_result["user"]
+
+        g.v158_current_user = user
+
+        requires_super_admin = (
+            path
+            in V158_SUPER_ADMIN_ONLY_PATHS
+            or is_security_admin_path(
+                path
+            )
+        )
+
+        if (
+            requires_super_admin
+            and not role_allows(
+                str(
+                    user.get("role")
+                    or ""
+                ),
+                "super_admin",
+            )
+        ):
+            abort(403)
+
+        return None
+
+    finally:
+        conn.close()
+
+
 
 @app.route("/security/guard", methods=["GET", "POST"])
 def v155_security_guard_console():
@@ -9142,17 +9320,7 @@ def v155_security_guard_console():
         remove_whitelist_ip,
     )
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
-
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    if not saved_token or (
-        input_token != saved_token
-        and cookie_token != saved_token
-    ):
-        abort(403)
+    # V15.8：安全后台权限由全局认证钩子统一控制。
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
@@ -9229,17 +9397,7 @@ def v155_security_cleanup():
         cleanup_security_logs,
     )
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
-
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    if not saved_token or (
-        input_token != saved_token
-        and cookie_token != saved_token
-    ):
-        abort(403)
+    # V15.8：安全后台权限由全局认证钩子统一控制。
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
@@ -9300,17 +9458,7 @@ def v155_security_blocks():
         remove_block_ip,
     )
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
-
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    if not saved_token or (
-        input_token != saved_token
-        and cookie_token != saved_token
-    ):
-        abort(403)
+    # V15.8：安全后台权限由全局认证钩子统一控制。
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
@@ -9370,16 +9518,22 @@ def v155_security_blocks():
 # =========================
 
 def _v155_security_admin_allowed():
-    from pathlib import Path
-    from flask import request
+    user = getattr(
+        g,
+        "v158_current_user",
+        None,
+    )
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
+    if not user:
+        return False
 
-    input_token = request.args.get("token", "").strip()
-    cookie_token = request.cookies.get("v155_security_admin", "").strip()
-
-    return bool(saved_token and (input_token == saved_token or cookie_token == saved_token))
+    return role_allows(
+        str(
+            user.get("role")
+            or ""
+        ),
+        "super_admin",
+    )
 
 
 def _v155_build_nginx_sync_report():
