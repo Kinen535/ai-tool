@@ -18,10 +18,32 @@
                style="background:#fff7ed;color:#f97316;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
                 日志清理
             </a>
-            <a href="/security/logout"
-               style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                退出
-            </a>
+            <form
+                method="post"
+                action="{{ url_for('v158_logout') }}"
+                style="display:inline;margin:0;"
+            >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
+
+                <button
+                    type="submit"
+                    style="
+                        border:0;
+                        background:#f1f5f9;
+                        color:#334155;
+                        padding:8px 14px;
+                        border-radius:10px;
+                        font:inherit;
+                        cursor:pointer;
+                    "
+                >
+                    退出
+                </button>
+            </form>
         </div>
     </div>
 

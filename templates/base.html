@@ -1298,6 +1298,182 @@ body[data-page-path="/strategic"]
 
 </style>
 
+<!-- V15.8-B3-A10 authenticated account header -->
+<style>
+.v158-auth-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.v158-account-card {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-main);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.v158-account-avatar {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: #ffffff;
+    background: linear-gradient(
+        135deg,
+        #2563eb,
+        #1d4ed8
+    );
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.v158-account-details {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.v158-account-name {
+    max-width: 180px;
+    overflow: hidden;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v158-account-meta {
+    max-width: 250px;
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--text-sub);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v158-logout-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.v158-logout-button {
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #b91c1c;
+    background: #fff1f2;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease;
+}
+
+.v158-logout-button:hover {
+    background: #ffe4e6;
+}
+
+.v158-logout-button:active {
+    transform: translateY(1px);
+}
+
+.v158-security-nav {
+    margin-top: 3px;
+}
+
+html[data-theme="dark"] .v158-account-card {
+    background: #111b2e;
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .v158-account-name {
+    color: #e8eef8;
+}
+
+html[data-theme="dark"] .v158-account-meta {
+    color: #a9b6ca;
+}
+
+html[data-theme="dark"] .v158-logout-button {
+    color: #fda4af;
+    background: #351f28;
+    border-color: #713344;
+}
+
+html[data-theme="dark"] .v158-logout-button:hover {
+    background: #472530;
+}
+
+@media (max-width: 1100px) {
+    .v158-account-meta {
+        display: none;
+    }
+
+    .v158-account-name {
+        max-width: 120px;
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar-right {
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .server-status {
+        display: none;
+    }
+
+    .v158-auth-summary {
+        gap: 7px;
+    }
+
+    .v158-account-card {
+        padding: 5px 7px;
+    }
+
+    .v158-account-name {
+        max-width: 100px;
+    }
+
+    .v158-logout-button {
+        min-height: 34px;
+        padding: 6px 9px;
+    }
+}
+
+@media (max-width: 460px) {
+    .v158-account-details {
+        display: none;
+    }
+
+    .v158-account-card {
+        padding: 4px;
+    }
+
+    .v158-account-avatar {
+        width: 30px;
+        height: 30px;
+    }
+}
+</style>
+
 </head>
 
 <body data-page-path="{{ request.path }}">
@@ -1599,6 +1775,24 @@ body[data-page-path="/strategic"]
 
             </a>
 
+            {% if (
+                g.v158_current_user
+                and g.v158_current_user.get("role")
+                    == "super_admin"
+            ) %}
+            <a
+                class="nav-item v158-security-nav
+                {% if request.path == '/security'
+                    or request.path.startswith('/security/')
+                %}active{% endif %}"
+                href="{{ url_for('v155_security_console') }}"
+            >
+                <i data-lucide="shield"></i>
+
+                <span>安全后台</span>
+            </a>
+            {% endif %}
+
             <a href="/identity/logs">
             📜 身份日志
             </a>
@@ -1651,6 +1845,109 @@ body[data-page-path="/strategic"]
 
             <!-- 右边 -->
             <div class="topbar-right">
+
+                {% set v158_auth_user =
+                    g.v158_current_user
+                %}
+
+                {% if v158_auth_user %}
+                    {% if (
+                        v158_auth_user.get("role")
+                        == "super_admin"
+                    ) %}
+                        {% set v158_role_label =
+                            "超级管理员"
+                        %}
+                    {% elif (
+                        v158_auth_user.get("role")
+                        == "manager"
+                    ) %}
+                        {% set v158_role_label =
+                            "管理员"
+                        %}
+                    {% else %}
+                        {% set v158_role_label =
+                            "只读用户"
+                        %}
+                    {% endif %}
+
+                    <div class="v158-auth-summary">
+
+                        <div
+                            class="v158-account-card"
+                            title="当前登录账号"
+                        >
+                            <span
+                                class="v158-account-avatar"
+                                aria-hidden="true"
+                            >
+                                帐
+                            </span>
+
+                            <span
+                                class="v158-account-details"
+                            >
+                                <span
+                                    class="v158-account-name"
+                                >
+                                    {{
+                                        v158_auth_user.get(
+                                            "display_name"
+                                        )
+                                        or
+                                        v158_auth_user.get(
+                                            "username"
+                                        )
+                                    }}
+                                </span>
+
+                                <span
+                                    class="v158-account-meta"
+                                >
+                                    账号：{{
+                                        v158_auth_user.get(
+                                            "username"
+                                        )
+                                    }}
+                                    ·
+                                    角色：{{
+                                        v158_role_label
+                                    }}
+                                </span>
+                            </span>
+                        </div>
+
+                        <form
+                            class="v158-logout-form"
+                            method="post"
+                            action="{{
+                                url_for(
+                                    'v158_logout'
+                                )
+                            }}"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{
+                                    session.get(
+                                        'v158_csrf_token',
+                                        ''
+                                    )
+                                }}"
+                            >
+
+                            <button
+                                class="v158-logout-button"
+                                type="submit"
+                                title="退出当前账号"
+                            >
+                                退出
+                            </button>
+                        </form>
+
+                    </div>
+                {% endif %}
 
                 <!-- 系统状态 -->
                 <div class="server-status online">

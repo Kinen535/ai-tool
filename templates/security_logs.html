@@ -15,10 +15,32 @@
                 安全控制台
             </a>
         </div>
-        <a href="/security/logout"
-           style="background:#f1f5f9;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
-            退出安全后台
-        </a>
+        <form
+            method="post"
+            action="{{ url_for('v158_logout') }}"
+            style="display:inline;margin:0;"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ session.get('v158_csrf_token', '') }}"
+            >
+
+            <button
+                type="submit"
+                style="
+                    border:0;
+                    background:#f1f5f9;
+                    color:#334155;
+                    padding:8px 14px;
+                    border-radius:10px;
+                    font:inherit;
+                    cursor:pointer;
+                "
+            >
+                退出安全后台
+            </button>
+        </form>
     </div>
 
     <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
