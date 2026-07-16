@@ -20,6 +20,7 @@ DB_PATH = "data/snapshots.db"
 
 import pandas as pd
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
+from services.v158_auth_config import build_v158_flask_session_config
 
 print("🔥🔥🔥 app.py 稳定版已加载！🔥🔥🔥")
 
@@ -44,7 +45,14 @@ MID_BATTLE_MIN = 30000
 CORE_BATTLE_MIN = 100000
 
 app = Flask(__name__)
-app.secret_key = "alliance-manager-v9-stable"
+
+_v158_session_config, _v158_session_secret_source = (
+    build_v158_flask_session_config()
+)
+
+app.config.update(
+    _v158_session_config
+)
 
 snapshot_cache: dict[str, pd.DataFrame] = {}
 
