@@ -42,3 +42,5 @@ exports/reputation/
 
 # V15.6-A32I security token backup files
 data/security_admin_token_before_*.txt
+# V15.8 authentication session secret
+data/v158_session_secret.txt
