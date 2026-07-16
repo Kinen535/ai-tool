@@ -19,8 +19,23 @@ import traceback
 DB_PATH = "data/snapshots.db"
 
 import pandas as pd
-from flask import Flask, flash, redirect, render_template, request, send_file, url_for
-from services.v158_auth_config import build_v158_flask_session_config
+from flask import Flask, abort, flash, redirect, render_template, request, send_file, session, url_for
+from services.v158_auth_config import (
+    build_v158_flask_session_config,
+)
+from services.v158_auth_service import (
+    CSRF_SESSION_KEY,
+    SESSION_USER_ID,
+    authenticate_credentials,
+    establish_auth_session,
+    issue_csrf_token,
+    safe_next_path,
+    validate_auth_session,
+    validate_csrf_token,
+)
+from services.v158_auth_store import (
+    record_login_event,
+)
 
 print("🔥🔥🔥 app.py 稳定版已加载！🔥🔥🔥")
 
@@ -8718,50 +8733,180 @@ def v155_security_logs():
     )
 
 
-@app.route("/security/login", methods=["GET", "POST"])
-def v155_security_login():
-    from pathlib import Path
-    from flask import request, render_template, redirect, make_response
+def _v158_open_auth_connection():
+    conn = sqlite3.connect(
+        DB_FILE
+    )
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    token_path = Path("data/security_admin_token.txt")
-    saved_token = token_path.read_text().strip() if token_path.exists() else ""
 
-    error = ""
-
-    if request.method == "POST":
-        input_token = request.form.get("token", "").strip()
-
-        if saved_token and input_token == saved_token:
-            try:
-                v155_record_security_admin_action(
-                    "security_login",
-                    "安全后台登录",
-                    "success",
-                    "管理员 token 登录成功",
-                )
-            except Exception:
-                pass
-
-            resp = make_response(redirect("/security"))
-            resp.set_cookie(
-                "v155_security_admin",
-                saved_token,
-                max_age=60 * 60 * 12,
-                httponly=True,
-                samesite="Strict",
-            )
-            return resp
-
-        error = "安全 token 错误，请重新输入。"
-
-    return render_template(
-        "security_login.html",
-        error=error,
-        title="安全后台登录",
+def _v158_request_ip() -> str:
+    forwarded = request.headers.get(
+        "X-Forwarded-For",
+        "",
     )
 
+    ip_address = (
+        forwarded.split(",", 1)[0].strip()
+        if forwarded
+        else ""
+    )
+
+    if not ip_address:
+        ip_address = str(
+            request.remote_addr or ""
+        ).strip()
+
+    return ip_address[:64]
 
 
+@app.route(
+    "/login",
+    methods=["GET", "POST"],
+)
+def v158_login():
+    next_path = safe_next_path(
+        request.values.get("next"),
+        default="/",
+    )
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        current_session = (
+            validate_auth_session(
+                conn,
+                session,
+            )
+        )
+
+        if current_session["ok"]:
+            return redirect(
+                next_path
+            )
+
+        error = ""
+        username = ""
+
+        if request.method == "POST":
+            username = str(
+                request.form.get(
+                    "username",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            csrf_valid = (
+                validate_csrf_token(
+                    session,
+                    request.form.get(
+                        "csrf_token",
+                        "",
+                    ),
+                )
+            )
+
+            if not csrf_valid:
+                error = (
+                    "登录页面已过期，"
+                    "请刷新后重新提交。"
+                )
+
+                issue_csrf_token(
+                    session,
+                    force=True,
+                )
+
+            else:
+                result = (
+                    authenticate_credentials(
+                        conn,
+                        username=username,
+                        password=request.form.get(
+                            "password",
+                            "",
+                        ),
+                        ip_address=(
+                            _v158_request_ip()
+                        ),
+                        user_agent=(
+                            request.headers.get(
+                                "User-Agent",
+                                "",
+                            )[:1000]
+                        ),
+                        request_path=(
+                            request.path
+                        ),
+                    )
+                )
+
+                if result["ok"]:
+                    session.clear()
+
+                    establish_auth_session(
+                        session,
+                        user=result["user"],
+                    )
+
+                    issue_csrf_token(
+                        session,
+                        force=True,
+                    )
+
+                    response = redirect(
+                        next_path
+                    )
+
+                    response.delete_cookie(
+                        "v155_security_admin"
+                    )
+
+                    return response
+
+                error = result["message"]
+
+        csrf_token = issue_csrf_token(
+            session
+        )
+
+        return render_template(
+            "login.html",
+            title="系统登录",
+            error=error,
+            username=username,
+            next_path=next_path,
+            csrf_token=csrf_token,
+        )
+
+    finally:
+        conn.close()
+
+
+@app.route(
+    "/security/login",
+    methods=["GET", "POST"],
+)
+def v155_security_login():
+    response = redirect(
+        url_for(
+            "v158_login",
+            next="/security",
+        ),
+        code=(
+            303
+            if request.method == "POST"
+            else 302
+        ),
+    )
+
+    response.delete_cookie(
+        "v155_security_admin"
+    )
+
+    return response
 
 
 @app.route("/security/ip")
@@ -8802,14 +8947,97 @@ def v155_security_ip_detail():
     )
 
 
-@app.route("/security/logout")
-def v155_security_logout():
-    from flask import redirect, make_response
+@app.route(
+    "/security/logout",
+    methods=["POST"],
+    endpoint="v155_security_logout",
+)
+@app.route(
+    "/logout",
+    methods=["POST"],
+)
+def v158_logout():
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
 
-    resp = make_response(redirect("/security/login"))
-    resp.delete_cookie("v155_security_admin")
-    return resp
+    conn = _v158_open_auth_connection()
 
+    try:
+        session_result = (
+            validate_auth_session(
+                conn,
+                session,
+            )
+        )
+
+        if session_result["ok"]:
+            user = session_result["user"]
+
+            try:
+                conn.execute(
+                    "BEGIN IMMEDIATE"
+                )
+
+                record_login_event(
+                    conn,
+                    user_id=int(
+                        user["id"]
+                    ),
+                    username_snapshot=str(
+                        user.get(
+                            "username"
+                        )
+                        or ""
+                    ),
+                    event_type="logout",
+                    result_status="success",
+                    reason_code="user_logout",
+                    ip_address=(
+                        _v158_request_ip()
+                    ),
+                    user_agent=(
+                        request.headers.get(
+                            "User-Agent",
+                            "",
+                        )[:1000]
+                    ),
+                    request_path=(
+                        request.path
+                    ),
+                    session_version=int(
+                        user.get(
+                            "session_version"
+                        )
+                        or 1
+                    ),
+                )
+
+                conn.commit()
+
+            except Exception:
+                if conn.in_transaction:
+                    conn.rollback()
+
+    finally:
+        conn.close()
+
+    session.clear()
+
+    response = redirect(
+        url_for("v158_login")
+    )
+
+    response.delete_cookie(
+        "v155_security_admin"
+    )
+
+    return response
 
 
 # =========================

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac
+import secrets
 import sqlite3
 import time
 from typing import Any, MutableMapping
@@ -26,6 +28,8 @@ SESSION_ROLE = "v158_role"
 SESSION_VERSION = "v158_session_version"
 SESSION_LOGIN_AT = "v158_login_at"
 SESSION_LAST_ACTIVE_AT = "v158_last_active_at"
+
+CSRF_SESSION_KEY = "v158_csrf_token"
 
 AUTH_SESSION_KEYS = (
     SESSION_USER_ID,
@@ -61,6 +65,57 @@ def _epoch(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def issue_csrf_token(
+    session_data: MutableMapping[str, Any],
+    *,
+    force: bool = False,
+) -> str:
+    current = str(
+        session_data.get(
+            CSRF_SESSION_KEY
+        )
+        or ""
+    )
+
+    if (
+        not force
+        and 32 <= len(current) <= 256
+    ):
+        return current
+
+    token = secrets.token_urlsafe(32)
+
+    session_data[
+        CSRF_SESSION_KEY
+    ] = token
+
+    return token
+
+
+def validate_csrf_token(
+    session_data: MutableMapping[str, Any],
+    supplied_token: Any,
+) -> bool:
+    expected = str(
+        session_data.get(
+            CSRF_SESSION_KEY
+        )
+        or ""
+    )
+
+    supplied = str(
+        supplied_token or ""
+    )
+
+    if not expected or not supplied:
+        return False
+
+    return hmac.compare_digest(
+        expected,
+        supplied,
+    )
 
 
 def safe_next_path(

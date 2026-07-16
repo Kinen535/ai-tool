@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>系统登录 · 三国志战略版幕僚中心</title>
+
+    <style>
+        :root {
+            color-scheme: light;
+            --page-bg: #eef3f9;
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text-main: #162033;
+            --text-sub: #64748b;
+            --border: #d9e2ef;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger-bg: #fff1f2;
+            --danger-text: #be123c;
+            --danger-border: #fecdd3;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: var(--text-main);
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(37, 99, 235, 0.18),
+                    transparent 38%
+                ),
+                radial-gradient(
+                    circle at bottom right,
+                    rgba(14, 165, 233, 0.14),
+                    transparent 36%
+                ),
+                var(--page-bg);
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                "PingFang SC",
+                "Microsoft YaHei",
+                sans-serif;
+        }
+
+        .login-shell {
+            width: 100%;
+            max-width: 460px;
+        }
+
+        .brand {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .brand-mark {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            color: white;
+            background:
+                linear-gradient(
+                    135deg,
+                    #2563eb,
+                    #0f5bcc
+                );
+            box-shadow:
+                0 18px 45px
+                rgba(37, 99, 235, 0.24);
+            font-size: 30px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 26px;
+            line-height: 1.35;
+        }
+
+        .brand p {
+            margin: 8px 0 0;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        .login-card {
+            padding: 30px;
+            border: 1px solid
+                rgba(217, 226, 239, 0.9);
+            border-radius: 24px;
+            background: var(--card-bg);
+            box-shadow:
+                0 24px 60px
+                rgba(15, 23, 42, 0.12);
+            backdrop-filter: blur(14px);
+        }
+
+        .login-card h2 {
+            margin: 0 0 6px;
+            font-size: 21px;
+        }
+
+        .login-card .desc {
+            margin: 0 0 22px;
+            color: var(--text-sub);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .error-box {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border: 1px solid
+                var(--danger-border);
+            border-radius: 12px;
+            color: var(--danger-text);
+            background: var(--danger-bg);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 750;
+        }
+
+        .field input {
+            width: 100%;
+            min-height: 48px;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            color: var(--text-main);
+            background: white;
+            font-size: 16px;
+            transition:
+                border-color 0.2s,
+                box-shadow 0.2s;
+        }
+
+        .field input:focus {
+            border-color: var(--primary);
+            box-shadow:
+                0 0 0 4px
+                rgba(37, 99, 235, 0.12);
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 50px;
+            border: 0;
+            border-radius: 13px;
+            color: white;
+            background: var(--primary);
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition:
+                transform 0.15s,
+                background 0.2s;
+        }
+
+        .submit-button:hover {
+            background: var(--primary-hover);
+        }
+
+        .submit-button:active {
+            transform: translateY(1px);
+        }
+
+        .security-note {
+            margin: 18px 0 0;
+            color: var(--text-sub);
+            font-size: 12px;
+            line-height: 1.7;
+            text-align: center;
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 16px;
+            }
+
+            .login-card {
+                padding: 24px 20px;
+                border-radius: 20px;
+            }
+
+            .brand h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-shell">
+
+    <div class="brand">
+        <div class="brand-mark">策</div>
+
+        <h1>三国志战略版幕僚中心</h1>
+
+        <p>V15.8 统一账号认证中心</p>
+    </div>
+
+    <main class="login-card">
+
+        <h2>登录系统</h2>
+
+        <p class="desc">
+            请使用已分配的系统账号和密码进入管理后台。
+        </p>
+
+        {% if error %}
+            <div
+                class="error-box"
+                role="alert"
+            >
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form
+            method="post"
+            action="{{ url_for('v158_login') }}"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token }}"
+            >
+
+            <input
+                type="hidden"
+                name="next"
+                value="{{ next_path }}"
+            >
+
+            <div class="field">
+                <label for="username">
+                    用户名
+                </label>
+
+                <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    value="{{ username }}"
+                    maxlength="64"
+                    autocomplete="username"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    required
+                    autofocus
+                >
+            </div>
+
+            <div class="field">
+                <label for="password">
+                    密码
+                </label>
+
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    maxlength="128"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button
+                class="submit-button"
+                type="submit"
+            >
+                安全登录
+            </button>
+        </form>
+
+        <p class="security-note">
+            连续登录失败达到安全阈值后，
+            账号将被临时锁定。
+        </p>
+
+    </main>
+
+</div>
+
+</body>
+</html>
