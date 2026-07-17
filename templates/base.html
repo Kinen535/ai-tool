@@ -1783,13 +1783,28 @@ html[data-theme="dark"] .v158-logout-button:hover {
             <a
                 class="nav-item v158-security-nav
                 {% if request.path == '/security'
-                    or request.path.startswith('/security/')
+                    or (
+                        request.path.startswith('/security/')
+                        and not request.path.startswith('/security/accounts')
+                    )
                 %}active{% endif %}"
                 href="{{ url_for('v155_security_console') }}"
             >
                 <i data-lucide="shield"></i>
 
                 <span>安全后台</span>
+            </a>
+
+            <a
+                class="nav-item
+                {% if request.path.startswith('/security/accounts') %}
+                    active
+                {% endif %}"
+                href="{{ url_for('v158_security_accounts') }}"
+            >
+                <i data-lucide="users"></i>
+
+                <span>账号管理</span>
             </a>
             {% endif %}
 

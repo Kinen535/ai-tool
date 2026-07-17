@@ -9308,6 +9308,36 @@ def v158_authentication_before_request():
 
 
 
+
+@app.route("/security/accounts")
+def v158_security_accounts():
+    from services.v158_account_admin_service import (
+        build_account_admin_report,
+    )
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        report = build_account_admin_report(
+            conn,
+            recent_limit=30,
+        )
+
+        csrf_token = issue_csrf_token(
+            session
+        )
+
+        return render_template(
+            "security_accounts.html",
+            report=report,
+            csrf_token=csrf_token,
+            title="账号管理",
+        )
+
+    finally:
+        conn.close()
+
+
 @app.route("/security/guard", methods=["GET", "POST"])
 def v155_security_guard_console():
     import sqlite3

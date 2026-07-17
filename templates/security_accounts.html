@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .v158-account-page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .v158-account-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .v158-account-header h1 {
+        margin: 0 0 8px;
+    }
+
+    .v158-account-header p {
+        margin: 0;
+        color: #64748b;
+        line-height: 1.7;
+    }
+
+    .v158-account-back {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        padding: 9px 14px;
+        border-radius: 10px;
+        background: #eff6ff;
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .v158-account-notice {
+        margin-bottom: 18px;
+        padding: 16px 18px;
+        border-left: 6px solid #7c3aed;
+        border-radius: 14px;
+        background: #f5f3ff;
+        color: #475569;
+        line-height: 1.7;
+    }
+
+    .v158-account-stats {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .v158-account-stat {
+        padding: 18px;
+        border-radius: 16px;
+        background: white;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+    }
+
+    .v158-account-stat div {
+        color: #64748b;
+    }
+
+    .v158-account-stat strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 28px;
+        color: #0f172a;
+    }
+
+    .v158-account-panel {
+        margin-bottom: 18px;
+        padding: 22px;
+        border-radius: 18px;
+        background: white;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+    }
+
+    .v158-account-panel h2 {
+        margin: 0 0 14px;
+    }
+
+    .v158-account-table-wrap {
+        overflow-x: auto;
+    }
+
+    .v158-account-table {
+        width: 100%;
+        min-width: 1180px;
+        border-collapse: collapse;
+    }
+
+    .v158-account-table th {
+        padding: 11px 10px;
+        background: #f8fafc;
+        color: #475569;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .v158-account-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #334155;
+        vertical-align: top;
+    }
+
+    .v158-account-username {
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .v158-account-self {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #6d28d9;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .v158-account-role,
+    .v158-account-status,
+    .v158-account-lock,
+    .v158-account-result {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .v158-role-super {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+    .v158-role-manager {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .v158-role-viewer {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .v158-status-active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .v158-status-disabled {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .v158-lock-yes {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+
+    .v158-lock-no {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .v158-result-success {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .v158-result-blocked {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+
+    .v158-result-failure {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .v158-account-muted {
+        color: #94a3b8;
+    }
+
+    .v158-account-empty {
+        padding: 18px;
+        border-radius: 12px;
+        background: #f8fafc;
+        color: #64748b;
+    }
+
+    @media (max-width: 1100px) {
+        .v158-account-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .v158-account-page {
+            padding: 16px;
+        }
+
+        .v158-account-header {
+            flex-direction: column;
+        }
+
+        .v158-account-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="v158-account-page">
+    <div class="v158-account-header">
+        <div>
+            <h1>👥 系统账号管理</h1>
+
+            <p>
+                查看账号角色、启用状态、登录锁定、最后登录信息和账号操作审计。
+            </p>
+        </div>
+
+        <a
+            class="v158-account-back"
+            href="{{ url_for('v155_security_console') }}"
+        >
+            ← 返回安全后台
+        </a>
+    </div>
+
+    <div class="v158-account-notice">
+        当前为账号管理第一阶段，只开放只读查看。
+        创建账号、修改权限、解除锁定、重置密码和强制注销功能，
+        将在后端保护和 CSRF 验收通过后逐项开放。
+    </div>
+
+    <div class="v158-account-stats">
+        <div class="v158-account-stat">
+            <div>账号总数</div>
+            <strong>{{ report.stats.total_users }}</strong>
+        </div>
+
+        <div class="v158-account-stat">
+            <div>启用账号</div>
+            <strong>{{ report.stats.active_users }}</strong>
+        </div>
+
+        <div class="v158-account-stat">
+            <div>停用账号</div>
+            <strong>{{ report.stats.disabled_users }}</strong>
+        </div>
+
+        <div class="v158-account-stat">
+            <div>启用超级管理员</div>
+            <strong>{{ report.stats.active_super_admins }}</strong>
+        </div>
+
+        <div class="v158-account-stat">
+            <div>当前锁定账号</div>
+            <strong>{{ report.stats.locked_users }}</strong>
+        </div>
+    </div>
+
+    <div class="v158-account-panel">
+        <h2>① 账号列表</h2>
+
+        {% if report.users %}
+        <div class="v158-account-table-wrap">
+            <table class="v158-account-table">
+                <thead>
+                    <tr>
+                        <th>账号</th>
+                        <th>显示名称</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>登录锁定</th>
+                        <th>失败次数</th>
+                        <th>最后登录</th>
+                        <th>最后登录 IP</th>
+                        <th>密码状态</th>
+                        <th>会话版本</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for user in report.users %}
+                    <tr>
+                        <td>
+                            <span class="v158-account-username">
+                                {{ user.username }}
+                            </span>
+
+                            {% if (
+                                g.v158_current_user
+                                and user.id
+                                    == g.v158_current_user.get("id")
+                            ) %}
+                            <span class="v158-account-self">
+                                当前账号
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ user.display_name }}</td>
+
+                        <td>
+                            <span class="
+                                v158-account-role
+                                {% if user.role == 'super_admin' %}
+                                    v158-role-super
+                                {% elif user.role == 'manager' %}
+                                    v158-role-manager
+                                {% else %}
+                                    v158-role-viewer
+                                {% endif %}
+                            ">
+                                {{ user.role_label }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="
+                                v158-account-status
+                                {% if user.status == 'active' %}
+                                    v158-status-active
+                                {% else %}
+                                    v158-status-disabled
+                                {% endif %}
+                            ">
+                                {{ user.status_label }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if user.is_locked %}
+                            <span class="v158-account-lock v158-lock-yes">
+                                已锁定
+                            </span>
+
+                            <div
+                                class="v158-account-muted"
+                                style="margin-top:5px;"
+                            >
+                                至 {{ user.locked_until }}
+                            </div>
+                            {% else %}
+                            <span class="v158-account-lock v158-lock-no">
+                                未锁定
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ user.failed_login_count }}</td>
+
+                        <td>
+                            {{ user.last_login_at or "从未登录" }}
+                        </td>
+
+                        <td>
+                            {{ user.last_login_ip or "—" }}
+                        </td>
+
+                        <td>
+                            {% if user.must_change_password %}
+                                <strong style="color:#c2410c;">
+                                    登录后须修改
+                                </strong>
+                            {% else %}
+                                <span style="color:#15803d;">
+                                    正常
+                                </span>
+                            {% endif %}
+
+                            <div
+                                class="v158-account-muted"
+                                style="margin-top:5px;"
+                            >
+                                {{ user.password_changed_at or "—" }}
+                            </div>
+                        </td>
+
+                        <td>{{ user.session_version }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="v158-account-empty">
+            当前没有系统账号。
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="v158-account-panel">
+        <h2>② 最近账号操作</h2>
+
+        {% if report.recent_actions %}
+        <div class="v158-account-table-wrap">
+            <table
+                class="v158-account-table"
+                style="min-width:1000px;"
+            >
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>操作账号</th>
+                        <th>动作</th>
+                        <th>目标账号</th>
+                        <th>结果</th>
+                        <th>原因</th>
+                        <th>来源 IP</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for action in report.recent_actions %}
+                    <tr>
+                        <td>{{ action.created_at }}</td>
+
+                        <td>
+                            {{ action.username_snapshot or "system" }}
+
+                            {% if action.role_snapshot %}
+                            <div class="v158-account-muted">
+                                {{ report.role_labels.get(
+                                    action.role_snapshot,
+                                    action.role_snapshot
+                                ) }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <strong>{{ action.action_label }}</strong>
+
+                            <div class="v158-account-muted">
+                                {{ action.action_key }}
+                            </div>
+                        </td>
+
+                        <td>
+                            {{ action.target_label or action.target_id }}
+                        </td>
+
+                        <td>
+                            <span class="
+                                v158-account-result
+                                {% if action.result_status == 'success' %}
+                                    v158-result-success
+                                {% elif action.result_status == 'blocked' %}
+                                    v158-result-blocked
+                                {% else %}
+                                    v158-result-failure
+                                {% endif %}
+                            ">
+                                {% if action.result_status == "success" %}
+                                    成功
+                                {% elif action.result_status == "blocked" %}
+                                    已拦截
+                                {% else %}
+                                    失败
+                                {% endif %}
+                            </span>
+                        </td>
+
+                        <td style="max-width:420px;">
+                            {{ action.reason or "—" }}
+                        </td>
+
+                        <td>{{ action.ip_address or "—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="v158-account-empty">
+            暂无账号管理操作记录。
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
