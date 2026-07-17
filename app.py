@@ -9309,15 +9309,128 @@ def v158_authentication_before_request():
 
 
 
-@app.route("/security/accounts")
+@app.route(
+    "/security/accounts",
+    methods=["GET", "POST"],
+)
 def v158_security_accounts():
     from services.v158_account_admin_service import (
         build_account_admin_report,
+        create_account,
     )
 
     conn = _v158_open_auth_connection()
 
     try:
+        if request.method == "POST":
+            if not validate_csrf_token(
+                session,
+                request.form.get(
+                    "csrf_token",
+                    "",
+                ),
+            ):
+                abort(400)
+
+            action = str(
+                request.form.get(
+                    "action",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if action != "create_account":
+                abort(400)
+
+            current_user = (
+                getattr(
+                    g,
+                    "v158_current_user",
+                    None,
+                )
+                or {}
+            )
+
+            try:
+                actor_user_id = int(
+                    current_user.get("id")
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+                abort(403)
+
+            if actor_user_id <= 0:
+                abort(403)
+
+            result = create_account(
+                conn,
+                actor_user_id=actor_user_id,
+                username=request.form.get(
+                    "username",
+                    "",
+                ),
+                display_name=request.form.get(
+                    "display_name",
+                    "",
+                ),
+                role=request.form.get(
+                    "role",
+                    "viewer",
+                ),
+                status=request.form.get(
+                    "status",
+                    "active",
+                ),
+                password=request.form.get(
+                    "password",
+                    "",
+                ),
+                must_change_password=False,
+                audit={
+                    "request_method": request.method,
+                    "request_path": request.path,
+                    "ip_address": (
+                        _v158_request_ip()
+                    ),
+                    "user_agent": (
+                        request.headers.get(
+                            "User-Agent",
+                            "",
+                        )[:1000]
+                    ),
+                },
+            )
+
+            if result.get("ok"):
+                category = "success"
+
+            elif (
+                result.get("result_status")
+                == "blocked"
+            ):
+                category = "warning"
+
+            else:
+                category = "error"
+
+            flash(
+                str(
+                    result.get("message")
+                    or "账号管理操作完成。"
+                ),
+                category,
+            )
+
+            return redirect(
+                url_for(
+                    "v158_security_accounts"
+                )
+            )
+
         report = build_account_admin_report(
             conn,
             recent_limit=30,

@@ -202,6 +202,94 @@
         color: #64748b;
     }
 
+    .v158-account-flash {
+        margin-bottom: 14px;
+        padding: 13px 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        line-height: 1.6;
+    }
+
+    .v158-flash-success {
+        border-left: 5px solid #16a34a;
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .v158-flash-warning {
+        border-left: 5px solid #f97316;
+        background: #fff7ed;
+        color: #9a3412;
+    }
+
+    .v158-flash-error {
+        border-left: 5px solid #dc2626;
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .v158-account-create-form {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .v158-account-field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .v158-account-field label {
+        color: #334155;
+        font-weight: 800;
+    }
+
+    .v158-account-field input,
+    .v158-account-field select {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: white;
+        color: #0f172a;
+        font: inherit;
+    }
+
+    .v158-account-field input:focus,
+    .v158-account-field select:focus {
+        border-color: #7c3aed;
+        outline: 3px solid rgba(124, 58, 237, .12);
+    }
+
+    .v158-account-field small {
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .v158-account-form-wide {
+        grid-column: 1 / -1;
+    }
+
+    .v158-account-create-button {
+        min-height: 44px;
+        padding: 10px 18px;
+        border: 0;
+        border-radius: 10px;
+        background: #7c3aed;
+        color: white;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .v158-account-create-button:hover {
+        background: #6d28d9;
+    }
+
     @media (max-width: 1100px) {
         .v158-account-stats {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -218,6 +306,10 @@
         }
 
         .v158-account-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .v158-account-create-form {
             grid-template-columns: 1fr;
         }
     }
@@ -242,9 +334,180 @@
     </div>
 
     <div class="v158-account-notice">
-        当前为账号管理第一阶段，只开放只读查看。
-        创建账号、修改权限、解除锁定、重置密码和强制注销功能，
-        将在后端保护和 CSRF 验收通过后逐项开放。
+        当前已开放创建账号功能。
+        修改权限、停用账号、解除锁定、重置密码和强制注销，
+        仍将在后续阶段逐项接入和验收。
+        首次登录强制改密流程尚未开放，因此本阶段创建的账号
+        暂不标记为“登录后须修改密码”。
+    </div>
+
+    {% with messages = get_flashed_messages(
+        with_categories=true
+    ) %}
+        {% for category, message in messages %}
+        <div class="
+            v158-account-flash
+            {% if category == 'success' %}
+                v158-flash-success
+            {% elif category == 'warning' %}
+                v158-flash-warning
+            {% else %}
+                v158-flash-error
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="v158-account-panel">
+        <h2>① 创建系统账号</h2>
+
+        <form
+            method="post"
+            action="{{ url_for('v158_security_accounts') }}"
+            class="v158-account-create-form"
+            autocomplete="off"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token }}"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="create_account"
+            >
+
+            <div class="v158-account-field">
+                <label for="v158-create-username">
+                    登录账号
+                </label>
+
+                <input
+                    id="v158-create-username"
+                    type="text"
+                    name="username"
+                    minlength="3"
+                    maxlength="64"
+                    pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}"
+                    required
+                    autocomplete="off"
+                    placeholder="例如：alliance_manager"
+                >
+
+                <small>
+                    3至64位，以字母或数字开头；
+                    只允许字母、数字、点、下划线和连字符。
+                </small>
+            </div>
+
+            <div class="v158-account-field">
+                <label for="v158-create-display-name">
+                    显示名称
+                </label>
+
+                <input
+                    id="v158-create-display-name"
+                    type="text"
+                    name="display_name"
+                    maxlength="100"
+                    required
+                    autocomplete="off"
+                    placeholder="例如：同盟管理组"
+                >
+            </div>
+
+            <div class="v158-account-field">
+                <label for="v158-create-role">
+                    账号角色
+                </label>
+
+                <select
+                    id="v158-create-role"
+                    name="role"
+                    required
+                >
+                    <option value="viewer">
+                        只读用户
+                    </option>
+
+                    <option value="manager">
+                        管理员
+                    </option>
+
+                    <option value="super_admin">
+                        超级管理员
+                    </option>
+                </select>
+
+                <small>
+                    只有超级管理员可以进入安全后台。
+                </small>
+            </div>
+
+            <div class="v158-account-field">
+                <label for="v158-create-status">
+                    初始状态
+                </label>
+
+                <select
+                    id="v158-create-status"
+                    name="status"
+                    required
+                >
+                    <option value="active">
+                        启用
+                    </option>
+
+                    <option value="disabled">
+                        停用
+                    </option>
+                </select>
+
+                <small>
+                    停用账号无法登录系统。
+                </small>
+            </div>
+
+            <div class="
+                v158-account-field
+                v158-account-form-wide
+            ">
+                <label for="v158-create-password">
+                    初始密码
+                </label>
+
+                <input
+                    id="v158-create-password"
+                    type="password"
+                    name="password"
+                    minlength="12"
+                    maxlength="128"
+                    required
+                    autocomplete="new-password"
+                    placeholder="至少12位，组合大小写、数字和符号"
+                >
+
+                <small>
+                    至少12个字符，并至少包含大写字母、
+                    小写字母、数字、特殊字符中的三类；
+                    不能包含完整登录账号。
+                    密码不会在页面或审计日志中显示。
+                </small>
+            </div>
+
+            <div class="v158-account-form-wide">
+                <button
+                    type="submit"
+                    class="v158-account-create-button"
+                >
+                    创建账号
+                </button>
+            </div>
+        </form>
     </div>
 
     <div class="v158-account-stats">
@@ -275,7 +538,7 @@
     </div>
 
     <div class="v158-account-panel">
-        <h2>① 账号列表</h2>
+        <h2>② 账号列表</h2>
 
         {% if report.users %}
         <div class="v158-account-table-wrap">
@@ -406,7 +669,7 @@
     </div>
 
     <div class="v158-account-panel">
-        <h2>② 最近账号操作</h2>
+        <h2>③ 最近账号操作</h2>
 
         {% if report.recent_actions %}
         <div class="v158-account-table-wrap">
