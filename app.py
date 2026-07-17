@@ -6517,104 +6517,389 @@ def battles():
 
     conn.close()
 
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    current_role = str(
+        current_user.get("role")
+        or ""
+    )
+
+    csrf_token = issue_csrf_token(
+        session
+    )
+
     return render_template(
         "battles.html",
         battles=battle_rows,
-        battle_stats=battle_stats
+        battle_stats=battle_stats,
+        csrf_token=csrf_token,
+        can_manage_battles=role_allows(
+            current_role,
+            "manager",
+        ),
+        can_delete_battles=role_allows(
+            current_role,
+            "super_admin",
+        ),
     )
 
-@app.route("/battle/create", methods=["POST"])
+@app.route(
+    "/battle/create",
+    methods=["POST"],
+)
 def battle_create():
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
 
-    battle_name = request.form.get("battle_name", "").strip()
-    script_type = request.form.get("script_type", "").strip()
-    alliance_name = request.form.get("alliance_name", "").strip()
+    if not role_allows(
+        str(
+            current_user.get("role")
+            or ""
+        ),
+        "manager",
+    ):
+        abort(403)
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    battle_name = request.form.get(
+        "battle_name",
+        "",
+    ).strip()
+
+    script_type = request.form.get(
+        "script_type",
+        "",
+    ).strip()
+
+    alliance_name = request.form.get(
+        "alliance_name",
+        "",
+    ).strip()
 
     if not battle_name:
-        return redirect("/battles")
-
-    conn = get_conn()
-
-    conn.execute("""
-        INSERT INTO battles
-        (
-            battle_name,
-            script_type,
-            alliance_name,
-            is_current,
-            created_at
+        flash(
+            "战场名称不能为空。",
+            "warning",
         )
-        VALUES (?, ?, ?, 0, ?)
-    """, (
-        battle_name,
-        script_type,
-        alliance_name,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ))
 
-    conn.commit()
-    conn.close()
-
-    return redirect("/battles")
-
-@app.route("/battle/delete/<int:battle_id>")
-def battle_delete(battle_id):
+        return redirect(
+            url_for("battles")
+        )
 
     conn = get_conn()
 
-    # 不允许删除当前战场
-    current = conn.execute("""
-        SELECT is_current
-        FROM battles
-        WHERE id=?
-    """, (battle_id,)).fetchone()
+    try:
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
 
-    if current and current["is_current"]:
+        conn.execute(
+            """
+            INSERT INTO battles
+            (
+                battle_name,
+                script_type,
+                alliance_name,
+                is_current,
+                created_at
+            )
+            VALUES (?, ?, ?, 0, ?)
+            """,
+            (
+                battle_name,
+                script_type,
+                alliance_name,
+                datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            ),
+        )
+
+        conn.commit()
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+    finally:
         conn.close()
-        return redirect("/battles")
 
-    conn.execute("""
-        DELETE FROM battles
-        WHERE id=?
-    """, (battle_id,))
+    flash(
+        f"战场已创建：{battle_name}",
+        "success",
+    )
 
-    conn.execute("""
-        DELETE FROM snapshots
-        WHERE battle_id=?
-    """, (battle_id,))
+    return redirect(
+        url_for("battles")
+    )
 
-    conn.execute("""
-        DELETE FROM player_records
-        WHERE battle_id=?
-    """, (battle_id,))
+@app.route(
+    "/battle/delete/<int:battle_id>",
+    methods=["POST"],
+)
+def battle_delete(battle_id):
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
 
-    conn.commit()
-    conn.close()
+    if not role_allows(
+        str(
+            current_user.get("role")
+            or ""
+        ),
+        "super_admin",
+    ):
+        abort(403)
 
-    return redirect("/battles")
-
-@app.route("/battle/select/<int:battle_id>")
-def battle_select(battle_id):
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
 
     conn = get_conn()
 
-    # 清空当前战场
-    conn.execute("""
-        UPDATE battles
-        SET is_current = 0
-    """)
+    try:
+        battle = conn.execute(
+            """
+            SELECT
+                id,
+                battle_name,
+                is_current
+            FROM battles
+            WHERE id=?
+            """,
+            (
+                battle_id,
+            ),
+        ).fetchone()
 
-    # 设置新战场
-    conn.execute("""
-        UPDATE battles
-        SET is_current = 1
-        WHERE id = ?
-    """, (battle_id,))
+        if not battle:
+            flash(
+                "目标战场不存在。",
+                "warning",
+            )
 
-    conn.commit()
-    conn.close()
+            return redirect(
+                url_for("battles")
+            )
 
-    return redirect("/battles")
+        if battle["is_current"]:
+            flash(
+                "当前使用中的战场不能删除。",
+                "warning",
+            )
+
+            return redirect(
+                url_for("battles")
+            )
+
+        battle_name = str(
+            battle["battle_name"]
+            or f"#{battle_id}"
+        )
+
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
+
+        conn.execute(
+            """
+            DELETE FROM snapshots
+            WHERE battle_id=?
+            """,
+            (
+                battle_id,
+            ),
+        )
+
+        conn.execute(
+            """
+            DELETE FROM player_records
+            WHERE battle_id=?
+            """,
+            (
+                battle_id,
+            ),
+        )
+
+        conn.execute(
+            """
+            DELETE FROM battles
+            WHERE id=?
+            """,
+            (
+                battle_id,
+            ),
+        )
+
+        conn.commit()
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+    finally:
+        conn.close()
+
+    flash(
+        f"战场已删除：{battle_name}",
+        "success",
+    )
+
+    return redirect(
+        url_for("battles")
+    )
+
+@app.route(
+    "/battle/select/<int:battle_id>",
+    methods=["POST"],
+)
+def battle_select(battle_id):
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    if not role_allows(
+        str(
+            current_user.get("role")
+            or ""
+        ),
+        "manager",
+    ):
+        abort(403)
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    conn = get_conn()
+
+    try:
+        target = conn.execute(
+            """
+            SELECT
+                id,
+                battle_name,
+                is_current
+            FROM battles
+            WHERE id=?
+            """,
+            (
+                battle_id,
+            ),
+        ).fetchone()
+
+        if not target:
+            flash(
+                "目标战场不存在，未执行切换。",
+                "warning",
+            )
+
+            return redirect(
+                url_for("battles")
+            )
+
+        if target["is_current"]:
+            flash(
+                "该战场已经是当前战场。",
+                "info",
+            )
+
+            return redirect(
+                url_for("battles")
+            )
+
+        battle_name = str(
+            target["battle_name"]
+            or f"#{battle_id}"
+        )
+
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
+
+        conn.execute(
+            """
+            UPDATE battles
+            SET is_current=0
+            WHERE is_current != 0
+            """
+        )
+
+        conn.execute(
+            """
+            UPDATE battles
+            SET is_current=1
+            WHERE id=?
+            """,
+            (
+                battle_id,
+            ),
+        )
+
+        conn.commit()
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+    finally:
+        conn.close()
+
+    flash(
+        f"已切换当前战场：{battle_name}",
+        "success",
+    )
+
+    return redirect(
+        url_for("battles")
+    )
 
 @app.route("/snapshot/view/<int:snapshot_id>")
 def snapshot_view(snapshot_id):

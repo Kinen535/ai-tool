@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.battle-action-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.battle-action-form button {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.battle-readonly-note {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+    line-height: 1.6;
+}
+</style>
+
+<div class="battle-center">
+
+    <!-- 标题 -->
+    <div class="page-header">
+        <h1>⚔️ 战场管理中心</h1>
+        <p>创建、切换与管理赛季战场</p>
+    </div>
+
+    <!-- 战场统计 -->
+    <div class="battle-stats">
+
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ battles|length }}
+            </div>
+            <div class="stat-label">
+                总战场数
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ battles|selectattr("is_current")|list|length }}
+            </div>
+            <div class="stat-label">
+                当前战场
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ battles|rejectattr("is_current")|list|length }}
+            </div>
+            <div class="stat-label">
+                历史战场
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 创建战场 -->
+    <div class="battle-create-box">
+
+        <h3>➕ 创建新战场</h3>
+
+        {% if can_manage_battles %}
+<form
+                method="post"
+                action="{{ url_for('battle_create') }}"
+            >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token }}"
+                >
+
+            <input
+                type="text"
+                name="battle_name"
+                placeholder="战场名称"
+                required
+            >
+
+            <input
+                type="text"
+                name="script_type"
+                placeholder="剧本名称"
+                required
+            >
+
+            <input
+                type="text"
+                name="alliance_name"
+                placeholder="同盟名称"
+                required
+            >
+
+            <button type="submit">
+                创建战场
+            </button>
+
+        </form>
+{% else %}
+            <div class="battle-readonly-note">
+                当前账号为只读角色，不能创建战场。
+            </div>
+{% endif %}
+
+    </div>
+
+    <!-- 当前战场 -->
+    <div class="battle-section">
+
+        <h3>⭐ 当前战场</h3>
+
+        <div class="battle-grid">
+
+            {% for b in battles %}
+            {% if b.is_current %}
+
+            <div class="battle-card current-battle">
+
+                <div class="battle-card-top">
+
+                    <span class="battle-id">
+                        #{{ b.id }}
+                    </span>
+
+                    <span class="battle-badge current">
+                        当前战场
+                    </span>
+
+                </div>
+
+                <h4>
+                    {{ b.battle_name }}
+                </h4>
+
+                <p>🎯 剧本：{{ b.script_type }}</p>
+
+                <p>📁 同盟：{{ b.alliance_name }}</p>
+
+                {% if b.created_at %}
+                <div class="battle-date">
+                    🕒 {{ b.created_at[:10] }}
+                </div>
+                {% endif %}
+
+                <div class="battle-extra">
+                    👥 成员数量：
+                    {{ battle_stats[b.id]["member_count"] }}
+                </div>
+
+                <div class="battle-extra">
+                    📦 快照数量：
+                    {{ battle_stats[b.id]["snapshot_count"] }}
+                </div>
+
+                <div class="battle-extra">
+                    🕒 最近上传：
+                    {{ battle_stats[b.id]["last_upload"] }}
+                </div>
+
+                <div class="battle-status">
+                    🔒 当前使用中
+                </div>
+
+                <div class="battle-actions">
+
+                    <a
+                        href="/overview"
+                        class="btn-enter"
+                    >
+                        进入战场
+                    </a>
+
+                </div>
+
+            </div>
+
+            {% endif %}
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+    <!-- 历史战场 -->
+    <div class="battle-section">
+
+        <h3>📚 历史战场</h3>
+
+        <div class="battle-grid">
+
+            {% for b in battles %}
+            {% if not b.is_current %}
+
+            <div class="battle-card">
+
+                <div class="battle-card-top">
+
+                    <span class="battle-id">
+                        #{{ b.id }}
+                    </span>
+
+                    <span class="battle-badge history">
+                        历史战场
+                    </span>
+
+                </div>
+
+                <h4>
+                    {{ b.battle_name }}
+                </h4>
+
+                <p>🎯 剧本：{{ b.script_type }}</p>
+
+                <p>📁 同盟：{{ b.alliance_name }}</p>
+
+                {% if b.created_at %}
+                <div class="battle-date">
+                    🕒 {{ b.created_at[:10] }}
+                </div>
+                {% endif %}
+
+                <div class="battle-extra">
+                    👥 成员数量：
+                    {{ battle_stats[b.id]["member_count"] }}
+                </div>
+
+                <div class="battle-extra">
+                    📦 快照数量：
+                    {{ battle_stats[b.id]["snapshot_count"] }}
+                </div>
+
+                <div class="battle-extra">
+                    🕒 最近上传：
+                    {{ battle_stats[b.id]["last_upload"] }}
+                </div>
+
+                <div class="battle-actions">
+
+                    <a
+                        href="/overview"
+                        class="btn-enter"
+                    >
+                        查看
+                    </a>
+
+                    {% if can_manage_battles %}
+                    <form
+                        method="post"
+                        action="{{
+                            url_for(
+                                'battle_select',
+                                battle_id=b.id
+                            )
+                        }}"
+                        class="battle-action-form"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="btn-switch"
+                        >
+                            切换
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if can_delete_battles %}
+                    <form
+                        method="post"
+                        action="{{
+                            url_for(
+                                'battle_delete',
+                                battle_id=b.id
+                            )
+                        }}"
+                        class="battle-action-form"
+                        onsubmit="return confirm('确定删除该战场吗？');"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="btn-delete"
+                        >
+                            删除
+                        </button>
+                    </form>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            {% endif %}
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
