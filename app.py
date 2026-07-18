@@ -4375,487 +4375,421 @@ def members():
 
 @app.route("/identity")
 def identity():
-
     conn = get_conn()
 
     keyword = request.args.get(
         "keyword",
-        ""
+        "",
     ).strip()
 
     role = request.args.get(
         "role",
-        ""
+        "",
     ).strip()
 
     grade = request.args.get(
         "grade",
-        ""
+        "",
     ).strip()
 
-    sql = """
-    SELECT
-        member_name,
-        role_tag,
-        role_desc,
-        role_rule,
-        role_weight,
-        identity_score,
-        is_protected,
-        exempt_stall
-    FROM member_profiles
-    WHERE 1=1
-    """
-
-    params = []
-
-    # =====================
-    # 成员搜索
-    # =====================
-
-    if keyword:
-
-        sql += """
-        AND member_name LIKE ?
+    current_battle = conn.execute(
         """
-
-        params.append(
-            f"%{keyword}%"
-        )
-
-    # =====================
-    # 身份筛选
-    # =====================
-
-    if role:
-
-        sql += """
-        AND role_tag = ?
-        """
-
-        params.append(
-            role
-        )
-
-    if grade == "S":
-
-        sql += """
-        AND identity_score >= 90
-        """
-
-    elif grade == "A":
-
-        sql += """
-        AND identity_score >= 70
-        AND identity_score < 90
-        """
-
-    elif grade == "B":
-
-        sql += """
-        AND identity_score >= 50
-        AND identity_score < 70
-        """
-
-    elif grade == "C":
-
-        sql += """
-        AND identity_score >= 30
-        AND identity_score < 50
-        """
-
-    elif grade == "D":
-
-        sql += """
-        AND identity_score < 30
-        """
-    sql += """
-    ORDER BY
-        identity_score DESC,
-        role_tag,
-        member_name
-    """
-
-    rows = conn.execute(
-        sql,
-        params
-    ).fetchall()
-
-    # =====================
-    # 当前筛选显示
-    # =====================
-
-    current_filter = []
-
-    if role == "admin":
-        current_filter.append("管理员")
-
-    elif role == "warehouse":
-        current_filter.append("仓库号")
-
-    elif role == "core":
-        current_filter.append("核心成员")
-
-    if grade == "S":
-        current_filter.append("S级核心成员")
-
-    elif grade == "A":
-        current_filter.append("A级骨干成员")
-
-    elif grade == "B":
-        current_filter.append("B级稳定成员")
-
-    elif grade == "C":
-        current_filter.append("C级观察成员")
-
-    elif grade == "D":
-        current_filter.append("D级待淘汰成员")
-
-    if not current_filter:
-        current_filter = "全部成员"
-    else:
-        current_filter = " + ".join(current_filter)
-    # =====================
-    # 身份统计
-    # =====================
-
-    admin_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE role_tag='admin'
-        """
-    ).fetchone()[0]
-
-    warehouse_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE role_tag='warehouse'
-        """
-    ).fetchone()[0]
-
-    core_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE role_tag='core'
-        """
-    ).fetchone()[0]
-
-    protected_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE is_protected=1
-        """
-    ).fetchone()[0]
-
-    exempt_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE exempt_stall=1
-        """
-    ).fetchone()[0]
-
-    # =====================
-    # 身份评级统计
-    # =====================
-
-    s_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE identity_score >= 90
-        """
-    ).fetchone()[0]
-
-    a_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE identity_score >= 70
-        AND identity_score < 90
-        """
-    ).fetchone()[0]
-
-    b_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE identity_score >= 50
-        AND identity_score < 70
-        """
-    ).fetchone()[0]
-
-    c_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE identity_score >= 30
-        AND identity_score < 50
-        """
-    ).fetchone()[0]
-
-    d_count = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        WHERE identity_score < 30
-        """
-    ).fetchone()[0]
-
-    # =====================
-    # TOP10身份榜
-    # =====================
-
-    top_identity = conn.execute(
-        """
-        SELECT
-            member_name,
-            identity_score
-        FROM member_profiles
-        ORDER BY identity_score DESC
-        LIMIT 10
-        """
-    ).fetchall()
-
-    # =====================
-    # 风险榜
-    # =====================
-
-    risk_members = conn.execute(
-        """
-        SELECT
-            member_name,
-            identity_score,
-            risk_reason
-        FROM member_profiles
-        WHERE identity_score < 50
-        ORDER BY identity_score ASC
-        LIMIT 10
-        """
-    ).fetchall()
-
-    # =====================
-    # 成长最快TOP10
-    # =====================
-
-    grow_members = conn.execute(
-        """
-        SELECT
-            member_name,
-            identity_score,
-            trend
-        FROM member_profiles
-        WHERE identity_score >= 60
-          AND identity_score < 85
-          AND trend IN ('explosive','up')
-        ORDER BY identity_score DESC
-        LIMIT 10
-        """
-    ).fetchall()
-
-    # =====================
-    # 总人数
-    # =====================
-
-    total_members = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM member_profiles
-        """
-    ).fetchone()[0]
-
-     # =====================
-    # 真实成长/下滑榜
-    # =====================
-
-    latest_time_row = conn.execute(
-        """
-        SELECT snapshot_time
-        FROM player_records
-        WHERE is_deleted = 0
-        ORDER BY snapshot_time DESC
+        SELECT id
+        FROM battles
+        WHERE is_current = 1
         LIMIT 1
         """
     ).fetchone()
 
-    prev_time_row = conn.execute(
-        """
-        SELECT snapshot_time
-        FROM player_records
-        WHERE is_deleted = 0
-        AND snapshot_time < (
-            SELECT snapshot_time
+    all_members = []
+
+    if current_battle:
+        battle_id = current_battle[0]
+
+        latest_row = conn.execute(
+            """
+            SELECT MAX(snapshot_time)
             FROM player_records
-            WHERE is_deleted = 0
-            ORDER BY snapshot_time DESC
-            LIMIT 1
+            WHERE battle_id = ?
+              AND is_deleted = 0
+              AND TRIM(
+                  COALESCE(snapshot_time, '')
+              ) <> ''
+            """,
+            (battle_id,),
+        ).fetchone()
+
+        latest_time = (
+            latest_row[0]
+            if latest_row
+            else None
         )
-        ORDER BY snapshot_time DESC
-        LIMIT 1
-        """
-    ).fetchone()
+
+        if latest_time:
+            records = conn.execute(
+                """
+                SELECT
+                    pr.member AS member_name,
+
+                    COALESCE(
+                        mp.role_tag,
+                        pr.role_tag,
+                        'member'
+                    ) AS role_tag,
+
+                    COALESCE(
+                        mp.role_desc,
+                        pr.role_desc,
+                        ''
+                    ) AS role_desc,
+
+                    COALESCE(
+                        mp.role_rule,
+                        pr.role_rule,
+                        'normal'
+                    ) AS role_rule,
+
+                    COALESCE(
+                        mp.role_weight,
+                        pr.role_weight,
+                        1
+                    ) AS role_weight,
+
+                    COALESCE(
+                        pr.identity_score,
+                        0
+                    ) AS identity_score,
+
+                    COALESCE(
+                        mp.is_protected,
+                        pr.is_protected,
+                        0
+                    ) AS is_protected,
+
+                    COALESCE(
+                        mp.exempt_stall,
+                        pr.exempt_stall,
+                        0
+                    ) AS exempt_stall,
+
+                    COALESCE(pr.av, 0) AS av,
+                    COALESCE(pr.bs, 0) AS bs,
+                    COALESCE(pr.wv, 0) AS wv,
+                    COALESCE(pr.bv, 0) AS bv,
+
+                    COALESCE(
+                        pr.trend,
+                        'stable'
+                    ) AS trend,
+
+                    COALESCE(
+                        pr.risk_level,
+                        'safe'
+                    ) AS risk_level,
+
+                    COALESCE(
+                        pr.risk_reason,
+                        ''
+                    ) AS risk_reason,
+
+                    COALESCE(
+                        pr.battle_gain,
+                        0
+                    ) AS battle_gain,
+
+                    COALESCE(
+                        pr.assist_gain,
+                        0
+                    ) AS assist_gain,
+
+                    COALESCE(
+                        pr.donate_gain,
+                        0
+                    ) AS donate_gain,
+
+                    pr.group_name
+
+                FROM player_records AS pr
+
+                LEFT JOIN member_profiles AS mp
+                  ON mp.member_name = pr.member
+
+                WHERE pr.battle_id = ?
+                  AND pr.snapshot_time = ?
+                  AND pr.is_deleted = 0
+
+                ORDER BY pr.member
+                """,
+                (
+                    battle_id,
+                    latest_time,
+                ),
+            ).fetchall()
+
+            all_members = [
+                dict(record)
+                for record in records
+            ]
+
+    conn.close()
+
+    def matches_grade(member):
+        score = member["identity_score"] or 0
+
+        if grade == "S":
+            return score >= 90
+
+        if grade == "A":
+            return 70 <= score < 90
+
+        if grade == "B":
+            return 50 <= score < 70
+
+        if grade == "C":
+            return 30 <= score < 50
+
+        if grade == "D":
+            return score < 30
+
+        return True
+
+    rows = []
+
+    for member in all_members:
+        if (
+            keyword
+            and keyword not in (
+                member["member_name"] or ""
+            )
+        ):
+            continue
+
+        if (
+            role
+            and member["role_tag"] != role
+        ):
+            continue
+
+        if not matches_grade(member):
+            continue
+
+        rows.append(member)
+
+    rows.sort(
+        key=lambda member: (
+            -(member["identity_score"] or 0),
+            member["role_tag"] or "",
+            member["member_name"] or "",
+        )
+    )
+
+    filter_labels = []
+
+    role_labels = {
+        "admin": "管理员",
+        "warehouse": "仓库号",
+        "core": "核心成员",
+    }
+
+    grade_labels = {
+        "S": "S级核心成员",
+        "A": "A级骨干成员",
+        "B": "B级稳定成员",
+        "C": "C级观察成员",
+        "D": "D级待淘汰成员",
+    }
+
+    if role in role_labels:
+        filter_labels.append(
+            role_labels[role]
+        )
+
+    if grade in grade_labels:
+        filter_labels.append(
+            grade_labels[grade]
+        )
+
+    current_filter = (
+        " + ".join(filter_labels)
+        if filter_labels
+        else "全部成员"
+    )
+
+    total_members = len(all_members)
+
+    admin_count = sum(
+        member["role_tag"] == "admin"
+        for member in all_members
+    )
+
+    warehouse_count = sum(
+        member["role_tag"] == "warehouse"
+        for member in all_members
+    )
+
+    core_count = sum(
+        member["role_tag"] == "core"
+        for member in all_members
+    )
+
+    protected_count = sum(
+        member["is_protected"] == 1
+        for member in all_members
+    )
+
+    exempt_count = sum(
+        member["exempt_stall"] == 1
+        for member in all_members
+    )
+
+    s_count = sum(
+        (member["identity_score"] or 0) >= 90
+        for member in all_members
+    )
+
+    a_count = sum(
+        70 <= (member["identity_score"] or 0) < 90
+        for member in all_members
+    )
+
+    b_count = sum(
+        50 <= (member["identity_score"] or 0) < 70
+        for member in all_members
+    )
+
+    c_count = sum(
+        30 <= (member["identity_score"] or 0) < 50
+        for member in all_members
+    )
+
+    d_count = sum(
+        (member["identity_score"] or 0) < 30
+        for member in all_members
+    )
+
+    top_identity = sorted(
+        all_members,
+        key=lambda member: (
+            member["identity_score"] or 0,
+            member["member_name"] or "",
+        ),
+        reverse=True,
+    )[:10]
+
+    risk_members = sorted(
+        [
+            member
+            for member in all_members
+            if (
+                member["identity_score"] or 0
+            ) < 50
+        ],
+        key=lambda member: (
+            member["identity_score"] or 0,
+            member["member_name"] or "",
+        ),
+    )[:10]
+
+    grow_members = sorted(
+        [
+            member
+            for member in all_members
+            if (
+                60
+                <= (
+                    member["identity_score"]
+                    or 0
+                )
+                < 85
+                and member["trend"]
+                in ("explosive", "up")
+            )
+        ],
+        key=lambda member: (
+            member["identity_score"] or 0,
+            member["member_name"] or "",
+        ),
+        reverse=True,
+    )[:10]
 
     growth_members = []
-    decline_members = []
 
-    if latest_time_row and prev_time_row:
+    for member in all_members:
+        item = dict(member)
 
-        latest_time = latest_time_row["snapshot_time"]
-        prev_time = prev_time_row["snapshot_time"]
+        item["score_change"] = (
+            (member["battle_gain"] or 0)
+            + (member["assist_gain"] or 0) * 2
+        )
 
-    # =====================
-    # 成长贡献TOP10
-    # =====================
+        growth_members.append(item)
 
-    growth_members = conn.execute(
-        """
-        SELECT
-            member AS member_name,
-            (
-                battle_gain
-                + assist_gain * 2
-            ) AS score_change,
-            battle_gain,
-            assist_gain,
-            donate_gain,
-            trend
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        ORDER BY score_change DESC
-        LIMIT 10
-        """,
-        (latest_time,)
-    ).fetchall()
+    growth_members.sort(
+        key=lambda member: (
+            member["score_change"],
+            member["member_name"] or "",
+        ),
+        reverse=True,
+    )
 
-    # =====================
-    # 重点关注成员TOP10
-    # =====================
-
-    focus_raw = conn.execute(
-        """
-        SELECT
-
-            member AS member_name,
-
-            identity_score,
-  
-            av,
-            bs,
-
-            wv,
-            bv,
-
-            trend,
-            risk_level,
-            risk_reason,
-
-            role_tag,
-            is_protected,
-            exempt_stall
-
-        FROM player_records
-
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-
-        AND role_tag NOT IN ('admin','warehouse')
-
-        ORDER BY identity_score DESC
-        """,
-        (latest_time,)
-    ).fetchall()
+    growth_members = growth_members[:10]
 
     focus_members = []
 
-    for row in focus_raw:
+    for member in all_members:
+        focus_score = 0
 
-        row = dict(row)
+        if member["trend"] == "dead":
+            focus_score += 100
 
-        risk_score = 0
+        elif member["trend"] == "down":
+            focus_score += 50
 
-        # 长期停滞
-
-        if row["trend"] == "dead":
-            risk_score += 100
-
-        elif row["trend"] == "down":
-            risk_score += 50
-
-        # 活跃不足
-
-        risk_score += max(
+        focus_score += max(
             0,
-            30 - (row["av"] or 0)
+            30 - (member["av"] or 0),
         )
 
-        # 稳定不足
-
-        risk_score += max(
+        focus_score += max(
             0,
-            30 - (row["bs"] or 0)
+            30 - (member["bs"] or 0),
         )
- 
-        # 高价值成员加权
 
-        risk_score += (
-            row["identity_score"] or 0
+        focus_score += (
+            member["identity_score"] or 0
         ) * 0.2
 
-        # 战争价值加权
-
-        risk_score += (
-            row["wv"] or 0
+        focus_score += (
+            member["wv"] or 0
         ) * 0.1
 
-        # 建设价值加权
-
-        risk_score += (
-            row["bv"] or 0
+        focus_score += (
+            member["bv"] or 0
         ) * 0.05
 
-        row["focus_score"] = round(
-            risk_score,
-            1
-        )
-
         if (
-            row["trend"] in ("dead", "down")
-            or row["risk_level"] in ("warning", "danger")
-            or (row["av"] or 0) < 20
-            or (row["bs"] or 0) < 30
+            member["trend"] in ("dead", "down")
+            or member["risk_level"]
+            in ("warning", "danger")
+            or (member["av"] or 0) < 20
+            or (member["bs"] or 0) < 30
         ):
-
-            focus_members.append(row)
+            item = dict(member)
+            item["focus_score"] = round(
+                focus_score,
+                1,
+            )
+            focus_members.append(item)
 
     focus_members.sort(
-        key=lambda x: x["focus_score"],
-        reverse=True
+        key=lambda member: (
+            member["focus_score"],
+            member["member_name"] or "",
+        ),
+        reverse=True,
     )
 
     focus_members = focus_members[:10]
-
-    print("==========")
-    print("focus count =", len(focus_members))
-
-    for x in focus_members[:5]:
-        print(
-            x["member_name"],
-            x["trend"],
-            x["risk_level"],
-            x["av"],
-            x["bs"]
-        )
-
-    print("==========")
- 
-    # =====================
-    # 同盟健康度（百分制）
-    # =====================
 
     excellent_count = (
         s_count
@@ -4867,144 +4801,105 @@ def identity():
         excellent_count
         / max(total_members, 1)
         * 100,
-        1
+        1,
     )
 
     if health_score >= 80:
-
         health_level = "卓越"
 
     elif health_score >= 60:
-
         health_level = "健康"
 
     elif health_score >= 40:
-
-         health_level = "警戒"
+        health_level = "警戒"
 
     else:
-
         health_level = "危险"
-
-    # =====================
-    # AI建议
-    # =====================
 
     ai_advice = []
 
-    if s_count == 0:
-
+    if total_members == 0:
         ai_advice.append(
-            "当前无S级核心成员，核心梯队存在断层风险"
+            "当前战场暂无可用成员数据"
         )
 
-    if a_count < max(total_members * 0.03, 5):
+    else:
+        if s_count == 0:
+            ai_advice.append(
+                "当前无S级核心成员，核心梯队存在断层风险"
+            )
 
-        ai_advice.append(
-            "A级骨干占比偏低，建议重点培养成长成员"
-        )
+        if a_count < max(
+            total_members * 0.03,
+            5,
+        ):
+            ai_advice.append(
+                "A级骨干占比偏低，建议重点培养成长成员"
+            )
 
-    if d_count >= 50:
+        if d_count >= 50:
+            ai_advice.append(
+                f"D级成员 {d_count} 人，建议启动清理计划"
+            )
 
-        ai_advice.append(
-            f"D级成员 {d_count} 人，建议启动清理计划"
-        )
+        elif d_count > total_members * 0.3:
+            ai_advice.append(
+                "D级成员占比过高，建议开展成员优化"
+            )
 
-    elif d_count > total_members * 0.3:
+        if growth_members:
+            top = growth_members[0]
 
-        ai_advice.append(
-            "D级成员占比过高，建议开展成员优化"
-        )
+            ai_advice.append(
+                f"{top['member_name']}近期成长最快，建议重点关注"
+            )
 
-    if growth_members:
+        if top_identity:
+            top = top_identity[0]
 
-        top = growth_members[0]
+            ai_advice.append(
+                f"{top['member_name']}为当前核心战力，建议重点保护"
+            )
 
-        ai_advice.append(
-            f"{top['member_name']}近期成长最快，建议重点关注"
-        )
+        if protected_count > 10:
+            ai_advice.append(
+                "身份保护人数偏多，建议定期复核"
+            )
 
-    if decline_members:
+        if not ai_advice:
+            ai_advice.append(
+                "当前身份体系运行健康"
+            )
 
-        top = decline_members[0]
-
-        ai_advice.append(
-            f"{top['member_name']}出现明显下滑，建议观察"
-        )
-
-    if top_identity:
-
-        top = top_identity[0]
-
-        ai_advice.append(
-            f"{top['member_name']}为当前核心战力，建议重点保护"
-        )
-
-    if d_count >= 50:
-
-        ai_advice.append(
-            f"D级成员 {d_count} 人，建议启动清理计划"
-        )
-
-    if a_count <= 5:
-
-        ai_advice.append(
-            "A级骨干过少，建议重点培养成长成员"
-        )
-
-    if protected_count > 10:
-
-        ai_advice.append(
-            "身份保护人数偏多，建议定期复核"
-    )
-
-    if len(ai_advice) > 5:
-        ai_advice = ai_advice[:5]
-
-        ai_advice.append(
-            "当前身份体系运行健康"
-    )
-
-    conn.close()
+    ai_advice = ai_advice[:5]
 
     return render_template(
-    "identity.html",
-
-    members=rows,
-
-    keyword=keyword,
-    role=role,
-    grade=grade,
-
-    current_filter=current_filter,
-
-    admin_count=admin_count,
-    warehouse_count=warehouse_count,
-    core_count=core_count,
-
-    protected_count=protected_count,
-    exempt_count=exempt_count,
-
-    s_count=s_count,
-    a_count=a_count,
-    b_count=b_count,
-    c_count=c_count,
-    d_count=d_count,
-
-    total_members=total_members,
-
-    top_identity=top_identity,
-    risk_members=risk_members,
-    grow_members=grow_members,
-
-    health_score=health_score,
-    health_level=health_level,
-
-    growth_members=growth_members,
-    focus_members=focus_members,
-
-    ai_advice=ai_advice,
-)
+        "identity.html",
+        members=rows,
+        keyword=keyword,
+        role=role,
+        grade=grade,
+        current_filter=current_filter,
+        admin_count=admin_count,
+        warehouse_count=warehouse_count,
+        core_count=core_count,
+        protected_count=protected_count,
+        exempt_count=exempt_count,
+        s_count=s_count,
+        a_count=a_count,
+        b_count=b_count,
+        c_count=c_count,
+        d_count=d_count,
+        total_members=total_members,
+        top_identity=top_identity,
+        risk_members=risk_members,
+        grow_members=grow_members,
+        health_score=health_score,
+        health_level=health_level,
+        growth_members=growth_members,
+        focus_members=focus_members,
+        ai_advice=ai_advice,
+    )
 
 @app.route("/talent")
 def talent():
