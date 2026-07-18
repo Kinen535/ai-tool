@@ -450,26 +450,52 @@ def build_task_pool(members):
 def load_members(conn):
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT
-        member,
-        group_name,
-        av,
-        bs,
-        wv,
-        bv,
-        trend,
-        risk_level,
-        risk_reason,
-        stall_count,
-        identity_score,
-        role_tag
-    FROM player_records
-    WHERE snapshot_time = (
-        SELECT MAX(snapshot_time)
+    current_battle = cursor.execute(
+        """
+        SELECT id
+        FROM battles
+        WHERE is_current = 1
+        LIMIT 1
+        """
+    ).fetchone()
+
+    if not current_battle:
+        return []
+
+    battle_id = current_battle[0]
+
+    cursor.execute(
+        """
+        SELECT
+            member,
+            group_name,
+            av,
+            bs,
+            wv,
+            bv,
+            trend,
+            risk_level,
+            risk_reason,
+            stall_count,
+            identity_score,
+            role_tag
         FROM player_records
+        WHERE battle_id = ?
+          AND is_deleted = 0
+          AND snapshot_time = (
+              SELECT MAX(snapshot_time)
+              FROM player_records
+              WHERE battle_id = ?
+                AND is_deleted = 0
+                AND TRIM(COALESCE(snapshot_time, '')) <> ''
+          )
+        ORDER BY member
+        """,
+        (
+            battle_id,
+            battle_id,
+        )
     )
-    """)
 
     rows = cursor.fetchall()
 
@@ -477,30 +503,21 @@ def load_members(conn):
 
     for r in rows:
         members.append({
-
             "member_name": r[0],
             "group_name": r[1],
-
             "av": r[2] or 0,
             "bs": r[3] or 0,
-
             "wv": r[4] or 0,
             "bv": r[5] or 0,
-
             "trend": r[6] or "stable",
-
             "risk_level": r[7] or "safe",
             "risk_reason": r[8] or "",
-
             "stall_count": r[9] or 0,
-
             "identity_score": r[10] or 0,
-
-            "role_tag": r[11] or "member"
-
+            "role_tag": r[11] or "member",
         })
-    return members
 
+    return members
 
 def get_today_actions(members):
     result = []
