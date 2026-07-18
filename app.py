@@ -3925,20 +3925,13 @@ def trends():
             group_name,
             battle_total,
             assist_total,
-            power_total
+            power_value
         FROM player_records
         WHERE battle_id = ?
-        AND is_deleted = 0
+          AND is_deleted = 0
     """
 
-    params = [battle_id]
-
-    # =========================
-    # 玩家搜索
-    # =========================
-
     if member_keyword:
-
         exact_query = base_query + """
             AND member = ?
             ORDER BY snapshot_time ASC
@@ -3947,43 +3940,129 @@ def trends():
         exact_df = pd.read_sql_query(
             exact_query,
             conn,
-            params=[battle_id, member_keyword]
+            params=[
+                battle_id,
+                member_keyword,
+            ],
         )
 
-        print(f"📈 trends 精准匹配结果: {len(exact_df)}")
+        print(
+            f"📈 trends 精准匹配结果: "
+            f"{len(exact_df)}"
+        )
 
         if not exact_df.empty:
-
             df = exact_df
 
         else:
-
-            fuzzy_query = base_query + """
-                AND member LIKE ?
-                ORDER BY snapshot_time ASC
-            """
-
-            df = pd.read_sql_query(
-                fuzzy_query,
+            candidate_df = pd.read_sql_query(
+                """
+                SELECT DISTINCT member
+                FROM player_records
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                  AND member LIKE ?
+                ORDER BY member
+                """,
                 conn,
-                params=[battle_id, f"%{member_keyword}%"]
+                params=[
+                    battle_id,
+                    f"%{member_keyword}%",
+                ],
             )
 
-            print(f"📈 trends 模糊匹配结果: {len(df)}")
+            candidates = (
+                candidate_df["member"]
+                .dropna()
+                .astype(str)
+                .tolist()
+            )
+
+            print(
+                f"📈 trends 模糊候选成员: "
+                f"{len(candidates)}"
+            )
+
+            if len(candidates) == 1:
+                member_keyword = candidates[0]
+
+                df = pd.read_sql_query(
+                    exact_query,
+                    conn,
+                    params=[
+                        battle_id,
+                        member_keyword,
+                    ],
+                )
+
+            elif len(candidates) > 1:
+                preview = "、".join(
+                    candidates[:10]
+                )
+
+                suffix = (
+                    "等"
+                    if len(candidates) > 10
+                    else ""
+                )
+
+                conn.close()
+
+                flash(
+                    (
+                        f"关键词“{member_keyword}”"
+                        f"匹配到{len(candidates)}名成员："
+                        f"{preview}{suffix}。"
+                        "请点击或输入完整成员名后再分析。"
+                    ),
+                    "warning",
+                )
+
+                return render_template(
+                    "trends.html",
+                    history_data=[],
+                    trend_rows=[],
+                    member_keyword=member_keyword,
+                    group_keyword=group_keyword,
+                    ai_result={
+                        "level": "需要精确成员",
+                        "score": 0,
+                        "summary": (
+                            "当前关键词匹配到多名成员，"
+                            "系统已停止多人混合计算"
+                        ),
+                    },
+                )
+
+            else:
+                df = pd.DataFrame()
 
     else:
+        conn.close()
 
-        if group_keyword:
+        flash(
+            (
+                "为避免多名成员数据相互串算，"
+                "团级趋势查询暂时停止。"
+                "请先输入完整成员名查询。"
+            ),
+            "warning",
+        )
 
-            base_query += " AND group_name LIKE ? "
-            params.append(f"%{group_keyword}%")
-
-        base_query += " ORDER BY snapshot_time ASC "
-
-        df = pd.read_sql_query(
-            base_query,
-            conn,
-            params=params
+        return render_template(
+            "trends.html",
+            history_data=[],
+            trend_rows=[],
+            member_keyword="",
+            group_keyword=group_keyword,
+            ai_result={
+                "level": "团级趋势维护中",
+                "score": 0,
+                "summary": (
+                    "团级聚合展示将在趋势模板"
+                    "完成基线整理后接入"
+                ),
+            },
         )
 
     conn.close()
@@ -4038,7 +4117,7 @@ def trends():
 
         battle_raw = row.get("battle_total", 0)
         assist_raw = row.get("assist_total", 0)
-        power_raw = row.get("power_total", 0)
+        power_raw = row.get("power_value", 0)
 
         if pd.isna(battle_raw):
             battle_raw = 0
