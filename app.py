@@ -7157,25 +7157,39 @@ def archive_events():
 
 @app.route("/ai/daily")
 def ai_daily():
-
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
 
-    members = cur.execute("""
+    members = conn.execute(
+        """
         SELECT
-            member_name,
-            av,
-            bs,
-            trend,
-            risk_level,
-            risk_reason,
-            role_tag,
-            identity_score,
-            is_protected,
-            exempt_stall
-        FROM member_profiles
-    """).fetchall()
+            pr.member AS member_name,
+            pr.av,
+            pr.bs,
+            pr.trend,
+            pr.risk_level,
+            pr.risk_reason,
+            pr.role_tag,
+            pr.identity_score,
+            pr.is_protected,
+            pr.exempt_stall
+        FROM player_records AS pr
+        JOIN battles AS b
+          ON b.id = pr.battle_id
+         AND b.is_current = 1
+        WHERE pr.is_deleted = 0
+          AND pr.snapshot_time = (
+              SELECT MAX(p2.snapshot_time)
+              FROM player_records AS p2
+              WHERE p2.battle_id = b.id
+                AND p2.is_deleted = 0
+                AND TRIM(
+                    COALESCE(p2.snapshot_time, '')
+                ) <> ''
+          )
+        ORDER BY pr.member
+        """
+    ).fetchall()
 
     conn.close()
 
@@ -7183,21 +7197,20 @@ def ai_daily():
     watch_members = []
     clean_members = []
 
-    for m in members:
-        av = m["av"] or 0
-        bs = m["bs"] or 0
-        score = m["identity_score"] or 0
-        risk = m["risk_level"] or "安全"
-        role = m["role_tag"] or "member"
-        protected = m["is_protected"] or 0
-        exempt_stall = m["exempt_stall"] or 0
+    for member in members:
+        av = member["av"] or 0
+        bs = member["bs"] or 0
+        score = member["identity_score"] or 0
+        risk = member["risk_level"] or "safe"
+        role = member["role_tag"] or "member"
+        protected = member["is_protected"] or 0
 
         if (
             score >= 65
             and av >= 50
             and bs >= 60
         ):
-            train_members.append(m)
+            train_members.append(member)
 
         if (
             risk == "danger"
@@ -7205,104 +7218,121 @@ def ai_daily():
             and not (
                 av < 20
                 and bs < 30
-                and role not in ["leader", "admin"]
+                and role not in ("leader", "admin")
             )
         ):
-            watch_members.append(m)
+            watch_members.append(member)
 
         if (
             risk == "danger"
             and av < 20
             and bs < 30
             and protected == 0
-            and role not in ["leader", "admin"]
+            and role not in ("leader", "admin")
         ):
-            clean_members.append(m)
+            clean_members.append(member)
 
-            top_train = "、".join(
-                [m["member_name"] for m in train_members[:3]]
-            )
+    train_members.sort(
+        key=lambda item: (
+            item["identity_score"] or 0,
+            item["av"] or 0,
+            item["bs"] or 0,
+        ),
+        reverse=True,
+    )
 
-            top_clean = "\n".join([
-                f"{m['member_name']}（{m['risk_reason']}）"
-                for m in clean_members[:3]
-            ])
+    watch_members.sort(
+        key=lambda item: (
+            (item["av"] or 0) + (item["bs"] or 0),
+            item["member_name"] or "",
+        )
+    )
 
-            risk_stats = {
-                "活跃不足": 0,
-                "连续停滞": 0,
-                "长期低贡献": 0,
-                "综合健康分过低": 0
-            }
+    clean_members.sort(
+        key=lambda item: (
+            (item["av"] or 0) + (item["bs"] or 0),
+            item["member_name"] or "",
+        )
+    )
 
-            for m in watch_members:
+    top_train = "、".join(
+        item["member_name"]
+        for item in train_members[:3]
+    )
 
-                reason = str(m["risk_reason"] or "")
+    top_clean = "\n".join(
+        f"{item['member_name']}（{item['risk_reason'] or '风险等级较高'}）"
+        for item in clean_members[:3]
+    )
 
-                if "活跃不足" in reason:
-                    risk_stats["活跃不足"] += 1
+    risk_stats = {
+        "活跃不足": 0,
+        "连续停滞": 0,
+        "长期低贡献": 0,
+        "综合健康分过低": 0,
+    }
 
-                if "连续停滞" in reason:
-                    risk_stats["连续停滞"] += 1
+    for member in watch_members:
+        reason = str(member["risk_reason"] or "")
 
-                if "长期低贡献" in reason:
-                    risk_stats["长期低贡献"] += 1
+        if "活跃不足" in reason:
+            risk_stats["活跃不足"] += 1
 
-                if "综合健康分" in reason:
-                 risk_stats["综合健康分过低"] += 1
+        if "连续停滞" in reason:
+            risk_stats["连续停滞"] += 1
 
-            risk_report = f"""
-            活跃不足：{risk_stats['活跃不足']}人
-            连续停滞：{risk_stats['连续停滞']}人
-            长期低贡献：{risk_stats['长期低贡献']}人
-            综合健康分过低：{risk_stats['综合健康分过低']}人
-            """
+        if "长期低贡献" in reason:
+            risk_stats["长期低贡献"] += 1
 
-            summary = f"""
-            📊 联盟状态日报
+        if "综合健康分" in reason:
+            risk_stats["综合健康分过低"] += 1
 
-            联盟当前共有 {len(members)} 名成员。
+    risk_report = f"""
+    活跃不足：{risk_stats['活跃不足']}人
+    连续停滞：{risk_stats['连续停滞']}人
+    长期低贡献：{risk_stats['长期低贡献']}人
+    综合健康分过低：{risk_stats['综合健康分过低']}人
+    """
 
-            🌱 重点培养成员
-            共发现 {len(train_members)} 人。
+    summary = f"""
+    📊 联盟状态日报
 
-            代表成员：
-            {top_train}
+    联盟当前共有 {len(members)} 名成员。
 
-            👀 重点观察成员
-            共发现 {len(watch_members)} 人。
+    🌱 重点培养成员
+    共发现 {len(train_members)} 人。
 
-            风险结构分析：
+    代表成员：
+    {top_train or '暂无'}
 
-            {risk_report}
+    👀 重点观察成员
+    共发现 {len(watch_members)} 人。
 
-            🚨 建议清理成员
-            共发现 {len(clean_members)} 人。
+    风险结构分析：
+    {risk_report}
 
-            建议优先核查：
+    🚨 建议清理成员
+    共发现 {len(clean_members)} 人。
 
-            {top_clean}。
+    建议优先核查：
+    {top_clean or '暂无'}。
 
-            📌 综合评估
+    📌 综合评估
 
-            联盟整体运行稳定，
-            当前风险成员占比可控，
-            建议持续关注观察名单变化。
-            """
+    当前日报仅统计当前战场最新快照成员，
+    建议结合实际在线状态和管理记录复核名单。
+    """
 
     return render_template(
         "ai_daily.html",
-
         member_count=len(members),
         train_count=len(train_members),
         watch_count=len(watch_members),
         clean_count=len(clean_members),
-
         train_members=train_members[:10],
         watch_members=watch_members[:10],
         clean_members=clean_members[:10],
-
-        summary=summary
+        summary=summary,
     )
 
 @app.route("/ai/weekly")
