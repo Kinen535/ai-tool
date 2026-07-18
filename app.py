@@ -5719,6 +5719,60 @@ def identity_edit(member_name):
         row=row
     )
 
+@app.route("/identity/view")
+def identity_view_legacy():
+    member_name = request.args.get(
+        "member",
+        "",
+    ).strip()
+
+    if not member_name:
+        flash(
+            "缺少成员名称，无法打开人物档案",
+            "warning",
+        )
+        return redirect(
+            url_for("identity")
+        )
+
+    query = {}
+
+    next_url = request.args.get(
+        "next",
+        "",
+    ).strip()
+
+    if (
+        next_url.startswith("/")
+        and not next_url.startswith("//")
+    ):
+        query["next"] = next_url
+
+    source = request.args.get(
+        "from",
+        "",
+    ).strip()
+
+    if source:
+        query["from"] = source
+
+    group_name = request.args.get(
+        "group",
+        "",
+    ).strip()
+
+    if group_name:
+        query["group"] = group_name
+
+    return redirect(
+        url_for(
+            "identity_view",
+            member_name=member_name,
+            **query,
+        )
+    )
+
+
 @app.route("/identity/view/<member_name>")
 def identity_view(member_name):
 
@@ -5728,39 +5782,150 @@ def identity_view(member_name):
     conn = get_conn()
 
     try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
 
-        profile = conn.execute(
+        if not battle_row:
+            return "当前未设置战场"
+
+        battle_id = battle_row["id"]
+
+        latest_record = conn.execute(
+            """
+            SELECT *
+            FROM player_records
+            WHERE battle_id = ?
+              AND member = ?
+              AND is_deleted = 0
+            ORDER BY
+                snapshot_time DESC,
+                id DESC
+            LIMIT 1
+            """,
+            (
+                battle_id,
+                member_name,
+            ),
+        ).fetchone()
+
+        if not latest_record:
+            return "当前战场不存在该成员"
+
+        seen_row = conn.execute(
+            """
+            SELECT
+                MIN(snapshot_time) AS first_seen,
+                MAX(snapshot_time) AS last_seen
+            FROM player_records
+            WHERE battle_id = ?
+              AND member = ?
+              AND is_deleted = 0
+            """,
+            (
+                battle_id,
+                member_name,
+            ),
+        ).fetchone()
+
+        artificial_profile = conn.execute(
             """
             SELECT *
             FROM member_profiles
             WHERE member_name = ?
+            ORDER BY id DESC
+            LIMIT 1
             """,
             (
                 member_name,
-            )
+            ),
         ).fetchone()
 
-        if not profile:
+        latest_data = dict(latest_record)
 
-            return "成员不存在"
+        profile = (
+            dict(artificial_profile)
+            if artificial_profile
+            else {}
+        )
+
+        profile.update({
+            "member_name": member_name,
+            "first_seen": seen_row["first_seen"],
+            "last_seen": seen_row["last_seen"],
+            "av": latest_data.get("av") or 0,
+            "bs": latest_data.get("bs") or 0,
+            "trend": (
+                latest_data.get("trend")
+                or "stable"
+            ),
+            "risk_level": (
+                latest_data.get("risk_level")
+                or "safe"
+            ),
+            "risk_reason": (
+                latest_data.get("risk_reason")
+                or ""
+            ),
+            "identity_score": (
+                latest_data.get("identity_score")
+                or 0
+            ),
+        })
+
+        artificial_defaults = {
+            "role_tag": "member",
+            "role_desc": "",
+            "role_rule": "normal",
+            "role_weight": 1,
+            "is_protected": 0,
+            "exempt_stall": 0,
+        }
+
+        for field, default in artificial_defaults.items():
+            if profile.get(field) is None:
+                profile[field] = (
+                    latest_data.get(field)
+                    if latest_data.get(field) is not None
+                    else default
+                )
 
         records = conn.execute(
             """
             SELECT
                 snapshot_time,
-                av,
-                bs,
-                identity_score,
-                trend,
-                risk_level
-            FROM identity_history
-            WHERE member_name = ?
-            ORDER BY snapshot_time DESC
+                COALESCE(av, 0) AS av,
+                COALESCE(bs, 0) AS bs,
+                COALESCE(
+                    identity_score,
+                    0
+                ) AS identity_score,
+                COALESCE(
+                    trend,
+                    'stable'
+                ) AS trend,
+                COALESCE(
+                    risk_level,
+                    'safe'
+                ) AS risk_level
+            FROM player_records
+            WHERE battle_id = ?
+              AND member = ?
+              AND is_deleted = 0
+            ORDER BY
+                snapshot_time DESC,
+                id DESC
             LIMIT 10
             """,
             (
+                battle_id,
                 member_name,
-            )
+            ),
         ).fetchall()
 
         history_logs = conn.execute(
@@ -5773,11 +5938,10 @@ def identity_view(member_name):
             """,
             (
                 member_name,
-            )
+            ),
         ).fetchall()
 
     finally:
-
         conn.close()
 
     profile = dict(profile)
