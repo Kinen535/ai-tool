@@ -85,10 +85,12 @@
             {% for m in risk_members %}
                 <span class="tag tag-red">
                     {{ m["member"] }}
-                    {% if m["risk_level"] == "warning" %}
-                        ｜预警
+                    {% if m["risk_level"] == "clear" %}
+                          ｜建议清理
                     {% elif m["risk_level"] == "danger" %}
-                        ｜危险
+                          ｜危险
+                    {% elif m["risk_level"] == "warning" %}
+                          ｜预警
                     {% endif %}
                 </span>
             {% endfor %}
@@ -162,15 +164,17 @@
 
                 <td>
                     {% if m["risk_level"] == "safe" %}
-                        安全
+                          安全
+                    {% elif m["risk_level"] == "clear" %}
+                          建议清理
                     {% elif m["risk_level"] == "warning" %}
-                        预警
+                          预警
                     {% elif m["risk_level"] == "danger" %}
-                        危险
+                          危险
                     {% elif m["risk_level"] == "protected" %}
-                        保护
+                          保护
                     {% else %}
-                        {{ m["risk_level"] }}
+                          {{ m["risk_level"] }}
                     {% endif %}
                 </td>
 

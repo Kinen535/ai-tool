@@ -7370,53 +7370,157 @@ def archive_alliances():
 
 @app.route("/archives/group/<group_name>")
 def group_detail(group_name):
+    group_name = (
+        group_name
+        or ""
+    ).strip()
 
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
+    conn = get_conn()
 
-    members = conn.execute("""
-        SELECT
-            member,
-            role_tag,
-            identity_score,
-            risk_level,
-            av,
-            bs
-        FROM player_records
-        WHERE snapshot_time = (
-            SELECT MAX(snapshot_time)
-            FROM player_records
-            WHERE is_deleted = 0
-        )
-          AND is_deleted = 0
-          AND group_name = ?
-        ORDER BY identity_score DESC
-    """, (group_name,)).fetchall()
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
 
-    conn.close()
+        members = []
+        battle_id = None
+        latest_time = None
+
+        if battle_row:
+            battle_id = battle_row["id"]
+
+            latest_row = conn.execute(
+                """
+                SELECT MAX(snapshot_time)
+                FROM player_records
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                """,
+                (battle_id,),
+            ).fetchone()
+
+            latest_time = (
+                latest_row[0]
+                if latest_row
+                else None
+            )
+
+            if latest_time:
+                members = conn.execute(
+                    """
+                    SELECT
+                        member,
+                        COALESCE(
+                            role_tag,
+                            'member'
+                        ) AS role_tag,
+                        COALESCE(
+                            identity_score,
+                            0
+                        ) AS identity_score,
+                        COALESCE(
+                            risk_level,
+                            'safe'
+                        ) AS risk_level,
+                        COALESCE(
+                            av,
+                            0
+                        ) AS av,
+                        COALESCE(
+                            bs,
+                            0
+                        ) AS bs
+                    FROM player_records
+                    WHERE battle_id = ?
+                      AND snapshot_time = ?
+                      AND is_deleted = 0
+                      AND TRIM(
+                          COALESCE(
+                              group_name,
+                              ''
+                          )
+                      ) = ?
+                    ORDER BY
+                        identity_score DESC,
+                        member
+                    """,
+                    (
+                        battle_id,
+                        latest_time,
+                        group_name,
+                    ),
+                ).fetchall()
+
+    finally:
+        conn.close()
 
     member_count = len(members)
 
     avg_identity = 0
-    if member_count > 0:
+
+    if member_count:
         avg_identity = round(
-            sum(float(m["identity_score"] or 0) for m in members) / member_count,
-            1
+            sum(
+                float(
+                    member["identity_score"]
+                    or 0
+                )
+                for member in members
+            )
+            / member_count,
+            1,
         )
 
     risk_members = [
-        m for m in members
-        if m["risk_level"] in ["warning", "danger"]
+        member
+        for member in members
+        if member["risk_level"]
+        in (
+            "clear",
+            "danger",
+            "warning",
+        )
     ]
 
+    risk_order = {
+        "clear": 0,
+        "danger": 1,
+        "warning": 2,
+    }
+
+    risk_members = sorted(
+        risk_members,
+        key=lambda member: (
+            risk_order.get(
+                member["risk_level"],
+                9,
+            ),
+            float(
+                member["identity_score"]
+                or 0
+            ),
+            member["member"] or "",
+        ),
+    )
+
     leaders = [
-        m for m in members
-        if m["role_tag"] == "admin"
+        member
+        for member in members
+        if member["role_tag"] == "admin"
     ]
 
     a_count = sum(
-        1 for m in members
-        if float(m["identity_score"] or 0) >= 70
+        1
+        for member in members
+        if float(
+            member["identity_score"]
+            or 0
+        ) >= 70
     )
 
     return render_template(
@@ -7429,8 +7533,12 @@ def group_detail(group_name):
         risk_count=len(risk_members),
         a_count=a_count,
         leaders=leaders,
-        risk_members=risk_members
+        risk_members=risk_members,
+        current_battle_id=battle_id,
+        latest_time=latest_time,
     )
+
+
 
 
 @app.route("/archives/friends")
