@@ -4305,145 +4305,260 @@ def trends():
 
 @app.route("/risk")
 def risk_center():
+    reason = request.args.get(
+        "reason",
+        "",
+    ).strip()
+
+    valid_reasons = (
+        "活跃不足",
+        "长期低贡献",
+        "持续下滑",
+        "连续停滞",
+    )
+
+    if reason and reason not in valid_reasons:
+        flash(
+            "无效的风险原因筛选条件",
+            "warning",
+        )
+        reason = ""
 
     conn = get_conn()
 
-    high_risk = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='danger'
-        ORDER BY av + bs ASC
-        LIMIT 50
-    """).fetchall()
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
 
-    warning_risk = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='warning'
-        ORDER BY av + bs ASC
-        LIMIT 100
-    """).fetchall()
+        rows = []
 
-    protected = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='protected'
-        ORDER BY av + bs DESC
-    """).fetchall()
+        if battle_row:
+            battle_id = battle_row["id"]
 
-    cleanup_members = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='danger'
-        ORDER BY identity_score ASC
-        LIMIT 10
-    """).fetchall()
+            latest_row = conn.execute(
+                """
+                SELECT MAX(snapshot_time)
+                FROM player_records
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                """,
+                (battle_id,),
+            ).fetchone()
 
-    observe_members = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='warning'
-        ORDER BY identity_score ASC
-        LIMIT 10
-    """).fetchall()
+            latest_time = (
+                latest_row[0]
+                if latest_row
+                else None
+            )
 
-    protected_members = conn.execute("""
-        SELECT *
-        FROM member_profiles
-        WHERE risk_level='protected'
-        ORDER BY identity_score DESC
-        LIMIT 10
-    """).fetchall()
+            if latest_time:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        member AS member_name,
+                        group_name,
+                        COALESCE(av, 0) AS av,
+                        COALESCE(bs, 0) AS bs,
+                        COALESCE(
+                            identity_score,
+                            0
+                        ) AS identity_score,
+                        COALESCE(
+                            risk_level,
+                            'safe'
+                        ) AS risk_level,
+                        COALESCE(
+                            risk_reason,
+                            ''
+                        ) AS risk_reason,
+                        COALESCE(
+                            role_tag,
+                            'member'
+                        ) AS role_tag,
+                        COALESCE(
+                            is_protected,
+                            0
+                        ) AS is_protected
+                    FROM player_records
+                    WHERE battle_id = ?
+                      AND snapshot_time = ?
+                      AND is_deleted = 0
+                    ORDER BY member
+                    """,
+                    (
+                        battle_id,
+                        latest_time,
+                    ),
+                ).fetchall()
 
-    total_members = conn.execute("""
-        SELECT COUNT(*)
-        FROM member_profiles
-    """).fetchone()[0]
+    finally:
+        conn.close()
+
+    members = [
+        dict(row)
+        for row in rows
+    ]
+
+    def identity_key(member):
+        return (
+            member["identity_score"] or 0,
+            (member["av"] or 0)
+            + (member["bs"] or 0),
+            member["member_name"] or "",
+        )
+
+    clear_members = sorted(
+        [
+            member
+            for member in members
+            if member["risk_level"] == "clear"
+        ],
+        key=identity_key,
+    )
+
+    danger_members = sorted(
+        [
+            member
+            for member in members
+            if member["risk_level"] == "danger"
+        ],
+        key=identity_key,
+    )
+
+    warning_members = sorted(
+        [
+            member
+            for member in members
+            if member["risk_level"] == "warning"
+        ],
+        key=identity_key,
+    )
+
+    protected = sorted(
+        [
+            member
+            for member in members
+            if member["risk_level"] == "protected"
+        ],
+        key=identity_key,
+        reverse=True,
+    )
+
+    # 模板中的“建议清理”只对应clear状态
+    high_risk = clear_members
+
+    # 模板中的“重点观察”合并危险和警告
+    warning_risk = (
+        danger_members
+        + warning_members
+    )
+
+    risk_population = (
+        clear_members
+        + danger_members
+        + warning_members
+    )
+
+    total_members = len(members)
 
     risk_rate = round(
-        (
-            len(high_risk) +
-            len(warning_risk)
-        ) * 100 / total_members,
-        1
+        len(risk_population)
+        * 100
+        / max(total_members, 1),
+        1,
     )
 
     risk_stats = {
-        "活跃不足": 0,
-        "长期低贡献": 0,
-        "持续下滑": 0,
-        "连续停滞": 0
+        item: 0
+        for item in valid_reasons
     }
 
-    for m in high_risk:
+    full_members_by_reason = {
+        item: []
+        for item in valid_reasons
+    }
 
-        reason = m["risk_reason"] or ""
+    for member in risk_population:
+        member_reason = (
+            member["risk_reason"]
+            or ""
+        )
 
-        if "活跃不足" in reason:
-            risk_stats["活跃不足"] += 1
-
-        if "长期低贡献" in reason:
-            risk_stats["长期低贡献"] += 1
-
-        if "持续下滑" in reason:
-            risk_stats["持续下滑"] += 1
-
-        if "连续停滞" in reason:
-            risk_stats["连续停滞"] += 1
+        for item in valid_reasons:
+            if item in member_reason:
+                risk_stats[item] += 1
+                full_members_by_reason[
+                    item
+                ].append(
+                    member["member_name"]
+                )
 
     risk_members_by_reason = {
-        "活跃不足": [],
-        "长期低贡献": [],
-        "持续下滑": [],
-        "连续停滞": []
+        item: names[:5]
+        for item, names
+        in full_members_by_reason.items()
     }
 
-    for m in high_risk:
+    cleanup_pool = clear_members
+    observe_pool = warning_risk
 
-        reason = m["risk_reason"] or ""
-
-        if "活跃不足" in reason:
-            risk_members_by_reason["活跃不足"].append(
-                m["member_name"]
+    if reason:
+        cleanup_pool = [
+            member
+            for member in cleanup_pool
+            if reason in (
+                member["risk_reason"]
+                or ""
             )
+        ]
 
-        if "长期低贡献" in reason:
-            risk_members_by_reason["长期低贡献"].append(
-                m["member_name"]
+        observe_pool = [
+            member
+            for member in observe_pool
+            if reason in (
+                member["risk_reason"]
+                or ""
             )
+        ]
 
-        if "持续下滑" in reason:
-            risk_members_by_reason["持续下滑"].append(
-                m["member_name"]
-            )
-
-        if "连续停滞" in reason:
-            risk_members_by_reason["连续停滞"].append(
-                m["member_name"]
-            )
-
-    for k in risk_members_by_reason:
-
-        risk_members_by_reason[k] = (
-            risk_members_by_reason[k][:5]
+        flash(
+            (
+                f"已筛选风险原因：{reason}。"
+                f"建议清理{len(cleanup_pool)}人，"
+                f"重点观察{len(observe_pool)}人。"
+            ),
+            "info",
         )
+
+        cleanup_members = cleanup_pool
+        observe_members = observe_pool
+
+    else:
+        cleanup_members = cleanup_pool[:10]
+        observe_members = observe_pool[:10]
+
+    protected_members = protected[:10]
 
     return render_template(
         "risk_center.html",
-
         high_risk=high_risk,
         warning_risk=warning_risk,
         protected=protected,
-
         cleanup_members=cleanup_members,
         observe_members=observe_members,
         protected_members=protected_members,
-
         risk_rate=risk_rate,
-
         risk_stats=risk_stats,
-        risk_members_by_reason=risk_members_by_reason
-
+        risk_members_by_reason=(
+            risk_members_by_reason
+        ),
+        selected_reason=reason,
     )
 
 @app.route("/members")
