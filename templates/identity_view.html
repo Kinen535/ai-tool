@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set identity_back_url = request.args.get("next") or "/identity" %}
+{% if not identity_back_url.startswith("/") or identity_back_url.startswith("//") %}
+    {% set identity_back_url = "/identity" %}
+{% endif %}
+
+
+
+<h1 class="page-title">
+👤 身份档案
+</h1>
+
+{% if source == "group" %}
+<a href="/archives/group/{{ group_name }}">
+← 返回分组详情
+</a>
+{% elif source == "talent" %}
+<a href="/talent">
+← 返回人才中心
+</a>
+{% elif source == "risk" %}
+<a href="/risk">
+← 返回风险中心
+</a>
+{% elif source == "staff" %}
+<a href="/staff">
+🤖 返回AI幕僚中心
+</a>
+{% else %}
+<a href="{{ identity_back_url }}">
+← 返回上级页面
+</a>
+{% endif %}
+
+{% if group_name %}
+<div class="card">
+    <div class="card-title">
+        🛡️ 所属分组
+    </div>
+
+    <a href="{{ url_for(
+        'group_detail',
+        group_name=group_name,
+        next=request.full_path.rstrip('?')
+    ) }}"
+       class="btn btn-secondary">
+        {{ group_name }}　查看分组详情 →
+    </a>
+</div>
+{% endif %}
+
+{% if ai_decision %}
+
+<div class="card">
+
+    <h2>🤖 AI幕僚决策</h2>
+
+    <div style="
+        margin-top:16px;
+    ">
+
+        <div style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-bottom:15px;
+        ">
+
+            <span class="decision-badge decision-main">
+
+                {% if ai_decision.decision == "重点培养" %}
+                    🌱 {{ ai_decision.decision }}
+                {% elif ai_decision.decision == "重点关注" %}
+                    🚨 {{ ai_decision.decision }}
+                {% else %}
+                    👀 {{ ai_decision.decision }}
+                {% endif %}
+
+            </span>
+
+            <span class="decision-badge">
+                {{ ai_decision.reason }}
+            </span>
+
+        </div>
+
+        {% if ai_decision.evidences %}
+
+        <div class="ai-section">
+
+            <div class="ai-section-title">
+                📌 AI判断依据
+            </div>
+
+            {% for item in ai_decision.evidences %}
+
+            <div class="ai-item">
+                ✓ {{ item }}
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% endif %}
+
+        {% if ai_decision.analysis %}
+
+        <div class="card">
+
+            <details>
+
+               <summary style="
+                   cursor:pointer;
+                   font-weight:600;
+               ">
+                   🤖 查看AI分析依据
+               </summary>
+
+               <div style="
+                   margin-top:12px;
+                   line-height:1.8;
+                   color:#334155;
+               ">
+                   {{ ai_decision.analysis }}
+               </div>
+
+           </details>
+
+        </div>
+
+        {% endif %}
+        
+     </div>
+
+</div>       
+
+{% endif %}
+
+{% if member_strategy %}
+
+<div class="card">
+
+    <h4>📋 AI管理建议</h4>
+
+   <div style="
+       margin-top:15px;
+       padding:18px;
+       background:#f8fafc;
+       border-radius:12px;
+       line-height:2;
+       display:inline-block;
+       min-width:520px;
+    ">
+
+        <div style="
+        display:inline-block;
+        padding:10px 20px;
+        border-radius:12px;
+        background:linear-gradient(
+        135deg,
+      #dbeafe,
+      #eff6ff
+        );
+        font-size:28px;
+        font-weight:700;
+        color:#2563eb;
+        margin-bottom:15px;
+        ">
+            {{ member_strategy.level }}
+            {{ member_strategy.title }}
+        </div>
+
+        <div style="margin-top:15px;">
+
+            <span style="
+                background:#ecfeff;
+                color:#0891b2;
+                padding:6px 12px;
+                border-radius:999px;
+                font-weight:600;
+            ">
+                👤 {{ member_strategy.talent }}
+            </span>
+
+        </div>
+
+        <div>
+            🎯 AI结论：
+            <b style="color:#16a34a;">
+                {{ member_strategy.decision }}
+            </b>
+        </div>
+
+        <div style="margin-top:15px;">
+
+            <b>📌 管理建议</b>
+
+            <ul style="
+                margin-top:12px;
+                line-height:2.2;
+            ">
+
+                {% for action in member_strategy.actions %}
+
+                <div>
+                    ✅ {{ action }}
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+<div class="identity-hero-card">
+
+    <div class="identity-hero-name">
+        {{ profile["member_name"] }}
+    </div>
+
+    <div class="identity-hero-grade">
+        {{ profile["grade"] }}
+    </div>
+
+    <div class="identity-hero-score">
+        身份价值：{{ profile["identity_score"] }}
+    </div>
+
+    <div class="identity-hero-status">
+        风险状态：{{ profile["risk_name"] }}
+    </div>
+
+</div>
+
+<div class="identity-metrics">
+
+    <div class="metric-card">
+        <div class="metric-title">活跃指数</div>
+        <div class="metric-value">{{ profile["av"] }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-title">综合贡献</div>
+        <div class="metric-value">{{ profile["bs"] }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-title">成长趋势</div>
+        <div class="metric-value">{{ profile["trend_name"] }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-title">风险状态</div>
+        <div class="metric-value">{{ profile["risk_name"] }}</div>
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h3>📋 成员档案</h3>
+
+    <table class="table">
+
+        <tr>
+            <td>首次出现</td>
+            <td>{{ profile["first_seen"] }}</td>
+        </tr>
+
+        <tr>
+            <td>最近出现</td>
+            <td>{{ profile["last_seen"] }}</td>
+        </tr>
+   
+    </table>
+
+</div>
+
+<div class="card">
+
+    <h3>📊 最近10期趋势分析</h3>
+
+    <div class="chart-grid">
+
+        <div class="chart-panel">
+
+            <h4>活跃 / 贡献趋势</h4>
+
+            <div class="chart-box">
+                <canvas id="avChart"></canvas>
+            </div>
+
+        </div>
+
+        <div class="chart-panel">
+
+            <h4>身份价值趋势</h4>
+
+            <div class="chart-box">
+                <canvas id="scoreChart"></canvas>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="card">
+
+    <h3>📈 成长履历</h3>
+
+    <div style="
+        margin-top:18px;
+        padding:16px;
+        background:#f8fafc;
+        border-radius:12px;
+        line-height:1.8;
+    ">
+
+        <ul style="
+            padding-left:20px;
+            line-height:1.8;
+        ">
+
+            {% for event in growth_events %}
+
+            <li>{{ event }}</li>
+
+            {% endfor %}
+
+        </ul>
+
+    </div>
+
+</div>
+
+<div class="card">
+
+    <details>
+
+        <summary style="
+            cursor:pointer;
+            font-size:18px;
+            font-weight:600;
+            padding:8px 0;
+        ">
+            📋 查看详细历史记录
+        </summary>
+
+        <div style="margin-top:15px;">
+
+            <table class="table">
+
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>活跃指数</th>
+                <th>综合贡献</th>
+                <th>身份价值</th>
+                <th>成长趋势</th>
+                <th>风险状态</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for row in records %}
+
+        <tr>
+
+            <td>{{ row["snapshot_time"] }}</td>
+            <td>{{ row["av"] }}</td>
+            <td>{{ row["bs"] }}</td>
+            <td>{{ row["identity_score"] }}</td>
+
+            <td>
+
+                {% if row["trend_name"] == "爆发增长" %}
+                <span class="trend-explosive">
+                    {{ row["trend_name"] }}
+                </span>
+
+                {% elif row["trend_name"] == "持续增长" %}
+                <span class="trend-up">
+                    {{ row["trend_name"] }}
+                </span>
+
+                {% elif row["trend_name"] == "持续下降" %}
+                <span class="trend-down">
+                    {{ row["trend_name"] }}
+                </span>
+
+                {% else %}
+                <span class="trend-stable">
+                    {{ row["trend_name"] }}
+                </span>
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if row["risk_name"] == "身份保护" %}
+                <span class="risk-protected">
+                    {{ row["risk_name"] }}
+                </span>
+
+                {% elif row["risk_name"] == "安全" %}
+                <span class="risk-safe">
+                    {{ row["risk_name"] }}
+                </span>
+
+                {% elif row["risk_name"] == "警告" %}
+                <span class="risk-warning">
+                    {{ row["risk_name"] }}
+                </span>
+
+                {% elif row["risk_name"] == "危险" %}
+                <span class="risk-danger">
+                    {{ row["risk_name"] }}
+                </span>
+
+                {% else %}
+                <span class="risk-clean">
+                    {{ row["risk_name"] }}
+                </span>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+        </div>
+
+    </details>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const labels = JSON.parse('{{ records|map(attribute="snapshot_time")|list|tojson|safe }}').reverse();
+
+const avData = JSON.parse('{{ records|map(attribute="av")|list|tojson|safe }}').reverse();
+
+const bsData = JSON.parse('{{ records|map(attribute="bs")|list|tojson|safe }}').reverse();
+
+const scoreData = JSON.parse('{{ records|map(attribute="identity_score")|list|tojson|safe }}').reverse();
+
+new Chart(
+    document.getElementById("avChart"),
+    {
+        type: "line",
+
+        data: {
+            labels: labels,
+
+            datasets: [
+                {
+                    label: "活跃指数",
+                    data: avData,
+                    borderWidth: 3,
+                    tension: 0.3
+                },
+                {
+                    label: "综合贡献",
+                    data: bsData,
+                    borderWidth: 3,
+                    tension: 0.3
+                }
+            ]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    }
+);
+
+new Chart(
+    document.getElementById("scoreChart"),
+    {
+        type: "line",
+
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "身份价值",
+                data: scoreData,
+                borderWidth: 3,
+                tension: 0.3
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    }
+);
+
+</script>
+
+<style>
+
+.decision-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:8px 14px;
+    border-radius:999px;
+    background:#f1f5f9;
+    color:#334155;
+    font-size:14px;
+    font-weight:600;
+}
+
+.decision-main{
+    background:#ecfdf5;
+    color:#15803d;
+}
+
+.confidence-badge{
+    background:#eff6ff;
+    color:#2563eb;
+}
+
+.ai-section{
+
+    margin-top:16px;
+
+    padding:14px;
+
+    border-radius:12px;
+
+    background:#f8fafc;
+
+    border:1px solid #e2e8f0;
+}
+
+.ai-section-title{
+
+    font-size:14px;
+
+    font-weight:700;
+
+    margin-bottom:10px;
+
+    color:#334155;
+}
+
+.ai-item{
+
+    padding:5px 0;
+
+    color:#475569;
+
+    font-size:14px;
+}
+
+</style>
+
+{% endblock %}

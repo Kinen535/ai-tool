@@ -6015,6 +6015,13 @@ def identity_view(member_name):
 
         latest_data = dict(latest_record)
 
+        # 分组名称以当前战场最新成员记录为准，
+        # 不再依赖网址是否携带group参数。
+        group_name = str(
+            latest_data.get("group_name")
+            or ""
+        ).strip()
+
         profile = (
             dict(artificial_profile)
             if artificial_profile
@@ -6023,6 +6030,7 @@ def identity_view(member_name):
 
         profile.update({
             "member_name": member_name,
+            "group_name": group_name,
             "first_seen": seen_row["first_seen"],
             "last_seen": seen_row["last_seen"],
             "av": latest_data.get("av") or 0,
