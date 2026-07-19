@@ -5097,254 +5097,321 @@ def identity():
 
 @app.route("/talent")
 def talent():
-
     conn = get_conn()
 
-    latest_row = conn.execute(
-        """
-        SELECT snapshot_time
-        FROM player_records
-        WHERE is_deleted = 0
-        ORDER BY snapshot_time DESC
-        LIMIT 1
-        """
-    ).fetchone()
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
 
-    if not latest_row:
+        rows = []
+        latest_time = None
+
+        if battle_row:
+            battle_id = battle_row["id"]
+
+            latest_row = conn.execute(
+                """
+                SELECT MAX(snapshot_time)
+                FROM player_records
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                """,
+                (battle_id,),
+            ).fetchone()
+
+            latest_time = (
+                latest_row[0]
+                if latest_row
+                else None
+            )
+
+            if latest_time:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        member AS member_name,
+                        COALESCE(
+                            identity_score,
+                            0
+                        ) AS identity_score,
+                        COALESCE(av, 0) AS av,
+                        COALESCE(bs, 0) AS bs,
+                        COALESCE(wv, 0) AS wv,
+                        COALESCE(bv, 0) AS bv,
+                        COALESCE(
+                            trend,
+                            'stable'
+                        ) AS trend,
+                        COALESCE(
+                            risk_level,
+                            'safe'
+                        ) AS risk_level,
+                        COALESCE(
+                            risk_reason,
+                            ''
+                        ) AS risk_reason,
+                        COALESCE(
+                            role_tag,
+                            'member'
+                        ) AS role_tag,
+                        COALESCE(
+                            battle_gain,
+                            0
+                        ) AS battle_gain,
+                        COALESCE(
+                            assist_gain,
+                            0
+                        ) AS assist_gain,
+                        COALESCE(
+                            donate_gain,
+                            0
+                        ) AS donate_gain
+                    FROM player_records
+                    WHERE battle_id = ?
+                      AND snapshot_time = ?
+                      AND is_deleted = 0
+                    ORDER BY member
+                    """,
+                    (
+                        battle_id,
+                        latest_time,
+                    ),
+                ).fetchall()
+
+    finally:
         conn.close()
-        return render_template(
-            "talent.html",
-            risk_members=[],
-            growth_members=[],
-            silent_members=[],
-            reserve_members=[]
-        )
 
-    latest_time = latest_row["snapshot_time"]
+    members = [
+        dict(row)
+        for row in rows
+    ]
+
+    eligible_members = [
+        member
+        for member in members
+        if member["role_tag"]
+        not in ("admin", "warehouse")
+    ]
 
     # =====================
-    # 1. 核心风险成员TOP10
+    # 1. 核心风险成员
     # =====================
 
-    risk_raw = conn.execute(
-        """
-        SELECT
-            member AS member_name,
-            identity_score,
-            av,
-            bs,
-            wv,
-            bv,
-            trend,
-            risk_level,
-            risk_reason
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        AND role_tag NOT IN ('admin','warehouse')
-        """,
-        (latest_time,)
-    ).fetchall()
+    risk_pool = []
 
-    risk_members = []
-
-    for row in risk_raw:
-        row = dict(row)
-
+    for member in eligible_members:
         risk_score = 0
 
-        if row["trend"] == "dead":
+        if member["trend"] == "dead":
             risk_score += 100
-        elif row["trend"] == "down":
+
+        elif member["trend"] == "down":
             risk_score += 60
 
-        if row["risk_level"] == "danger":
+        if member["risk_level"] == "danger":
             risk_score += 50
-        elif row["risk_level"] == "warning":
+
+        elif member["risk_level"] == "warning":
             risk_score += 25
 
-        risk_score += max(0,40-(row["av"] or 0)) * 1.5
+        risk_score += max(
+            0,
+            40 - (member["av"] or 0),
+        ) * 1.5
 
-        risk_score += max(0,40-(row["bs"] or 0))
+        risk_score += max(
+            0,
+            40 - (member["bs"] or 0),
+        )
 
-        # 只保留有一定价值、并且有风险的人
         if (
             risk_score >= 60
             and (
-                (row["identity_score"] or 0) >= 20
-                or (row["wv"] or 0) >= 20
-                or row["risk_level"] in ("warning", "danger")
+                (member["identity_score"] or 0)
+                >= 20
+                or (member["wv"] or 0) >= 20
+                or member["risk_level"]
+                in ("warning", "danger")
             )
         ):
-            row["risk_score"] = round(risk_score, 1)
+            item = dict(member)
+            item["risk_score"] = round(
+                risk_score,
+                1,
+            )
 
             if risk_score >= 120:
-                row["risk_tag"] = "极高风险"
-            elif risk_score >= 90:
-                row["risk_tag"] = "高风险"
-            elif risk_score >= 60:
-                row["risk_tag"] = "需关注"
-            else:
-                row["risk_tag"] = "观察"
+                item["risk_tag"] = "极高风险"
 
-            risk_members.append(row)
-    risk_members.sort(
-        key=lambda x: x["risk_score"],
-        reverse=True
+            elif risk_score >= 90:
+                item["risk_tag"] = "高风险"
+
+            elif risk_score >= 60:
+                item["risk_tag"] = "需关注"
+
+            else:
+                item["risk_tag"] = "观察"
+
+            risk_pool.append(item)
+
+    risk_pool.sort(
+        key=lambda item: (
+            -(item["risk_score"] or 0),
+            -(item["identity_score"] or 0),
+            item["member_name"] or "",
+        )
     )
 
-    risk_members = risk_members[:10]
+    risk_count = len(risk_pool)
+    risk_members = risk_pool[:10]
 
     # =====================
-    # 2. 成长新星TOP10
+    # 2. 潜力新星
     # =====================
 
-    growth_members = conn.execute(
-        """
-        SELECT
-            member AS member_name,
-            (
-                battle_gain
-                + assist_gain * 2
-            ) AS score_change,
-            battle_gain,
-            assist_gain,
-            donate_gain,
-            identity_score,
-            av,
-            bs,
-            trend
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        AND role_tag NOT IN ('admin','warehouse')
-        AND identity_score < 80
-        AND (
-            battle_gain > 0
-            OR assist_gain > 0
+    growth_pool = []
+
+    for member in eligible_members:
+        if (
+            (member["identity_score"] or 0) < 80
+            and (
+                (member["battle_gain"] or 0) > 0
+                or (member["assist_gain"] or 0) > 0
+            )
+        ):
+            item = dict(member)
+
+            item["score_change"] = (
+                (member["battle_gain"] or 0)
+                + (member["assist_gain"] or 0) * 2
+            )
+
+            growth_pool.append(item)
+
+    growth_pool.sort(
+        key=lambda item: (
+            -(item["score_change"] or 0),
+            -(item["battle_gain"] or 0),
+            -(item["assist_gain"] or 0),
+            item["member_name"] or "",
         )
-        ORDER BY score_change DESC
-        LIMIT 10
-        """,
-        (latest_time,)
-    ).fetchall()
+    )
+
+    growth_members = growth_pool[:10]
 
     # =====================
-    # 😴 高价值沉默成员TOP10
+    # 3. 高价值沉默成员
     # =====================
 
-    silent_members = conn.execute(
-        """
-        SELECT
-            member AS member_name,
-            identity_score,
-            av,
-            bs,
-            trend,
-            risk_level
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        AND role_tag NOT IN ('admin','warehouse')
-        AND identity_score >= 30
-        AND av < 20
-        ORDER BY
-        identity_score DESC,
-        av ASC
-        LIMIT 10
-        """,
-        (latest_time,)
-    ).fetchall()
+    silent_pool = [
+        dict(member)
+        for member in eligible_members
+        if (
+            (member["identity_score"] or 0)
+            >= 30
+            and (member["av"] or 0) < 20
+        )
+    ]
+
+    silent_pool.sort(
+        key=lambda item: (
+            -(item["identity_score"] or 0),
+            item["av"] or 0,
+            item["member_name"] or "",
+        )
+    )
+
+    silent_count = len(silent_pool)
+    silent_members = silent_pool[:10]
 
     # =====================
-    # 🏆 后备干部TOP10
+    # 4. 后备干部
     # =====================
 
-    reserve_members = conn.execute(
-        """
-        SELECT
-            member AS member_name,
-            identity_score,
-            av,
-            bs,
-            wv,
-            bv,
-            trend
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        AND role_tag NOT IN ('admin','warehouse')
-        AND identity_score >= 20
-        AND identity_score < 50
+    reserve_pool = [
+        dict(member)
+        for member in eligible_members
+        if (
+            20
+            <= (member["identity_score"] or 0)
+            < 50
+            and (member["av"] or 0) >= 40
+            and (member["bs"] or 0) >= 50
+            and member["trend"]
+            in ("up", "explosive")
+        )
+    ]
 
-        AND av >= 40
-        AND bs >= 50
+    reserve_pool.sort(
+        key=lambda item: (
+            -(item["bs"] or 0),
+            -(item["av"] or 0),
+            -(item["identity_score"] or 0),
+            item["member_name"] or "",
+        )
+    )
 
-        AND trend IN ('up','explosive')
-        AND av >= 30
-        AND trend IN ('up','explosive')
-        ORDER BY
+    reserve_count = len(reserve_pool)
+    reserve_members = reserve_pool[:10]
 
-        bs DESC,
+    # =====================
+    # 人才梯队完整统计
+    # =====================
 
-        av DESC,
+    total_members = len(members)
 
-        identity_score DESC
-        LIMIT 10
-        """,
-        (latest_time,)
-    ).fetchall()
+    core_count = sum(
+        (member["identity_score"] or 0) >= 80
+        for member in members
+    )
 
-    core_count = conn.execute("""
-    SELECT COUNT(*)
-    FROM player_records
-    WHERE snapshot_time=?
-    AND identity_score>=80
-    """,(latest_time,)).fetchone()[0]
+    backbone_count = sum(
+        60
+        <= (member["identity_score"] or 0)
+        < 80
+        for member in members
+    )
 
-    backbone_count = conn.execute("""
-    SELECT COUNT(*)
-    FROM player_records
-    WHERE snapshot_time=?
-    AND identity_score>=60
-    AND identity_score<80
-    """,(latest_time,)).fetchone()[0]
+    core_pct = round(
+        core_count
+        / max(total_members, 1)
+        * 100,
+        1,
+    )
 
-    reserve_count = conn.execute("""
-    SELECT COUNT(*)
-    FROM player_records
-    WHERE snapshot_time=?
-    AND is_deleted = 0
-    AND role_tag NOT IN ('admin','warehouse')
+    backbone_pct = round(
+        backbone_count
+        / max(total_members, 1)
+        * 100,
+        1,
+    )
 
-    AND identity_score >= 20
-    AND identity_score < 50
+    reserve_pct = round(
+        reserve_count
+        / max(total_members, 1)
+        * 100,
+        1,
+    )
 
-    AND av >= 40
-    AND bs >= 50
+    risk_pct = round(
+        risk_count
+        / max(total_members, 1)
+        * 100,
+        1,
+    )
 
-    AND trend IN ('up','explosive')
-    """,(latest_time,)).fetchone()[0]
-
-    risk_count = len(risk_members)
-
-    silent_count = len(silent_members)
-
-    total_members = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM player_records
-        WHERE snapshot_time = ?
-        AND is_deleted = 0
-        """,
-        (latest_time,)
-    ).fetchone()[0]
-
-    core_pct = round(core_count / max(total_members,1) * 100, 1)
-
-    backbone_pct = round(backbone_count / max(total_members,1) * 100, 1)
-
-    reserve_pct = round(reserve_count / max(total_members,1) * 100, 1)
+    silent_pct = round(
+        silent_count
+        / max(total_members, 1)
+        * 100,
+        1,
+    )
 
     # =====================
     # 人才健康度 V9.2
@@ -5352,64 +5419,51 @@ def talent():
 
     health_score = 100
 
-    # 核心梯队
+    if total_members == 0:
+        health_score = 0
 
-    if core_pct < 2:
-        health_score -= 15
+    else:
+        if core_pct < 2:
+            health_score -= 15
 
-    elif core_pct >= 5:
-        health_score += 5
+        elif core_pct >= 5:
+            health_score += 5
 
-    # 骨干梯队
+        if backbone_pct < 10:
+            health_score -= 10
 
-    if backbone_pct < 10:
-        health_score -= 10
+        elif backbone_pct >= 20:
+            health_score += 5
 
-    elif backbone_pct >= 20:
-        health_score += 5
+        if reserve_pct < 5:
+            health_score -= 15
 
-    # 后备梯队
+        elif reserve_pct >= 10:
+            health_score += 5
 
-    if reserve_pct < 5:
-        health_score -= 15
+        if risk_pct > 15:
+            health_score -= 20
 
-    elif reserve_pct >= 10:
-        health_score += 5
+        elif risk_pct > 10:
+            health_score -= 10
 
-    # 风险成员
+        if silent_pct > 15:
+            health_score -= 15
 
-    risk_pct = round(
-        risk_count / max(total_members,1) * 100,
-        1
-    )
+        elif silent_pct > 10:
+            health_score -= 8
 
-    if risk_pct > 15:
-        health_score -= 20
-
-    elif risk_pct > 10:
-         health_score -= 10
-
-    # 沉默成员
-
-    silent_pct = round(
-        silent_count / max(total_members,1) * 100,
-        1
-    )
-
-    if silent_pct > 15:
-        health_score -= 15
-
-    elif silent_pct > 10:
-        health_score -= 8
-
-    health_score = max(0, min(100, health_score))
+        health_score = max(
+            0,
+            min(100, health_score),
+        )
 
     if health_score >= 90:
         health_level = "S"
 
     elif health_score >= 80:
         health_level = "A"
-   
+
     elif health_score >= 65:
         health_level = "B"
 
@@ -5418,8 +5472,6 @@ def talent():
 
     else:
         health_level = "D"
-
-    conn.close()
 
     return render_template(
         "talent.html",
@@ -5434,12 +5486,12 @@ def talent():
         silent_count=silent_count,
         core_pct=core_pct,
         backbone_pct=backbone_pct,
-        reserve_pct=reserve_pct, 
+        reserve_pct=reserve_pct,
         health_score=health_score,
         health_level=health_level,
+        total_members=total_members,
+        latest_time=latest_time,
     )
-
-    
 
 @app.route("/rules")
 def rules():
