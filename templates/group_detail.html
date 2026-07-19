@@ -104,13 +104,29 @@
 
 </div>
 
-<div class="card">
+<details class="card">
 
-    <div class="card-title">
-        成员明细
-    </div>
+    <summary style="
+        cursor:pointer;
+        font-weight:700;
+        font-size:18px;
+        padding:4px 0 12px 0;
+    ">
+        📋 成员明细（共 {{ member_count }} 人）
 
-    <table class="table sticky-table">
+        <span style="
+            margin-left:10px;
+            font-size:13px;
+            font-weight:500;
+            color:#94a3b8;
+        ">
+            点击展开 / 收起
+        </span>
+    </summary>
+
+    <div style="margin-top:14px;">
+
+<table class="table sticky-table">
 
         <thead>
             <tr>
@@ -192,6 +208,8 @@
 
     </table>
 
-</div>
+    </div>
+
+</details>
 
 {% endblock %}
