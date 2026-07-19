@@ -4,24 +4,19 @@
 {% set v15_identity_next_url_e51 = request.full_path.rstrip("?") %}
 
 
-{% set v15_context_back_url_e51 = request.args.get("next") or "" %}
-{% if not v15_context_back_url_e51 or not v15_context_back_url_e51.startswith("/") or v15_context_back_url_e51.startswith("//") %}
-    {% set v15_context_back_url_e51 = "/leaders" %}
+{% set v15_context_back_url_e51 = request.args.get("next") or "/archives/groups" %}
+{% if not v15_context_back_url_e51.startswith("/") or v15_context_back_url_e51.startswith("//") or v15_context_back_url_e51.startswith("/logout") %}
+    {% set v15_context_back_url_e51 = "/archives/groups" %}
 {% endif %}
 
-
-<a href="/archives/alliances" class="btn btn-secondary">
+<a id="v15-main-back-btn-e51"
+   href="{{ v15_context_back_url_e51 }}"
+   class="btn btn-secondary"
+   style="display:inline-block;margin:8px 0 14px 0;">
     ← 返回上级页面
 </a>
 
 <h1 class="page-title">
-
-<a id="v15-main-back-btn-e51"
-   href="{{ v15_context_back_url_e51 }}"
-   style="display:inline-block;margin:8px 0 14px 0;padding:8px 12px;background:#f3f4f6;border-radius:10px;color:#374151;text-decoration:none;">
-   ← 返回上级页面
-</a>
-
     📊 分组详情：{{ group_name }}
 </h1>
 
