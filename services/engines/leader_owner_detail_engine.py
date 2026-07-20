@@ -39,35 +39,178 @@ def build_leader_owner_detail_report(
     }
 
 
-def _build_stats(groups: List[Dict[str, Any]]) -> Dict[str, Any]:
-    task_count = sum(int(g.get("task_count") or 0) for g in groups)
-    done_tasks = sum(int(g.get("done_tasks") or 0) for g in groups)
+def _build_stats(
+    groups: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    task_count = sum(
+        int(
+            group.get("task_count")
+            or 0
+        )
+        for group in groups
+    )
+
+    done_tasks = sum(
+        int(
+            group.get("done_tasks")
+            or 0
+        )
+        for group in groups
+    )
 
     feedback_rate = 0.0
+
     if task_count > 0:
-        feedback_rate = done_tasks / task_count * 100
+        feedback_rate = (
+            done_tasks
+            / task_count
+            * 100
+        )
+
+    clear_count = 0
+    danger_count = 0
+    warning_count = 0
+    risk_member_count = 0
+
+    for group in groups:
+        group_clear = group.get(
+            "risk_clear_count"
+        )
+
+        if group_clear is None:
+            group_clear = group.get(
+                "clear_count"
+            )
+
+        group_danger = group.get(
+            "risk_danger_count"
+        )
+
+        if group_danger is None:
+            group_danger = group.get(
+                "danger_count"
+            )
+
+        group_warning = group.get(
+            "risk_warning_count"
+        )
+
+        if group_warning is None:
+            group_warning = group.get(
+                "warning_count"
+            )
+
+        group_clear = int(
+            group_clear or 0
+        )
+
+        group_danger = int(
+            group_danger or 0
+        )
+
+        group_warning = int(
+            group_warning or 0
+        )
+
+        group_total = group.get(
+            "risk_member_count"
+        )
+
+        if group_total is None:
+            group_total = (
+                group_clear
+                + group_danger
+                + group_warning
+            )
+
+        clear_count += group_clear
+        danger_count += group_danger
+        warning_count += group_warning
+        risk_member_count += int(
+            group_total or 0
+        )
 
     return {
         "group_count": len(groups),
-        "member_count": sum(int(g.get("member_count") or 0) for g in groups),
+
+        "member_count": sum(
+            int(
+                group.get("member_count")
+                or 0
+            )
+            for group in groups
+        ),
+
         "high_group_count": len([
-            g for g in groups
-            if g.get("pressure_level") == "high"
+            group
+            for group in groups
+            if group.get(
+                "pressure_level"
+            ) == "high"
         ]),
+
         "medium_group_count": len([
-            g for g in groups
-            if g.get("pressure_level") == "medium"
+            group
+            for group in groups
+            if group.get(
+                "pressure_level"
+            ) == "medium"
         ]),
-        "danger_count": sum(int(g.get("danger_count") or 0) for g in groups),
-        "warning_count": sum(int(g.get("warning_count") or 0) for g in groups),
+
+        "clear_count": clear_count,
+        "danger_count": danger_count,
+        "warning_count": warning_count,
+
+        "risk_member_count":
+            risk_member_count,
+
         "task_count": task_count,
-        "pending_tasks": sum(int(g.get("pending_tasks") or 0) for g in groups),
+
+        "pending_tasks": sum(
+            int(
+                group.get("pending_tasks")
+                or 0
+            )
+            for group in groups
+        ),
+
         "done_tasks": done_tasks,
-        "abnormal_tasks": sum(int(g.get("abnormal_tasks") or 0) for g in groups),
-        "p1_tasks": sum(int(g.get("p1_tasks") or 0) for g in groups),
-        "pressure_score": round(sum(float(g.get("pressure_score") or 0) for g in groups), 1),
-        "feedback_rate": round(feedback_rate, 1),
+
+        "abnormal_tasks": sum(
+            int(
+                group.get("abnormal_tasks")
+                or 0
+            )
+            for group in groups
+        ),
+
+        "p1_tasks": sum(
+            int(
+                group.get("p1_tasks")
+                or 0
+            )
+            for group in groups
+        ),
+
+        "pressure_score": round(
+            sum(
+                float(
+                    group.get(
+                        "pressure_score"
+                    )
+                    or 0
+                )
+                for group in groups
+            ),
+            1,
+        ),
+
+        "feedback_rate": round(
+            feedback_rate,
+            1,
+        ),
     }
+
 
 
 def _build_decision(
@@ -93,7 +236,7 @@ def _build_decision(
             "reason": "这些分组尚未指定明确负责人，盟主无法有效追责。",
             "actions": [
                 "优先给高压分组指定组长或临时负责人。",
-                "对危险人数较多的分组先安排管理层代管。",
+                "对完整风险人数较多的分组先安排管理层代管。",
                 "补齐负责人后再观察下一轮任务反馈。",
             ],
         }
@@ -105,7 +248,7 @@ def _build_decision(
             "reason": "该负责人名下存在高压分组，需要确认风险复核和任务反馈是否落地。",
             "actions": [
                 "先处理压力最高的分组。",
-                "要求负责人确认危险成员是否误判。",
+                "要求负责人确认建议清理、危险和预警成员是否误判。",
                 "检查是否存在组内长期低活跃成员。",
             ],
         }
@@ -138,11 +281,23 @@ def _build_summary(
     decision: Dict[str, Any],
 ) -> str:
     return (
-        f"负责人「{owner_name}」当前负责 {stats.get('group_count', 0)} 个分组，"
+        f"负责人「{owner_name}」当前负责 "
+        f"{stats.get('group_count', 0)} 个分组，"
         f"{stats.get('member_count', 0)} 名成员，"
-        f"高压分组 {stats.get('high_group_count', 0)} 个，"
-        f"危险成员 {stats.get('danger_count', 0)} 人，"
-        f"关联任务 {stats.get('task_count', 0)} 项，"
-        f"待反馈 {stats.get('pending_tasks', 0)} 项。"
-        f"当前判断：{decision.get('label', '继续观察')}。"
+        f"高压分组 "
+        f"{stats.get('high_group_count', 0)} 个，"
+        f"完整风险成员 "
+        f"{stats.get('risk_member_count', 0)} 人，"
+        f"其中建议清理 "
+        f"{stats.get('clear_count', 0)} 人、"
+        f"危险 "
+        f"{stats.get('danger_count', 0)} 人、"
+        f"预警 "
+        f"{stats.get('warning_count', 0)} 人，"
+        f"关联任务 "
+        f"{stats.get('task_count', 0)} 项，"
+        f"待反馈 "
+        f"{stats.get('pending_tasks', 0)} 项。"
+        f"当前判断："
+        f"{decision.get('label', '继续观察')}。"
     )

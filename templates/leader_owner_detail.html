@@ -38,7 +38,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
         <div class="stat-card"><div>负责分组</div><h2>{{ detail.stats.group_count }}</h2></div>
         <div class="stat-card"><div>成员数</div><h2>{{ detail.stats.member_count }}</h2></div>
         <div class="stat-card"><div>高压分组</div><h2>{{ detail.stats.high_group_count }}</h2></div>
-        <div class="stat-card"><div>危险成员</div><h2>{{ detail.stats.danger_count }}</h2></div>
+        <div class="stat-card"><div>完整风险</div><h2>{{ detail.stats.risk_member_count|default(0)|int }}</h2></div>
         <div class="stat-card"><div>待反馈</div><h2>{{ detail.stats.pending_tasks }}</h2></div>
 
     </div>
@@ -101,7 +101,23 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
             <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:9px;font-weight:bold;">{{ g.group_name }}</td>
                 <td style="padding:9px;">{{ g.member_count }}</td>
-                <td style="padding:9px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}</td>
+                <td style="padding:9px;line-height:1.7;">
+                    <span style="color:#991b1b;font-weight:bold;">
+                        建议清理 {{ g.risk_clear_count|default(0)|int }}
+                    </span>
+                    /
+                    <span style="color:#dc2626;font-weight:bold;">
+                        危险 {{ g.risk_danger_count|default(0)|int }}
+                    </span>
+                    /
+                    <span style="color:#f97316;font-weight:bold;">
+                        预警 {{ g.risk_warning_count|default(0)|int }}
+                    </span>
+
+                    <div style="font-size:12px;color:#6b7280;">
+                        合计 {{ g.risk_member_count|default(0)|int }} 人
+                    </div>
+                </td>
                 <td style="padding:9px;">总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}</td>
                 <td style="padding:9px;color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</td>
                 <td style="padding:9px;">{{ g.suggestion }}</td>
@@ -291,7 +307,25 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                     <td style="padding:9px;">{{ g.member_count }}</td>
                     <td style="padding:9px;">{{ g.avg_av }}</td>
                     <td style="padding:9px;">{{ g.avg_bs }}</td>
-                    <td style="padding:9px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }} / 保护 {{ g.protected_count }}</td>
+                    <td style="padding:9px;line-height:1.7;">
+                        <span style="color:#991b1b;font-weight:bold;">
+                            建议清理 {{ g.risk_clear_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#dc2626;font-weight:bold;">
+                            危险 {{ g.risk_danger_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#f97316;font-weight:bold;">
+                            预警 {{ g.risk_warning_count|default(0)|int }}
+                        </span>
+                        /
+                        保护 {{ g.protected_count|default(0)|int }}
+
+                        <div style="font-size:12px;color:#6b7280;">
+                            完整风险合计 {{ g.risk_member_count|default(0)|int }} 人
+                        </div>
+                    </td>
                     <td style="padding:9px;">总 {{ g.task_count }} / 待 {{ g.pending_tasks }} / 异常 {{ g.abnormal_tasks }}</td>
                     <td style="padding:9px;">{{ g.feedback_rate }}%</td>
                     <td style="padding:9px;">

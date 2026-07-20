@@ -7945,53 +7945,94 @@ def leader_group_risk_detail(group_name):
 @app.route("/leaders/owner/<path:owner_name>")
 def leader_owner_detail(owner_name):
     from urllib.parse import unquote
+
     from services.engines.leader_center_engine import (
-        build_leader_center_report
+        build_leader_center_report,
     )
     from services.engines.leader_owner_detail_engine import (
-        build_leader_owner_detail_report
+        build_leader_owner_detail_report,
+    )
+    from services.engines.risk_drilldown_engine import (
+        attach_risk_members_to_groups,
+        build_risk_drilldown_report,
     )
 
-    decoded_owner_name = unquote(owner_name)
+    decoded_owner_name = unquote(
+        owner_name
+    )
 
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
+    conn = sqlite3.connect(
+        "data/snapshots.db"
+    )
+
+    report = build_staff_report(
+        conn
+    )
 
     report["v14_leader_center"] = (
         build_leader_center_report(
             conn,
-            report
+            report,
         )
     )
 
-    report["v14_leader_owner_detail"] = (
+    report["v15_risk_drilldown"] = (
+        build_risk_drilldown_report(
+            conn
+        )
+    )
+
+    attach_risk_members_to_groups(
+        report[
+            "v14_leader_center"
+        ].get(
+            "group_cards",
+            [],
+        ),
+        report[
+            "v15_risk_drilldown"
+        ],
+        limit_per_group=5,
+    )
+
+    report[
+        "v14_leader_owner_detail"
+    ] = (
         build_leader_owner_detail_report(
-            report["v14_leader_center"],
-            decoded_owner_name
+            report[
+                "v14_leader_center"
+            ],
+            decoded_owner_name,
         )
     )
 
     conn.close()
 
-
     # v15_leader_owner_return_url
-    return_url = request.args.get("next", "/leaders").strip()
+    return_url = request.args.get(
+        "next",
+        "/leaders",
+    ).strip()
 
     if (
         not return_url.startswith("/")
         or return_url.startswith("//")
-        or return_url.startswith("/logout")
+        or return_url.startswith(
+            "/logout"
+        )
     ):
         return_url = "/leaders"
 
-    report["v15_return_url"] = return_url
-
+    report["v15_return_url"] = (
+        return_url
+    )
 
     return render_template(
         "leader_owner_detail.html",
         report=report,
-        title="负责人详情"
+        title="负责人详情",
     )
+
 
 
 
