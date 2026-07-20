@@ -36,11 +36,31 @@ box-shadow:0 8px 24px rgba(15,23,42,0.08);
     <p><b>摘要：</b>{{ gd.summary }}</p>
     <p><b>数据快照：</b>{{ gd.latest_snapshot_time }}</p>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px;">
-        <div class="stat-card"><div>分组</div><h2>{{ gd.group_name }}</h2></div>
-        <div class="stat-card"><div>异常成员</div><h2>{{ gd.stats.total }}</h2></div>
-        <div class="stat-card"><div>危险成员</div><h2>{{ gd.stats.danger }}</h2></div>
-        <div class="stat-card"><div>预警成员</div><h2>{{ gd.stats.warning }}</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:18px;">
+        <div class="stat-card">
+            <div>分组</div>
+            <h2>{{ gd.group_name }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>异常成员</div>
+            <h2>{{ gd.stats.total }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>建议清理</div>
+            <h2 style="color:#991b1b;">{{ gd.stats["clear"] }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>危险成员</div>
+            <h2 style="color:#dc2626;">{{ gd.stats.danger }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>预警成员</div>
+            <h2 style="color:#f97316;">{{ gd.stats.warning }}</h2>
+        </div>
     </div>
 
     <div style="margin-top:18px;background:#fff;border:1px solid #bfdbfe;border-radius:14px;padding:16px;">
@@ -98,10 +118,14 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
                     <td style="padding:9px;font-weight:bold;">{{ m.member }}</td>
 
                     <td style="padding:9px;">
-                        {% if m.risk_level == "danger" %}
+                        {% if m.risk_level == "clear" %}
+                            <span style="color:#991b1b;font-weight:bold;">{{ m.risk_label }}</span>
+                        {% elif m.risk_level == "danger" %}
                             <span style="color:#dc2626;font-weight:bold;">{{ m.risk_label }}</span>
-                        {% else %}
+                        {% elif m.risk_level == "warning" %}
                             <span style="color:#f97316;font-weight:bold;">{{ m.risk_label }}</span>
+                        {% else %}
+                            <span style="color:#475569;font-weight:bold;">{{ m.risk_label }}</span>
                         {% endif %}
                     </td>
 
@@ -138,7 +162,7 @@ border-radius:18px;
 padding:18px;
 box-shadow:0 8px 24px rgba(15,23,42,0.06);
 ">
-    <b>说明：</b>本页只取 player_records 最新快照，并按成员去重，避免历史快照重复展示。
+    <b>说明：</b>本页只取当前战场最新快照，并按成员去重；异常口径包含建议清理、危险和预警三类。
 </div>
 
 {% endblock %}
