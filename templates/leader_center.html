@@ -20,6 +20,24 @@
     .v15-leaders-back-btn-e52:hover {
         background:#e5e7eb;
     }
+
+/* A15.4.18：组长驾驶舱深色模式局部对比度 */
+html[data-theme="dark"] .leader-dark-title {
+    color:#f8fafc !important;
+}
+
+html[data-theme="dark"] .leader-dark-body {
+    color:#cbd5e1 !important;
+}
+
+html[data-theme="dark"] .leader-dark-muted {
+    color:#94a3b8 !important;
+}
+
+html[data-theme="dark"] .leader-dark-action {
+    color:#e2e8f0 !important;
+}
+
 </style>
 
 <script id="v15-leaders-page-return-e52">
@@ -497,7 +515,8 @@ width: 100%;">
                         {{ pending_count }}
                     </td>
 
-                    <td style="padding:9px;line-height:1.7;color:#374151;">
+                    <td class="leader-dark-body"
+                        style="padding:9px;line-height:1.7;color:#374151;">
                         {{ g.suggestion or g.suggest or g.advice or "建议盟主优先点名该组，要求负责人确认风险成员与待反馈任务。" }}
                     </td>
 
@@ -554,6 +573,7 @@ width: 100%;">
         <b>快捷筛选：</b>
         {% for item in lf.quick_filters %}
             <a href="{{ item.url }}"
+               class="leader-dark-action"
                style="display:inline-block;margin:4px 6px 4px 0;padding:7px 12px;border:1px solid #ddd;border-radius:999px;background:#fff;text-decoration:none;color:#374151;">
                 {{ item.label }}
             </a>
@@ -618,6 +638,7 @@ width: 100%;">
         </button>
 
         <a href="/leaders"
+           class="leader-dark-action"
            style="padding:10px 16px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;text-align:center;">
             重置
         </a>
@@ -696,11 +717,13 @@ width:100%;
 
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px;">
                 <div>
-                    <div style="font-size:20px;font-weight:800;color:#111827;">
+                    <div class="leader-dark-title"
+                         style="font-size:20px;font-weight:800;color:#111827;">
                         {{ g.group_name }}
                     </div>
 
-                    <div style="margin-top:4px;color:#6b7280;font-size:13px;">
+                    <div class="leader-dark-muted"
+                         style="margin-top:4px;color:#6b7280;font-size:13px;">
                         当前负责人：
                         <span style="font-weight:bold;color:#2563eb;">
                             {{ g.leader_display or "待指定" }}
@@ -904,7 +927,8 @@ width:100%;
 
             </div>
 
-            <div style="color:#374151;line-height:1.7;margin-bottom:12px;">
+            <div class="leader-dark-body"
+                 style="color:#374151;line-height:1.7;margin-bottom:12px;">
                 <b>建议：</b>
                 {{ g.suggestion or g.suggest or g.advice or "建议盟主优先点名该组，要求负责人确认风险成员与待反馈任务。" }}
             </div>
