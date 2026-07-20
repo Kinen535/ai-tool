@@ -371,7 +371,8 @@ width: 100%;">
 
     <p style="color:#475569;line-height:1.7;margin-bottom:14px;">
         说明：本模块已合并原「高压分组 TOP」「真实负责人压力」「异常摘要」信息。
-        首页只看分组处置优先级；具体异常人员下沉到分组详情页。
+        管理处置优先级用于安排盟务处理顺序；清理复核优先级用于安排建议清理名单的人工核查顺序。
+        两套优先级独立计算，具体异常人员下沉到分组详情页。
     </p>
 
     {% if lc.high_pressure_groups %}
@@ -397,6 +398,11 @@ width: 100%;">
                 {% set danger_count = g.risk_danger_count|default(0)|int %}
                 {% set warning_count = g.risk_warning_count|default(0)|int %}
                 {% set risk_member_count = g.risk_member_count|default(0)|int %}
+                {% set management_priority = g.management_priority|default("P3") %}
+                {% set management_label = g.management_priority_label|default("观察") %}
+                {% set cleanup_priority = g.cleanup_review_priority|default("P3") %}
+                {% set cleanup_label = g.cleanup_review_label|default("常规复核") %}
+                {% set cleanup_ratio = g.cleanup_review_ratio|default(0)|float %}
                 {% set pending_count = g.pending_count|default(0)|int %}
                 {% if pending_count == 0 %}
                     {% set pending_count = g.pending_task_count|default(0)|int %}
@@ -404,17 +410,17 @@ width: 100%;">
 
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;white-space:nowrap;">
-                        {% if g.pressure_score|float >= 120 or g.danger_count|default(0)|int >= 8 %}
+                        {% if management_priority == "P1" %}
                             <span style="display:inline-block;padding:5px 9px;background:#fee2e2;color:#dc2626;border-radius:999px;font-weight:bold;">
-                                P1｜紧急
+                                {{ management_priority }}｜{{ management_label }}
                             </span>
-                        {% elif g.pressure_score|float >= 90 or g.danger_count|default(0)|int > 0 %}
+                        {% elif management_priority == "P2" %}
                             <span style="display:inline-block;padding:5px 9px;background:#ffedd5;color:#f97316;border-radius:999px;font-weight:bold;">
-                                P2｜重要
+                                {{ management_priority }}｜{{ management_label }}
                             </span>
                         {% else %}
                             <span style="display:inline-block;padding:5px 9px;background:#dcfce7;color:#16a34a;border-radius:999px;font-weight:bold;">
-                                P3｜观察
+                                {{ management_priority }}｜{{ management_label }}
                             </span>
                         {% endif %}
                     </td>
@@ -464,6 +470,26 @@ width: 100%;">
 
                         <div style="font-size:12px;color:#6b7280;">
                             合计 {{ risk_member_count }} 人
+                        </div>
+
+                        <div style="margin-top:6px;">
+                            {% if cleanup_priority == "P1" %}
+                                <span style="display:inline-block;padding:4px 8px;background:#fee2e2;color:#991b1b;border-radius:999px;font-size:12px;font-weight:bold;">
+                                    清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                                </span>
+                            {% elif cleanup_priority == "P2" %}
+                                <span style="display:inline-block;padding:4px 8px;background:#ffedd5;color:#c2410c;border-radius:999px;font-size:12px;font-weight:bold;">
+                                    清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                                </span>
+                            {% else %}
+                                <span style="display:inline-block;padding:4px 8px;background:#f1f5f9;color:#475569;border-radius:999px;font-size:12px;font-weight:bold;">
+                                    清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                                </span>
+                            {% endif %}
+
+                            <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+                                建议清理占比 {{ cleanup_ratio }}%
+                            </div>
                         </div>
                     </td>
 
@@ -650,6 +676,11 @@ width:100%;
         {% set danger_count = g.risk_danger_count|default(0)|int %}
         {% set warning_count = g.risk_warning_count|default(0)|int %}
         {% set risk_member_count = g.risk_member_count|default(0)|int %}
+        {% set management_priority = g.management_priority|default("P3") %}
+        {% set management_label = g.management_priority_label|default("观察") %}
+        {% set cleanup_priority = g.cleanup_review_priority|default("P3") %}
+        {% set cleanup_label = g.cleanup_review_label|default("常规复核") %}
+        {% set cleanup_ratio = g.cleanup_review_ratio|default(0)|float %}
         {% set pending_count = g.pending_count|default(0)|int %}
         {% if pending_count == 0 %}
             {% set pending_count = g.pending_task_count|default(0)|int %}
@@ -819,6 +850,26 @@ width:100%;
                     <div style="font-size:12px;color:#6b7280;">
                         完整风险合计 {{ risk_member_count }} 人
                     </div>
+
+                    <div style="margin-top:7px;">
+                        {% if cleanup_priority == "P1" %}
+                            <span style="display:inline-block;padding:4px 8px;background:#fee2e2;color:#991b1b;border-radius:999px;font-size:12px;font-weight:bold;">
+                                清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                            </span>
+                        {% elif cleanup_priority == "P2" %}
+                            <span style="display:inline-block;padding:4px 8px;background:#ffedd5;color:#c2410c;border-radius:999px;font-size:12px;font-weight:bold;">
+                                清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                            </span>
+                        {% else %}
+                            <span style="display:inline-block;padding:4px 8px;background:#f1f5f9;color:#475569;border-radius:999px;font-size:12px;font-weight:bold;">
+                                清理复核 {{ cleanup_priority }}｜{{ cleanup_label }}
+                            </span>
+                        {% endif %}
+
+                        <span style="font-size:12px;color:#6b7280;margin-left:5px;">
+                            建议清理占比 {{ cleanup_ratio }}%
+                        </span>
+                    </div>
                 </div>
 
                 <div>
@@ -831,6 +882,23 @@ width:100%;
                         <span style="color:#dc2626;font-weight:bold;">{{ g.pressure_score }}</span>
                     {% else %}
                         {{ g.pressure_score }}
+                    {% endif %}
+                </div>
+
+                <div>
+                    <b>管理处置：</b>
+                    {% if management_priority == "P1" %}
+                        <span style="color:#dc2626;font-weight:bold;">
+                            {{ management_priority }}｜{{ management_label }}
+                        </span>
+                    {% elif management_priority == "P2" %}
+                        <span style="color:#f97316;font-weight:bold;">
+                            {{ management_priority }}｜{{ management_label }}
+                        </span>
+                    {% else %}
+                        <span style="color:#16a34a;font-weight:bold;">
+                            {{ management_priority }}｜{{ management_label }}
+                        </span>
                     {% endif %}
                 </div>
 

@@ -438,6 +438,20 @@ def _finalize_group_cards(
         pressure_score = _calc_pressure_score(stat, avg_av, avg_bs)
         pressure_level, pressure_label = _pressure_level(pressure_score)
 
+        cleanup_review = (
+            _cleanup_review_priority(
+                stat
+            )
+        )
+
+        management_priority = (
+            _management_priority(
+                stat,
+                pressure_level,
+                cleanup_review,
+            )
+        )
+
         leader_info = _build_leader_info(
             stat,
             group_name,
@@ -482,6 +496,49 @@ def _finalize_group_cards(
             "pressure_score": round(pressure_score, 1),
             "pressure_level": pressure_level,
             "pressure_label": pressure_label,
+
+            "management_priority":
+                management_priority.get(
+                    "level",
+                    "P3",
+                ),
+
+            "management_priority_label":
+                management_priority.get(
+                    "label",
+                    "观察",
+                ),
+
+            "management_priority_reason":
+                management_priority.get(
+                    "reason",
+                    "",
+                ),
+
+            "cleanup_review_priority":
+                cleanup_review.get(
+                    "level",
+                    "P3",
+                ),
+
+            "cleanup_review_label":
+                cleanup_review.get(
+                    "label",
+                    "常规复核",
+                ),
+
+            "cleanup_review_reason":
+                cleanup_review.get(
+                    "reason",
+                    "",
+                ),
+
+            "cleanup_review_ratio":
+                cleanup_review.get(
+                    "clear_ratio",
+                    0.0,
+                ),
+
             "suggestion": _group_suggestion(stat, pressure_level),
         }
 
@@ -562,6 +619,150 @@ def _unique_names(names: List[str]) -> List[str]:
         result.append(clean)
 
     return result
+
+
+def _cleanup_review_priority(
+    stat: Dict[str, Any],
+) -> Dict[str, Any]:
+    member_count = max(
+        int(
+            stat.get("member_count")
+            or 0
+        ),
+        0,
+    )
+
+    clear_count = max(
+        int(
+            stat.get("clear_count")
+            or 0
+        ),
+        0,
+    )
+
+    clear_ratio = 0.0
+
+    if member_count > 0:
+        clear_ratio = (
+            clear_count
+            / member_count
+            * 100
+        )
+
+    if (
+        clear_count >= 20
+        or clear_ratio >= 45
+    ):
+        return {
+            "level": "P1",
+            "label": "重点复核",
+            "reason": (
+                "建议清理人数或占比较高，"
+                "需要负责人逐个进行人工复核。"
+            ),
+            "clear_ratio": round(
+                clear_ratio,
+                1,
+            ),
+        }
+
+    if (
+        clear_count >= 8
+        or clear_ratio >= 25
+    ):
+        return {
+            "level": "P2",
+            "label": "优先复核",
+            "reason": (
+                "建议清理人数或占比达到"
+                "优先核查条件。"
+            ),
+            "clear_ratio": round(
+                clear_ratio,
+                1,
+            ),
+        }
+
+    return {
+        "level": "P3",
+        "label": "常规复核",
+        "reason": (
+            "建议清理规模较低，"
+            "按常规流程核查。"
+        ),
+        "clear_ratio": round(
+            clear_ratio,
+            1,
+        ),
+    }
+
+
+def _management_priority(
+    stat: Dict[str, Any],
+    pressure_level: str,
+    cleanup_review: Dict[str, Any],
+) -> Dict[str, str]:
+    danger_count = int(
+        stat.get("danger_count")
+        or 0
+    )
+
+    pending_tasks = int(
+        stat.get("pending_tasks")
+        or 0
+    )
+
+    review_level = str(
+        cleanup_review.get("level")
+        or "P3"
+    )
+
+    if (
+        pressure_level == "high"
+        and (
+            danger_count >= 8
+            or pending_tasks >= 3
+            or review_level == "P1"
+        )
+    ):
+        return {
+            "level": "P1",
+            "label": "紧急",
+            "reason": (
+                "当前为高压分组，且危险人数、"
+                "待反馈任务或清理复核达到"
+                "紧急处置条件。"
+            ),
+        }
+
+    if (
+        pressure_level in (
+            "high",
+            "medium",
+        )
+        or danger_count > 0
+        or review_level in (
+            "P1",
+            "P2",
+        )
+    ):
+        return {
+            "level": "P2",
+            "label": "重要",
+            "reason": (
+                "当前存在压力、危险成员"
+                "或清理复核事项，需要优先跟进。"
+            ),
+        }
+
+    return {
+        "level": "P3",
+        "label": "观察",
+        "reason": (
+            "当前没有达到紧急或重要"
+            "处置条件，维持常规观察。"
+        ),
+    }
 
 
 def _calc_pressure_score(stat: Dict[str, Any], avg_av: float, avg_bs: float) -> float:
