@@ -1,6 +1,38 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+/* A15.4.21：分组详情统计卡片深色适配 */
+html[data-theme="dark"]
+body[data-page-path^="/archives/group/"]
+.stat-card {
+    background:#192840 !important;
+    color:#e8eef8 !important;
+    border:1px solid #34445e !important;
+    box-shadow:0 8px 24px rgba(0,0,0,0.22) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/archives/group/"]
+.stat-card:hover {
+    background:#20304a !important;
+    border-color:#456087 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/archives/group/"]
+.stat-title {
+    color:#a9b6ca !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/archives/group/"]
+.stat-value {
+    color:#75a7ff !important;
+}
+</style>
+
 {% set v15_identity_next_url_e51 = request.full_path.rstrip("?") %}
 
 
