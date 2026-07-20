@@ -466,7 +466,7 @@ const bsData = JSON.parse('{{ records|map(attribute="bs")|list|tojson|safe }}').
 
 const scoreData = JSON.parse('{{ records|map(attribute="identity_score")|list|tojson|safe }}').reverse();
 
-new Chart(
+const avChart = new Chart(
     document.getElementById("avChart"),
     {
         type: "line",
@@ -497,7 +497,7 @@ new Chart(
     }
 );
 
-new Chart(
+const scoreChart = new Chart(
     document.getElementById("scoreChart"),
     {
         type: "line",
@@ -516,6 +516,120 @@ new Chart(
             responsive: true,
             maintainAspectRatio: false
         }
+    }
+);
+
+
+function applyIdentityChartTheme() {
+    const isDark = (
+        document.documentElement
+        .dataset.theme === "dark"
+    );
+
+    const textColor = (
+        isDark
+        ? "#cbd5e1"
+        : "#475569"
+    );
+
+    const gridColor = (
+        isDark
+        ? "rgba(148,163,184,0.20)"
+        : "rgba(100,116,139,0.18)"
+    );
+
+    [
+        avChart,
+        scoreChart
+    ].forEach(function (chart) {
+        chart.options.color = textColor;
+
+        chart.options.plugins = (
+            chart.options.plugins
+            || {}
+        );
+
+        chart.options.plugins.legend = (
+            chart.options.plugins.legend
+            || {}
+        );
+
+        chart.options.plugins.legend.labels = (
+            chart.options.plugins
+            .legend.labels
+            || {}
+        );
+
+        chart.options.plugins.legend
+            .labels.color = textColor;
+
+        chart.options.scales = (
+            chart.options.scales
+            || {}
+        );
+
+        [
+            "x",
+            "y"
+        ].forEach(function (axisName) {
+            const axis = (
+                chart.options.scales[
+                    axisName
+                ]
+                || {}
+            );
+
+            axis.ticks = (
+                axis.ticks
+                || {}
+            );
+
+            axis.grid = (
+                axis.grid
+                || {}
+            );
+
+            axis.border = (
+                axis.border
+                || {}
+            );
+
+            axis.ticks.color = (
+                textColor
+            );
+
+            axis.grid.color = (
+                gridColor
+            );
+
+            axis.border.color = (
+                gridColor
+            );
+
+            chart.options.scales[
+                axisName
+            ] = axis;
+        });
+
+        chart.update("none");
+    });
+}
+
+applyIdentityChartTheme();
+
+const identityThemeObserver = (
+    new MutationObserver(
+        applyIdentityChartTheme
+    )
+);
+
+identityThemeObserver.observe(
+    document.documentElement,
+    {
+        attributes: true,
+        attributeFilter: [
+            "data-theme"
+        ]
     }
 );
 
@@ -575,6 +689,118 @@ new Chart(
     color:#475569;
 
     font-size:14px;
+}
+
+
+/* A15.4.20：身份档案深色模式局部适配 */
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+:is(
+    .identity-hero-card,
+    .metric-card,
+    .chart-panel,
+    .chart-box
+) {
+    background:#152238 !important;
+    color:#e8eef8 !important;
+    border-color:#34445e !important;
+    box-shadow:0 8px 24px rgba(0,0,0,0.24) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.identity-hero-card {
+    background:#192840 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.chart-box {
+    background:#0f1b2d !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+:is(
+    .identity-hero-name,
+    .chart-panel h4
+) {
+    color:#f8fafc !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+:is(
+    .identity-hero-score,
+    .metric-title
+) {
+    color:#a9b6ca !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.metric-value {
+    color:#75a7ff !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+[style*="background:#f8fafc"] {
+    background:#152238 !important;
+    color:#e8eef8 !important;
+    border-color:#34445e !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+[style*="linear-gradient"] {
+    background:linear-gradient(
+        135deg,
+        #1b3154,
+        #20304a
+    ) !important;
+    color:#75a7ff !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.decision-badge {
+    background:#20304a !important;
+    color:#e8eef8 !important;
+    border:1px solid #3b4c68 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.decision-main {
+    background:#14342f !important;
+    color:#4ade80 !important;
+    border-color:#267565 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+.confidence-badge {
+    background:#1b3154 !important;
+    color:#75a7ff !important;
+    border-color:#385d96 !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+[style*="background:#ecfeff"] {
+    background:#163243 !important;
+    color:#67e8f9 !important;
+    border-color:#28748b !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+[style*="color:#334155"],
+html[data-theme="dark"]
+body[data-page-path^="/identity/view/"]
+[style*="color:#475569"] {
+    color:#cbd5e1 !important;
 }
 
 </style>
