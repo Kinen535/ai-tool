@@ -38,6 +38,26 @@ html[data-theme="dark"] .leader-dark-action {
     color:#e2e8f0 !important;
 }
 
+
+/* A15.4.19：最近负责人变更深色容器 */
+html[data-theme="dark"] .leader-audit-section {
+    background:#14342f !important;
+    color:#e8eef8 !important;
+    border-color:#2dd4bf !important;
+}
+
+html[data-theme="dark"]
+.leader-audit-section
+.leader-audit-title {
+    color:#f8fafc !important;
+}
+
+html[data-theme="dark"]
+.leader-audit-section
+.leader-audit-muted {
+    color:#a9b6ca !important;
+}
+
 </style>
 
 <script id="v15-leaders-page-return-e52">
@@ -965,7 +985,7 @@ width:100%;
     </div>
 </div>
 
-<div style="
+<div class="leader-audit-section" style="
 background:#f0fdfa;
 border-left:6px solid #0f766e;
 border-radius:18px;
@@ -976,9 +996,9 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 grid-column: 1 / -1;
 width: 100%;">
 
-    <h2>⑤ 最近负责人变更</h2>
+    <h2 class="leader-audit-title">⑤ 最近负责人变更</h2>
 
-    <p style="color:#475569;">
+    <p class="leader-audit-muted" style="color:#475569;">
         默认只展示最近 3 条负责人变更记录，点击可展开完整记录。
     </p>
 

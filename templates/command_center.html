@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* A15.4.19：负责人压力速览深色容器 */
+html[data-theme="dark"]
+.command-owner-pressure-section {
+    background:#241d38 !important;
+    color:#e8eef8 !important;
+    border-color:#8b5cf6 !important;
+}
+
+html[data-theme="dark"]
+.command-owner-pressure-section
+.command-owner-pressure-title {
+    color:#f8fafc !important;
+}
+
+</style>
 
 <script id="v15-command-leaders-return-e52">
 document.addEventListener("DOMContentLoaded", function () {
@@ -335,7 +351,7 @@ margin-bottom:24px;
     </div>
 
 
-    <div style="
+    <div class="command-owner-pressure-section" style="
     background:#f5f3ff;
     border-left:6px solid #8b5cf6;
     border-radius:18px;
@@ -343,7 +359,7 @@ margin-bottom:24px;
     box-shadow:0 8px 24px rgba(15,23,42,0.06);
     ">
 
-        <h2>⑤ 负责人压力速览</h2>
+        <h2 class="command-owner-pressure-title">⑤ 负责人压力速览</h2>
 
         {% if cc.leader_pressure %}
 
