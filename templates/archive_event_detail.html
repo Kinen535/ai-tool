@@ -2,12 +2,212 @@
 
 {% block content %}
 
+<style>
+/* A15.4.22：战场事件详情深色适配 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+) {
+    --event-detail-surface:#192840;
+    --event-detail-surface-soft:#20304a;
+    --event-detail-surface-deep:#0f1b2d;
+    --event-detail-border:#34445e;
+    --event-detail-text:#e8eef8;
+    --event-detail-muted:#a9b6ca;
+    --event-detail-link:#9dc2ff;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:white"] {
+    background:var(--event-detail-surface) !important;
+    color:var(--event-detail-text) !important;
+    border:1px solid var(--event-detail-border) !important;
+    box-shadow:0 8px 24px rgba(0,0,0,0.22) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:#eff6ff"] {
+    background:#1b3154 !important;
+    color:var(--event-detail-text) !important;
+    border-left-color:#60a5fa !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:#ecfdf5"] {
+    background:#14342f !important;
+    color:var(--event-detail-text) !important;
+    border-left-color:#4ade80 !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:#f3f4f6"] {
+    background:var(--event-detail-surface-soft) !important;
+    color:var(--event-detail-text) !important;
+    border-color:var(--event-detail-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:#f9fafb"] {
+    background:#1a2941 !important;
+    color:var(--event-detail-muted) !important;
+    border:1px solid var(--event-detail-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+:is(
+    input,
+    textarea,
+    select
+) {
+    background:var(--event-detail-surface-deep) !important;
+    color:var(--event-detail-text) !important;
+    border-color:#415574 !important;
+    color-scheme:dark;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+:is(
+    input,
+    textarea
+)::placeholder {
+    color:#8190a8 !important;
+    opacity:1;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="color:#64748b"],
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="color:#374151"] {
+    color:var(--event-detail-muted) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="border-bottom:1px solid #e5e7eb"] {
+    border-bottom-color:var(--event-detail-border) !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+a {
+    color:var(--event-detail-link);
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+[style*="background:#fee2e2"] {
+    background:#3b1d26 !important;
+    color:#ff8a8a !important;
+    border-color:#8b3345 !important;
+}
+
+/* A15.4.22-I：事件详情返回按钮稳定样式 */
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+:is(
+    .event-detail-back-link,
+    .event-detail-back-link:link,
+    .event-detail-back-link:visited
+) {
+    display:inline-flex !important;
+    align-items:center;
+    background:#20304a !important;
+    color:#f8fafc !important;
+    -webkit-text-fill-color:#f8fafc !important;
+    border:1px solid #5b7398 !important;
+    box-shadow:0 4px 14px rgba(0,0,0,0.20);
+    opacity:1 !important;
+    filter:none !important;
+    font-weight:700;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+:is(
+    .event-detail-back-link:hover,
+    .event-detail-back-link:focus-visible,
+    .event-detail-back-link:active
+) {
+    background:#294064 !important;
+    color:#ffffff !important;
+    -webkit-text-fill-color:#ffffff !important;
+    border-color:#75a7ff !important;
+    opacity:1 !important;
+    filter:none !important;
+}
+
+html[data-theme="dark"]
+body:is(
+    [data-page-path^="/archives/events/"],
+    [data-page-path^="/archive_events/"]
+)
+.event-detail-back-link:focus-visible {
+    outline:2px solid #75a7ff !important;
+    outline-offset:2px;
+}
+
+</style>
+
+
 {% set relations = relations|default([]) %}
 
 <div style="max-width:1300px;margin:0 auto;padding:24px;">
     <h1>🧾 战场事件详情</h1>
 
-    <a href="/archives/events"
+    <a class="event-detail-back-link"
+       href="/archives/events"
        style="display:inline-block;margin:8px 0 16px 0;padding:8px 12px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">
         ← 返回战场事件
     </a>
