@@ -247,7 +247,23 @@ margin-bottom:24px;
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:8px;font-weight:bold;">{{ g.group_name }}</td>
                     <td style="padding:8px;">{{ g.leader_display }}</td>
-                    <td style="padding:8px;">危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}</td>
+                    <td style="padding:8px;line-height:1.7;">
+                        <span style="color:#991b1b;font-weight:bold;">
+                            建议清理 {{ g.risk_clear_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#dc2626;font-weight:bold;">
+                            危险 {{ g.risk_danger_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#f97316;font-weight:bold;">
+                            预警 {{ g.risk_warning_count|default(0)|int }}
+                        </span>
+
+                        <div style="font-size:12px;color:#6b7280;">
+                            合计 {{ g.risk_member_count|default(0)|int }} 人
+                        </div>
+                    </td>
                     <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ g.pressure_label }} {{ g.pressure_score }}</td>
                     <td style="padding:8px;">
                         <a href="/leaders?pressure=high"
@@ -285,8 +301,12 @@ margin-bottom:24px;
 
                     <div style="font-size:13px;color:#475569;line-height:1.7;">
                         负责人：{{ g.leader_display }}<br>
-                        危险 {{ g.danger_count }} / 预警 {{ g.warning_count }}<br>
-                        已识别异常人员：{{ g.risk_member_count or 0 }} 人
+                        建议清理 {{ g.risk_clear_count|default(0)|int }}
+                        /
+                        危险 {{ g.risk_danger_count|default(0)|int }}
+                        /
+                        预警 {{ g.risk_warning_count|default(0)|int }}<br>
+                        已识别异常人员：{{ g.risk_member_count|default(0)|int }} 人
                     </div>
 
                     <a href="/leaders/group/{{ g.group_name|urlencode }}?from_command=1&next={{ v15_command_back_url_e51|urlencode }}"
