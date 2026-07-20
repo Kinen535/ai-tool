@@ -84,8 +84,13 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
     }
 
 
-def _fetch_latest_members(conn) -> List[Dict[str, Any]]:
-    columns = _get_columns(conn, "player_records")
+def _fetch_latest_members(
+    conn,
+) -> List[Dict[str, Any]]:
+    columns = _get_columns(
+        conn,
+        "player_records",
+    )
 
     if not columns:
         return []
@@ -101,40 +106,174 @@ def _fetch_latest_members(conn) -> List[Dict[str, Any]]:
         "role_tag",
     ]
 
-    available_fields = [field for field in select_fields if field in columns]
+    available_fields = [
+        field
+        for field in select_fields
+        if field in columns
+    ]
 
     if "member" not in available_fields:
         return []
 
     if "group_name" not in available_fields:
-        available_fields.append("'' AS group_name")
+        available_fields.append(
+            "'' AS group_name"
+        )
+
+    clauses = []
+
+    # player_records具备battle_id时，
+    # 必须使用当前战场，禁止取全库最新时间。
+    if "battle_id" in columns:
+        current_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
+
+        if not current_row:
+            return []
+
+        try:
+            current_battle_id = int(
+                current_row[0]
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return []
+
+        clauses.append(
+            f"battle_id = "
+            f"{current_battle_id}"
+        )
+
+        if "snapshot_time" in columns:
+            latest_deleted_filter = (
+                "AND COALESCE("
+                "is_deleted, 0"
+                ") = 0"
+                if "is_deleted" in columns
+                else ""
+            )
+
+            clauses.append(
+                "snapshot_time = ("
+                "SELECT MAX(snapshot_time) "
+                "FROM player_records "
+                f"WHERE battle_id = "
+                f"{current_battle_id} "
+                f"{latest_deleted_filter}"
+                ")"
+            )
+
+        elif "created_at" in columns:
+            latest_deleted_filter = (
+                "AND COALESCE("
+                "is_deleted, 0"
+                ") = 0"
+                if "is_deleted" in columns
+                else ""
+            )
+
+            clauses.append(
+                "created_at = ("
+                "SELECT MAX(created_at) "
+                "FROM player_records "
+                f"WHERE battle_id = "
+                f"{current_battle_id} "
+                f"{latest_deleted_filter}"
+                ")"
+            )
+
+    elif "snapshot_time" in columns:
+        latest_deleted_filter = (
+            "WHERE COALESCE("
+            "is_deleted, 0"
+            ") = 0"
+            if "is_deleted" in columns
+            else ""
+        )
+
+        clauses.append(
+            "snapshot_time = ("
+            "SELECT MAX(snapshot_time) "
+            "FROM player_records "
+            f"{latest_deleted_filter}"
+            ")"
+        )
+
+    elif "created_at" in columns:
+        latest_deleted_filter = (
+            "WHERE COALESCE("
+            "is_deleted, 0"
+            ") = 0"
+            if "is_deleted" in columns
+            else ""
+        )
+
+        clauses.append(
+            "created_at = ("
+            "SELECT MAX(created_at) "
+            "FROM player_records "
+            f"{latest_deleted_filter}"
+            ")"
+        )
+
+    if "is_deleted" in columns:
+        clauses.append(
+            "COALESCE(is_deleted, 0) = 0"
+        )
 
     where = ""
 
-    if "snapshot_time" in columns:
-        where = "WHERE snapshot_time = (SELECT MAX(snapshot_time) FROM player_records)"
-    elif "created_at" in columns:
-        where = "WHERE created_at = (SELECT MAX(created_at) FROM player_records)"
-    elif "battle_id" in columns:
-        where = "WHERE battle_id = (SELECT MAX(battle_id) FROM player_records)"
+    if clauses:
+        where = (
+            "WHERE "
+            + " AND ".join(clauses)
+        )
+
+    order_by = (
+        "ORDER BY id"
+        if "id" in columns
+        else ""
+    )
 
     sql = f"""
         SELECT {", ".join(available_fields)}
         FROM player_records
         {where}
+        {order_by}
     """
 
-    rows = _query_dicts(conn, sql)
+    rows = _query_dicts(
+        conn,
+        sql,
+    )
 
-    # 去重：同名成员只保留最后一条
+    # 同一战场同一快照如存在重复成员，
+    # 按id顺序保留最后一条。
     dedup = {}
+
     for row in rows:
-        member = str(row.get("member") or "").strip()
+        member = str(
+            row.get("member")
+            or ""
+        ).strip()
+
         if not member:
             continue
+
         dedup[member] = row
 
-    return list(dedup.values())
+    return list(
+        dedup.values()
+    )
+
 
 
 def _get_columns(conn, table: str) -> List[str]:
