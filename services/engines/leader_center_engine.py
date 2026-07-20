@@ -318,7 +318,9 @@ def _build_group_member_stats(members: List[Dict[str, Any]]) -> Dict[str, Dict[s
         stat["_av_total"] += av
         stat["_bs_total"] += bs
 
-        if risk_level == "danger":
+        if risk_level == "clear":
+            stat["clear_count"] += 1
+        elif risk_level == "danger":
             stat["danger_count"] += 1
         elif risk_level == "warning":
             stat["warning_count"] += 1
@@ -346,6 +348,7 @@ def _new_group_stat(group_name: str) -> Dict[str, Any]:
     return {
         "group_name": group_name,
         "member_count": 0,
+        "clear_count": 0,
         "danger_count": 0,
         "warning_count": 0,
         "protected_count": 0,
@@ -450,8 +453,23 @@ def _finalize_group_cards(
             "member_count": stat.get("member_count", 0),
             "avg_av": round(avg_av, 1),
             "avg_bs": round(avg_bs, 1),
+            "clear_count": stat.get("clear_count", 0),
             "danger_count": stat.get("danger_count", 0),
             "warning_count": stat.get("warning_count", 0),
+            "risk_member_count": (
+                int(
+                    stat.get("clear_count")
+                    or 0
+                )
+                + int(
+                    stat.get("danger_count")
+                    or 0
+                )
+                + int(
+                    stat.get("warning_count")
+                    or 0
+                )
+            ),
             "protected_count": stat.get("protected_count", 0),
             "weak_member_count": stat.get("weak_member_count", 0),
             "down_trend_count": stat.get("down_trend_count", 0),
@@ -610,8 +628,10 @@ def _build_leader_pressure(group_cards: List[Dict[str, Any]]) -> List[Dict[str, 
                 "high_group_count": 0,
                 "medium_group_count": 0,
                 "member_count": 0,
+                "clear_count": 0,
                 "danger_count": 0,
                 "warning_count": 0,
+                "risk_member_count": 0,
                 "task_count": 0,
                 "pending_tasks": 0,
                 "done_tasks": 0,
@@ -634,8 +654,13 @@ def _build_leader_pressure(group_cards: List[Dict[str, Any]]) -> List[Dict[str, 
             item["medium_group_count"] += 1
 
         item["member_count"] += int(group.get("member_count") or 0)
+        item["clear_count"] += int(group.get("clear_count") or 0)
         item["danger_count"] += int(group.get("danger_count") or 0)
         item["warning_count"] += int(group.get("warning_count") or 0)
+        item["risk_member_count"] += int(
+            group.get("risk_member_count")
+            or 0
+        )
         item["task_count"] += int(group.get("task_count") or 0)
         item["pending_tasks"] += int(group.get("pending_tasks") or 0)
         item["done_tasks"] += int(group.get("done_tasks") or 0)

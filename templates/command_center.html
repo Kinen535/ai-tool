@@ -357,8 +357,22 @@ margin-bottom:24px;
                 <div style="margin-top:6px;color:#374151;line-height:1.7;">
                     负责分组 {{ item.group_count }}，
                     高压 {{ item.high_group_count }}，
-                    危险 {{ item.danger_count }}，
+                    完整风险 {{ item.risk_member_count|default(0)|int }}，
                     压力 {{ item.pressure_score }}
+                    <br>
+                    <span style="font-size:13px;">
+                        <span style="color:#991b1b;font-weight:bold;">
+                            建议清理 {{ item.clear_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#dc2626;font-weight:bold;">
+                            危险 {{ item.danger_count|default(0)|int }}
+                        </span>
+                        /
+                        <span style="color:#f97316;font-weight:bold;">
+                            预警 {{ item.warning_count|default(0)|int }}
+                        </span>
+                    </span>
                 </div>
             </div>
             {% endfor %}
