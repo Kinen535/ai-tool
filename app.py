@@ -8915,21 +8915,151 @@ def v155_archive_home():
 def v155_archive_players():
     import sqlite3
     from flask import render_template, request
-    from services.v155_archive_store import list_players
 
     q = request.args.get("q", "").strip()
+    keyword = f"%{q}%"
 
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect(
+        "data/snapshots.db"
+    )
     conn.row_factory = sqlite3.Row
 
-    players = list_players(conn, q)
+    players = []
+    battle_id = None
+    snapshot_time = None
 
-    conn.close()
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
+
+        if battle_row:
+            battle_id = battle_row["id"]
+
+            snapshot_row = conn.execute(
+                """
+                SELECT
+                    MAX(snapshot_time)
+                    AS snapshot_time
+                FROM player_records
+                WHERE battle_id = ?
+                  AND COALESCE(
+                      is_deleted,
+                      0
+                  ) = 0
+                """,
+                (
+                    battle_id,
+                ),
+            ).fetchone()
+
+            snapshot_time = (
+                snapshot_row["snapshot_time"]
+                if snapshot_row
+                else None
+            )
+
+            if snapshot_time:
+                players = conn.execute(
+                    """
+                    SELECT
+                        pr.member,
+                        pr.group_name,
+                        NULL AS current_tag,
+                        COALESCE(
+                            pr.role_tag,
+                            'member'
+                        ) AS role_tag,
+                        COALESCE(
+                            pr.av,
+                            0
+                        ) AS av,
+                        COALESCE(
+                            pr.bs,
+                            0
+                        ) AS bs,
+                        COALESCE(
+                            pr.trend,
+                            'stable'
+                        ) AS trend,
+                        COALESCE(
+                            pr.risk_level,
+                            'safe'
+                        ) AS risk_level,
+                        COALESCE(
+                            pr.risk_reason,
+                            ''
+                        ) AS risk_reason,
+                        COALESCE(
+                            pr.identity_score,
+                            0
+                        ) AS identity_score
+                    FROM player_records AS pr
+                    WHERE pr.battle_id = ?
+                      AND pr.snapshot_time = ?
+                      AND COALESCE(
+                          pr.is_deleted,
+                          0
+                      ) = 0
+                      AND COALESCE(
+                          pr.member,
+                          ''
+                      ) != ''
+                      AND pr.member LIKE ?
+                      AND pr.id = (
+                          SELECT
+                              MAX(p2.id)
+                          FROM player_records AS p2
+                          WHERE p2.battle_id
+                                = pr.battle_id
+                            AND p2.snapshot_time
+                                = pr.snapshot_time
+                            AND p2.member
+                                = pr.member
+                            AND COALESCE(
+                                p2.is_deleted,
+                                0
+                            ) = 0
+                      )
+                    ORDER BY
+                        CASE pr.risk_level
+                            WHEN 'danger' THEN 1
+                            WHEN 'warning' THEN 2
+                            WHEN 'protected' THEN 3
+                            ELSE 9
+                        END,
+                        COALESCE(
+                            pr.identity_score,
+                            0
+                        ) DESC,
+                        COALESCE(
+                            pr.av,
+                            0
+                        ) ASC,
+                        pr.member ASC
+                    LIMIT 500
+                    """,
+                    (
+                        battle_id,
+                        snapshot_time,
+                        keyword,
+                    ),
+                ).fetchall()
+
+    finally:
+        conn.close()
 
     return render_template(
         "archive_players.html",
         players=players,
         q=q,
+        current_battle_id=battle_id,
+        current_snapshot_time=snapshot_time,
         title="人物档案",
     )
 
