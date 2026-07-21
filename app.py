@@ -1946,6 +1946,602 @@ def calculate_bs(
 
         conn.close()        
 
+# =========================
+# A15.4.24-C：最近5期风险保护层
+# =========================
+
+def _risk_median(values):
+    numbers = sorted(
+        float(value or 0)
+        for value in values
+    )
+
+    if not numbers:
+        return 0.0
+
+    middle = len(numbers) // 2
+
+    if len(numbers) % 2 == 1:
+        return numbers[middle]
+
+    return (
+        numbers[middle - 1]
+        + numbers[middle]
+    ) / 2.0
+
+
+def _build_recent_risk_evidence(
+    conn,
+    battle_id,
+    member,
+    snapshot_time,
+):
+    """
+    提取截至当前快照最近5期成员证据。
+
+    hard_periods：
+    战功、助攻或捐献存在正增长的期数。
+
+    active_periods：
+    在hard_periods基础上，同时认可势力正增长。
+    """
+    rows = conn.execute(
+        """
+        SELECT
+            pr.snapshot_time,
+            COALESCE(
+                pr.av,
+                0
+            ) AS av,
+            COALESCE(
+                pr.bs,
+                0
+            ) AS bs,
+            COALESCE(
+                pr.trend,
+                ''
+            ) AS trend,
+            COALESCE(
+                pr.battle_gain,
+                0
+            ) AS battle_gain,
+            COALESCE(
+                pr.assist_gain,
+                0
+            ) AS assist_gain,
+            COALESCE(
+                pr.donate_gain,
+                0
+            ) AS donate_gain,
+            COALESCE(
+                pr.power_gain,
+                0
+            ) AS power_gain
+        FROM player_records AS pr
+        WHERE pr.battle_id = ?
+          AND pr.member = ?
+          AND pr.snapshot_time <= ?
+          AND COALESCE(
+              pr.is_deleted,
+              0
+          ) = 0
+          AND pr.id = (
+              SELECT
+                  MAX(p2.id)
+              FROM player_records AS p2
+              WHERE p2.battle_id
+                    = pr.battle_id
+                AND p2.member
+                    = pr.member
+                AND p2.snapshot_time
+                    = pr.snapshot_time
+                AND COALESCE(
+                    p2.is_deleted,
+                    0
+                ) = 0
+          )
+        ORDER BY
+            pr.snapshot_time DESC,
+            pr.id DESC
+        LIMIT 5
+        """,
+        (
+            battle_id,
+            member,
+            snapshot_time,
+        ),
+    ).fetchall()
+
+    def number(row, field):
+        return float(
+            row[field]
+            or 0
+        )
+
+    av_values = [
+        number(row, "av")
+        for row in rows
+    ]
+
+    bs_values = [
+        number(row, "bs")
+        for row in rows
+    ]
+
+    active_periods = sum(
+        1
+        for row in rows
+        if (
+            number(
+                row,
+                "battle_gain",
+            ) > 0
+            or number(
+                row,
+                "assist_gain",
+            ) > 0
+            or number(
+                row,
+                "donate_gain",
+            ) > 0
+            or number(
+                row,
+                "power_gain",
+            ) > 0
+        )
+    )
+
+    hard_periods = sum(
+        1
+        for row in rows
+        if (
+            number(
+                row,
+                "battle_gain",
+            ) > 0
+            or number(
+                row,
+                "assist_gain",
+            ) > 0
+            or number(
+                row,
+                "donate_gain",
+            ) > 0
+        )
+    )
+
+    rising_periods = sum(
+        1
+        for row in rows
+        if str(
+            row["trend"]
+            or ""
+        ) in (
+            "up",
+            "explosive",
+        )
+    )
+
+    latest_hard_gain = 0.0
+
+    if rows:
+        latest_hard_gain = (
+            number(
+                rows[0],
+                "battle_gain",
+            )
+            + number(
+                rows[0],
+                "assist_gain",
+            )
+            + number(
+                rows[0],
+                "donate_gain",
+            )
+        )
+
+    return {
+        "period_count": len(rows),
+        "median_av": _risk_median(
+            av_values
+        ),
+        "median_bs": _risk_median(
+            bs_values
+        ),
+        "active_periods":
+            active_periods,
+        "hard_periods":
+            hard_periods,
+        "rising_periods":
+            rising_periods,
+        "latest_hard_gain":
+            latest_hard_gain,
+    }
+
+
+def _apply_recent_risk_protection(
+    base_level,
+    latest_trend,
+    evidence,
+):
+    """
+    平衡风险保护规则。
+
+    只允许将clear/danger向下一级风险降级，
+    永远不会依靠本保护层直接改成safe。
+    """
+    level = str(
+        base_level
+        or "safe"
+    )
+
+    if level not in (
+        "danger",
+        "clear",
+    ):
+        return level, None
+
+    period_count = int(
+        evidence.get(
+            "period_count",
+            0,
+        )
+        or 0
+    )
+
+    hard_periods = int(
+        evidence.get(
+            "hard_periods",
+            0,
+        )
+        or 0
+    )
+
+    active_periods = int(
+        evidence.get(
+            "active_periods",
+            0,
+        )
+        or 0
+    )
+
+    rising_periods = int(
+        evidence.get(
+            "rising_periods",
+            0,
+        )
+        or 0
+    )
+
+    median_av = float(
+        evidence.get(
+            "median_av",
+            0,
+        )
+        or 0
+    )
+
+    median_bs = float(
+        evidence.get(
+            "median_bs",
+            0,
+        )
+        or 0
+    )
+
+    latest_hard_gain = float(
+        evidence.get(
+            "latest_hard_gain",
+            0,
+        )
+        or 0
+    )
+
+    strong_activity = (
+        period_count >= 3
+        and hard_periods >= 3
+    )
+
+    recovery = (
+        period_count >= 2
+        and rising_periods >= 2
+        and hard_periods >= 2
+    )
+
+    latest_recovery = (
+        str(
+            latest_trend
+            or ""
+        ) in (
+            "up",
+            "explosive",
+        )
+        and latest_hard_gain > 0
+        and hard_periods >= 2
+    )
+
+    moderate_activity = (
+        period_count >= 2
+        and (
+            hard_periods >= 2
+            or active_periods >= 3
+        )
+    )
+
+    reasonable_history = (
+        median_av >= 15
+        or median_bs >= 25
+    )
+
+    if level == "danger":
+        if (
+            strong_activity
+            or recovery
+            or latest_recovery
+        ):
+            reason = (
+                f"最近5期有效贡献"
+                f"{hard_periods}期，"
+                "风险降级观察"
+            )
+
+            return "warning", reason
+
+    if level == "clear":
+        if (
+            strong_activity
+            and (
+                reasonable_history
+                or rising_periods >= 2
+            )
+        ):
+            reason = (
+                f"最近5期有效贡献"
+                f"{hard_periods}期，"
+                "不满足直接清理条件"
+            )
+
+            return "warning", reason
+
+        if (
+            moderate_activity
+            or recovery
+        ):
+            if hard_periods >= 2:
+                activity_label = (
+                    "有效贡献"
+                )
+                activity_count = (
+                    hard_periods
+                )
+            else:
+                activity_label = (
+                    "综合活跃"
+                )
+                activity_count = (
+                    active_periods
+                )
+
+            reason = (
+                f"最近5期"
+                f"{activity_label}"
+                f"{activity_count}期，"
+                "先降级重点核查"
+            )
+
+            return "danger", reason
+
+    return level, None
+
+
+# =========================
+# A15.4.24-F：身份建议与风险等级一致性
+# =========================
+
+def _build_identity_grade(
+    identity_score,
+):
+    """
+    身份等级只描述组织价值，
+    不再直接等同清理结论。
+    """
+    score = float(
+        identity_score
+        or 0
+    )
+
+    if score >= 90:
+        return {
+            "grade": "S级核心成员",
+            "advice": "优先资源支持",
+        }
+
+    if score >= 70:
+        return {
+            "grade": "A级骨干成员",
+            "advice": "重点培养",
+        }
+
+    if score >= 50:
+        return {
+            "grade": "B级稳定成员",
+            "advice": "持续观察",
+        }
+
+    if score >= 30:
+        return {
+            "grade": "C级观察成员",
+            "advice": "关注活跃变化",
+        }
+
+    return {
+        "grade": "D级待观察成员",
+        "advice": "结合风险状态复核",
+    }
+
+
+def _build_identity_decision(
+    profile,
+    identity_score,
+):
+    """
+    管理建议优先级：
+
+    身份保护
+    → clear
+    → danger
+    → warning
+    → 身份评分。
+
+    低身份分不能单独产生清理结论。
+    """
+    score = float(
+        identity_score
+        or 0
+    )
+
+    risk_level = str(
+        profile.get(
+            "risk_level",
+        )
+        or "safe"
+    )
+
+    is_protected = bool(
+        profile.get(
+            "is_protected",
+        )
+    )
+
+    if (
+        is_protected
+        or risk_level == "protected"
+    ):
+        return {
+            "decision_star":
+                "★★★★★",
+            "decision_title":
+                "战略保护成员",
+            "decision_color":
+                "purple",
+            "decision_text":
+                "已进入身份保护名单，不参与自动清理。",
+            "decision_action":
+                "长期保留｜资源支持｜禁止清理",
+        }
+
+    if risk_level == "clear":
+        return {
+            "decision_star":
+                "★☆☆☆☆",
+            "decision_title":
+                "清理候选",
+            "decision_color":
+                "red",
+            "decision_text":
+                "当前风险状态已进入清理级别，仍需人工复核。",
+            "decision_action":
+                "组长确认｜核查特殊身份｜决定是否清理",
+        }
+
+    if risk_level == "danger":
+        return {
+            "decision_star":
+                "★☆☆☆☆",
+            "decision_title":
+                "重点核查成员",
+            "decision_color":
+                "orange",
+            "decision_text":
+                "当前风险状态较高，但不等同于直接清理。",
+            "decision_action":
+                "联系确认｜组长复核｜下一快照复查",
+        }
+
+    if risk_level == "warning":
+        return {
+            "decision_star":
+                "★★☆☆☆",
+            "decision_title":
+                "观察成员",
+            "decision_color":
+                "orange",
+            "decision_text":
+                "近期存在波动或低分，但尚不满足清理条件。",
+            "decision_action":
+                "持续观察｜跟踪贡献｜暂不清理",
+        }
+
+    if score >= 90:
+        return {
+            "decision_star":
+                "★★★★★",
+            "decision_title":
+                "核心战力",
+            "decision_color":
+                "green",
+            "decision_text":
+                "贡献与成长表现优秀。",
+            "decision_action":
+                "重点培养｜资源倾斜",
+        }
+
+    if score >= 70:
+        return {
+            "decision_star":
+                "★★★★☆",
+            "decision_title":
+                "A级骨干",
+            "decision_color":
+                "blue",
+            "decision_text":
+                "具备持续成长空间。",
+            "decision_action":
+                "持续培养",
+        }
+
+    if score >= 50:
+        return {
+            "decision_star":
+                "★★★☆☆",
+            "decision_title":
+                "稳定成员",
+            "decision_color":
+                "gray",
+            "decision_text":
+                "整体状态正常。",
+            "decision_action":
+                "持续观察",
+        }
+
+    if score >= 30:
+        return {
+            "decision_star":
+                "★★☆☆☆",
+            "decision_title":
+                "观察成员",
+            "decision_color":
+                "orange",
+            "decision_text":
+                "身份价值仍需继续观察。",
+            "decision_action":
+                "跟踪表现",
+        }
+
+    return {
+        "decision_star":
+            "★★☆☆☆",
+        "decision_title":
+            "待观察成员",
+        "decision_color":
+            "orange",
+        "decision_text":
+            "当前身份评分较低，但不能仅凭评分直接清理。",
+        "decision_action":
+            "补充观察｜结合风险状态复核",
+    }
+
+
 def calculate_risk(
     battle_id: int,
     snapshot_time: str
@@ -2154,6 +2750,39 @@ def calculate_risk(
                 else:
 
                     risk_level = "clear"
+
+            # =====================
+            # 最近5期贡献保护
+            # =====================
+
+            protection_reason = None
+
+            if risk_level in (
+                "danger",
+                "clear",
+            ):
+                recent_evidence = (
+                    _build_recent_risk_evidence(
+                        conn=conn,
+                        battle_id=battle_id,
+                        member=member,
+                        snapshot_time=snapshot_time,
+                    )
+                )
+
+                (
+                    risk_level,
+                    protection_reason,
+                ) = _apply_recent_risk_protection(
+                    base_level=risk_level,
+                    latest_trend=trend,
+                    evidence=recent_evidence,
+                )
+
+            if protection_reason:
+                reasons.append(
+                    protection_reason
+                )
 
             # =====================
             # 额外标签
@@ -6535,30 +7164,11 @@ def identity_view(member_name):
     # 身份等级
     # =====================
 
-    if identity_score >= 90:
-
-        profile["grade"] = "S级核心成员"
-        profile["advice"] = "优先资源支持"
-
-    elif identity_score >= 70:
-
-        profile["grade"] = "A级骨干成员"
-        profile["advice"] = "重点培养"
-
-    elif identity_score >= 50:
-
-        profile["grade"] = "B级稳定成员"
-        profile["advice"] = "持续观察"
-
-    elif identity_score >= 30:
-
-        profile["grade"] = "C级观察成员"
-        profile["advice"] = "关注活跃变化"
-
-    else:
-
-        profile["grade"] = "D级待淘汰成员"
-        profile["advice"] = "考虑清理"
+    profile.update(
+        _build_identity_grade(
+            identity_score,
+        )
+    )
 
     profile["role_name"] = role_map.get(
         profile.get("role_tag"),
@@ -6579,53 +7189,12 @@ def identity_view(member_name):
     # 决策建议
     # =====================
 
-    if profile.get("is_protected"):
-
-        profile["decision_star"] = "★★★★★"
-        profile["decision_title"] = "战略保护成员"
-        profile["decision_color"] = "purple"
-        profile["decision_text"] = "已进入身份保护名单，不参与自动清理。"
-        profile["decision_action"] = "长期保留｜资源支持｜禁止清理"
-
-    elif identity_score >= 90:
-
-        profile["decision_star"] = "★★★★★"
-        profile["decision_title"] = "核心战力"
-        profile["decision_color"] = "green"
-        profile["decision_text"] = "贡献与成长表现优秀。"
-        profile["decision_action"] = "重点培养｜资源倾斜"
-
-    elif identity_score >= 70:
-
-        profile["decision_star"] = "★★★★☆"
-        profile["decision_title"] = "A级骨干"
-        profile["decision_color"] = "blue"
-        profile["decision_text"] = "具备持续成长空间。"
-        profile["decision_action"] = "持续培养"
-
-    elif identity_score >= 50:
-
-        profile["decision_star"] = "★★★☆☆"
-        profile["decision_title"] = "稳定成员"
-        profile["decision_color"] = "gray"
-        profile["decision_text"] = "整体状态正常。"
-        profile["decision_action"] = "持续观察"
-
-    elif identity_score >= 30:
-
-        profile["decision_star"] = "★★☆☆☆"
-        profile["decision_title"] = "观察成员"
-        profile["decision_color"] = "orange"
-        profile["decision_text"] = "存在活跃下降风险。"
-        profile["decision_action"] = "重点观察"
-
-    else:
-
-        profile["decision_star"] = "★☆☆☆☆"
-        profile["decision_title"] = "清理候选"
-        profile["decision_color"] = "red"
-        profile["decision_text"] = "已接近清理阈值。"
-        profile["decision_action"] = "准备清理"
+    profile.update(
+        _build_identity_decision(
+            profile=profile,
+            identity_score=identity_score,
+        )
+    )
 
     records_cn = []
 
@@ -7633,23 +8202,27 @@ def ai_daily():
         ):
             train_members.append(member)
 
+        # A15.4.24-J：
+        # 风险等级与管理名单语义统一。
+        #
+        # warning、danger只进入观察核查；
+        # 只有clear才进入清理复核名单。
         if (
-            risk == "danger"
-            and protected == 0
-            and not (
-                av < 20
-                and bs < 30
-                and role not in ("leader", "admin")
+            risk in (
+                "danger",
+                "warning",
             )
+            and protected == 0
         ):
             watch_members.append(member)
 
         if (
-            risk == "danger"
-            and av < 20
-            and bs < 30
+            risk == "clear"
             and protected == 0
-            and role not in ("leader", "admin")
+            and role not in (
+                "leader",
+                "admin",
+            )
         ):
             clean_members.append(member)
 
@@ -7732,7 +8305,7 @@ def ai_daily():
     风险结构分析：
     {risk_report}
 
-    🚨 建议清理成员
+    🚨 清理复核成员
     共发现 {len(clean_members)} 人。
 
     建议优先核查：
