@@ -1664,159 +1664,643 @@ def calculate_trend(
     snapshot_time: str
 ):
 
+    import bisect
+
+    from datetime import (
+        datetime,
+        timedelta,
+    )
+
     conn = get_conn()
 
     try:
 
+        window_hours = 48
+        bucket_hours = 6
+        bucket_count = 8
+
+        dimension_weights = {
+            "battle": 0.40,
+            "assist": 0.30,
+            "donate": 0.30,
+        }
+
+        trend_score_map = {
+            "explosive": 100,
+            "up": 80,
+            "stable": 60,
+            "down": 30,
+            "dead": 0,
+        }
+
+        snapshot_dt = (
+            datetime.fromisoformat(
+                str(snapshot_time)
+            )
+        )
+
+        window_start = (
+            snapshot_dt
+            -
+            timedelta(
+                hours=window_hours
+            )
+        ).isoformat(
+            sep=" ",
+            timespec="seconds",
+        )
+
         current_rows = conn.execute(
             """
             SELECT
-                id,
-                member
-            FROM player_records
-            WHERE battle_id = ?
-            AND snapshot_time = ?
-            AND is_deleted = 0
+                pr.id,
+                pr.member
+            FROM player_records AS pr
+            WHERE pr.battle_id = ?
+            AND pr.snapshot_time = ?
+            AND COALESCE(
+                pr.is_deleted,
+                0
+            ) = 0
+            AND pr.id = (
+                SELECT MAX(p2.id)
+                FROM player_records AS p2
+                WHERE p2.battle_id
+                    = pr.battle_id
+                AND p2.snapshot_time
+                    = pr.snapshot_time
+                AND p2.member
+                    = pr.member
+                AND COALESCE(
+                    p2.is_deleted,
+                    0
+                ) = 0
+            )
+            ORDER BY pr.member
             """,
             (
                 battle_id,
-                snapshot_time
+                snapshot_time,
             )
         ).fetchall()
 
-        updated_count = 0
+        current_by_member = {}
 
         for current in current_rows:
 
-            member = current["member"]
+            member = str(
+                current["member"]
+                or ""
+            ).strip()
 
-            history = conn.execute(
-                """
-                SELECT
-                    battle_gain,
-                    assist_gain
-                FROM player_records
-                WHERE battle_id = ?
-                AND member = ?
-                AND is_deleted = 0
-                ORDER BY snapshot_time DESC
-                LIMIT 10
-                """,
-                (
-                    battle_id,
-                    member
+            if not member:
+
+                raise ValueError(
+                    "趋势计算发现空成员名称"
                 )
-            ).fetchall()
 
-            if len(history) < 5:
+            if member in current_by_member:
 
-                trend = "stable"
-                trend_score = 60
+                raise ValueError(
+                    "趋势计算发现重复成员："
+                    f"{member}"
+                )
+
+            current_by_member[
+                member
+            ] = current
+
+        members = list(
+            current_by_member
+        )
+
+        member_set = set(
+            members
+        )
+
+        history_rows = conn.execute(
+            """
+            SELECT
+                pr.member,
+                pr.snapshot_time,
+                COALESCE(
+                    pr.battle_gain,
+                    0
+                ) AS battle_gain,
+                COALESCE(
+                    pr.assist_gain,
+                    0
+                ) AS assist_gain,
+                COALESCE(
+                    pr.donate_gain,
+                    0
+                ) AS donate_gain
+            FROM player_records AS pr
+            WHERE pr.battle_id = ?
+            AND pr.snapshot_time > ?
+            AND pr.snapshot_time <= ?
+            AND COALESCE(
+                pr.is_deleted,
+                0
+            ) = 0
+            AND pr.id = (
+                SELECT MAX(p2.id)
+                FROM player_records AS p2
+                WHERE p2.battle_id
+                    = pr.battle_id
+                AND p2.snapshot_time
+                    = pr.snapshot_time
+                AND p2.member
+                    = pr.member
+                AND COALESCE(
+                    p2.is_deleted,
+                    0
+                ) = 0
+            )
+            ORDER BY
+                pr.snapshot_time,
+                pr.member
+            """,
+            (
+                battle_id,
+                window_start,
+                snapshot_time,
+            )
+        ).fetchall()
+
+        bucket_data = {
+            member: [
+                {
+                    "battle": 0.0,
+                    "assist": 0.0,
+                    "donate": 0.0,
+                }
+                for _ in range(
+                    bucket_count
+                )
+            ]
+            for member in members
+        }
+
+        for history in history_rows:
+
+            member = str(
+                history["member"]
+                or ""
+            ).strip()
+
+            if member not in member_set:
+
+                continue
+
+            history_dt = (
+                datetime.fromisoformat(
+                    str(
+                        history[
+                            "snapshot_time"
+                        ]
+                    )
+                )
+            )
+
+            bucket_index = int(
+                (
+                    snapshot_dt
+                    -
+                    history_dt
+                ).total_seconds()
+                //
+                (
+                    bucket_hours
+                    * 3600
+                )
+            )
+
+            if not (
+                0
+                <= bucket_index
+                < bucket_count
+            ):
+
+                continue
+
+            bucket = bucket_data[
+                member
+            ][bucket_index]
+
+            bucket[
+                "battle"
+            ] += max(
+                0.0,
+                float(
+                    history[
+                        "battle_gain"
+                    ]
+                    or 0
+                ),
+            )
+
+            bucket[
+                "assist"
+            ] += max(
+                0.0,
+                float(
+                    history[
+                        "assist_gain"
+                    ]
+                    or 0
+                ),
+            )
+
+            bucket[
+                "donate"
+            ] += max(
+                0.0,
+                float(
+                    history[
+                        "donate_gain"
+                    ]
+                    or 0
+                ),
+            )
+
+        recent_values = {}
+        previous_values = {}
+        weighted_24 = {}
+        weighted_48 = {}
+        active_counts = {}
+
+        for member in members:
+
+            recent = {
+                "battle": 0.0,
+                "assist": 0.0,
+                "donate": 0.0,
+            }
+
+            previous = {
+                "battle": 0.0,
+                "assist": 0.0,
+                "donate": 0.0,
+            }
+
+            weighted_buckets = []
+
+            for bucket_index in range(
+                bucket_count
+            ):
+
+                bucket = bucket_data[
+                    member
+                ][bucket_index]
+
+                target = (
+                    recent
+                    if bucket_index < 4
+                    else previous
+                )
+
+                for field in (
+                    "battle",
+                    "assist",
+                    "donate",
+                ):
+
+                    target[
+                        field
+                    ] += bucket[
+                        field
+                    ]
+
+                weighted_buckets.append(
+                    bucket["battle"]
+                    +
+                    bucket["assist"] * 2
+                    +
+                    bucket["donate"]
+                )
+
+            recent_values[
+                member
+            ] = recent
+
+            previous_values[
+                member
+            ] = previous
+
+            weighted_24[
+                member
+            ] = sum(
+                weighted_buckets[:4]
+            )
+
+            weighted_48[
+                member
+            ] = sum(
+                weighted_buckets
+            )
+
+            active_counts[
+                member
+            ] = {
+                "new": sum(
+                    1
+                    for value
+                    in weighted_buckets[:4]
+                    if value > 0
+                ),
+                "old": sum(
+                    1
+                    for value
+                    in weighted_buckets[4:]
+                    if value > 0
+                ),
+            }
+
+        def positive_percentile_map(
+            values_by_member
+        ):
+
+            positives = sorted(
+                value
+                for value
+                in values_by_member.values()
+                if value > 0
+            )
+
+            if not positives:
+
+                return {
+                    member: 0.0
+                    for member
+                    in values_by_member
+                }
+
+            positive_count = len(
+                positives
+            )
+
+            result = {}
+
+            for member, value in (
+                values_by_member.items()
+            ):
+
+                if value <= 0:
+
+                    result[
+                        member
+                    ] = 0.0
+
+                    continue
+
+                position = (
+                    bisect.bisect_right(
+                        positives,
+                        value,
+                    )
+                )
+
+                result[
+                    member
+                ] = (
+                    position
+                    /
+                    positive_count
+                    *
+                    100
+                )
+
+            return result
+
+        def build_window_strength(
+            values_by_member
+        ):
+
+            percentile_maps = {}
+
+            for field in (
+                "battle",
+                "assist",
+                "donate",
+            ):
+
+                percentile_maps[
+                    field
+                ] = (
+                    positive_percentile_map({
+                        member:
+                            values_by_member[
+                                member
+                            ][field]
+                        for member
+                        in members
+                    })
+                )
+
+            result = {}
+
+            for member in members:
+
+                active_fields = [
+                    field
+                    for field in (
+                        "battle",
+                        "assist",
+                        "donate",
+                    )
+                    if values_by_member[
+                        member
+                    ][field] > 0
+                ]
+
+                if not active_fields:
+
+                    result[
+                        member
+                    ] = 0.0
+
+                    continue
+
+                active_weight = sum(
+                    dimension_weights[
+                        field
+                    ]
+                    for field
+                    in active_fields
+                )
+
+                normalized_score = (
+                    sum(
+                        percentile_maps[
+                            field
+                        ][member]
+                        *
+                        dimension_weights[
+                            field
+                        ]
+                        for field
+                        in active_fields
+                    )
+                    /
+                    active_weight
+                )
+
+                breadth_factor = (
+                    0.85
+                    +
+                    len(
+                        active_fields
+                    )
+                    * 0.05
+                )
+
+                result[
+                    member
+                ] = (
+                    normalized_score
+                    *
+                    breadth_factor
+                )
+
+            return result
+
+        recent_strength = (
+            build_window_strength(
+                recent_values
+            )
+        )
+
+        previous_strength = (
+            build_window_strength(
+                previous_values
+            )
+        )
+
+        ranked_24 = sorted(
+            members,
+            key=lambda member: (
+                -weighted_24[
+                    member
+                ],
+                member,
+            ),
+        )
+
+        recent_rank = {
+            member: index + 1
+            for index, member
+            in enumerate(
+                ranked_24
+            )
+        }
+
+        updated_count = 0
+
+        for member in members:
+
+            new_active = active_counts[
+                member
+            ]["new"]
+
+            old_active = active_counts[
+                member
+            ]["old"]
+
+            current_strength = (
+                recent_strength[
+                    member
+                ]
+            )
+
+            earlier_strength = (
+                previous_strength[
+                    member
+                ]
+            )
+
+            strength_delta = (
+                current_strength
+                -
+                earlier_strength
+            )
+
+            rank = recent_rank[
+                member
+            ]
+
+            if weighted_48[
+                member
+            ] <= 0:
+
+                trend = "dead"
+
+            elif (
+                new_active == 0
+                and old_active >= 1
+            ):
+
+                trend = "down"
+
+            elif (
+                rank <= 60
+                and new_active >= 2
+                and current_strength >= 78
+                and strength_delta >= 6
+            ):
+
+                trend = "explosive"
+
+            elif (
+                new_active >= 1
+                and current_strength >= 35
+                and strength_delta >= 8
+            ):
+
+                trend = "up"
+
+            elif (
+                rank <= 30
+                and new_active >= 2
+                and strength_delta >= -4
+            ):
+
+                trend = "up"
+
+            elif (
+                new_active <= 1
+                and old_active >= 2
+                and rank > 60
+                and current_strength <= 25
+                and strength_delta <= -22
+            ):
+
+                trend = "down"
 
             else:
 
-                values = []
+                trend = "stable"
 
-                for h in reversed(history):
-
-                    battle_gain = h["battle_gain"] or 0
-                    assist_gain = h["assist_gain"] or 0
-
-                    values.append(
-                        battle_gain
-                        +
-                        assist_gain * 2
-                    )
-
-                half = len(values) // 2
-
-                old_avg = (
-                    sum(values[:half])
-                    /
-                    max(1, len(values[:half]))
-                )
-
-                new_avg = (
-                    sum(values[half:])
-                    /
-                    max(1, len(values[half:]))
-                )
-
-                if old_avg <= 0:
-
-                    ratio = 1
-
-                else:
-
-                    ratio = (
-                        new_avg
-                        /
-                        old_avg
-                    )
-
-                if max(values) < 100:
-
-                    trend = "dead"
-                    trend_score = 0
-
-                elif new_avg < 500:
-
-                    if ratio >= 2:
-
-                        trend = "up"
-                        trend_score = 80
-
-                    elif ratio >= 0.8:
-
-                        trend = "stable"
-                        trend_score = 60
-
-                    else:
-
-                        trend = "down"
-                        trend_score = 30
-
-                else:
-
-                    if ratio >= 2:
-
-                        trend = "explosive"
-                        trend_score = 100
-
-                    elif ratio >= 1.2:
-
-                        trend = "up"
-                        trend_score = 80
-
-                    elif ratio >= 0.8:
-
-                        trend = "stable"
-                        trend_score = 60
-
-                    elif ratio >= 0.3:
-
-                        trend = "down"
-                        trend_score = 30
-
-                    else:
-
-                        trend = "dead"
-                        trend_score = 0
+            trend_score = (
+                trend_score_map[
+                    trend
+                ]
+            )
 
             conn.execute(
                 """
                 UPDATE player_records
                 SET
-
                     trend = ?,
                     trend_score = ?
-
                 WHERE id = ?
                 """,
                 (
                     trend,
                     trend_score,
-                    current["id"]
+                    current_by_member[
+                        member
+                    ]["id"],
                 )
             )
 
@@ -1848,6 +2332,7 @@ def calculate_trend(
     finally:
 
         conn.close()
+
 
 
 def calculate_bs(
@@ -3121,7 +3606,7 @@ def calculate_risk(
                 )
             reasons = []
 
-            risk_score = 0
+            risk_score = 8
 
             # =====================
             # BS
