@@ -2334,6 +2334,479 @@ def _apply_recent_risk_protection(
     return level, None
 
 
+def _build_high_contribution_protection_map(
+    conn,
+    battle_id,
+    snapshot_time,
+):
+    """
+    构建近48小时高贡献保护名单。
+
+    规则：
+    1. 近48小时战功或加权贡献前5%，
+       至少覆盖1个独立6小时活跃桶；
+    2. 近48小时战功或加权贡献前10%，
+       至少覆盖2个独立6小时活跃桶；
+    3. 赛季战功总量前5%，
+       近48小时至少覆盖1个活跃桶。
+
+    该保护层只允许clear/danger降为warning，
+    不会直接产生safe。
+    """
+    import math
+    from collections import defaultdict
+    from datetime import (
+        datetime,
+        timedelta,
+    )
+
+    window_hours = 48
+    bucket_hours = 6
+
+    latest_dt = datetime.fromisoformat(
+        str(
+            snapshot_time
+        )
+    )
+
+    window_start = (
+        latest_dt
+        - timedelta(
+            hours=window_hours
+        )
+    ).isoformat(
+        sep=" ",
+        timespec="seconds",
+    )
+
+    latest_rows = conn.execute(
+        """
+        SELECT
+            pr.member,
+            COALESCE(
+                pr.battle_total,
+                0
+            ) AS battle_total
+        FROM player_records AS pr
+        WHERE pr.battle_id = ?
+          AND pr.snapshot_time = ?
+          AND COALESCE(
+              pr.is_deleted,
+              0
+          ) = 0
+          AND pr.id = (
+              SELECT MAX(p2.id)
+              FROM player_records AS p2
+              WHERE p2.battle_id
+                    = pr.battle_id
+                AND p2.snapshot_time
+                    = pr.snapshot_time
+                AND p2.member
+                    = pr.member
+                AND COALESCE(
+                    p2.is_deleted,
+                    0
+                ) = 0
+          )
+        """,
+        (
+            battle_id,
+            snapshot_time,
+        ),
+    ).fetchall()
+
+    latest_by_member = {
+        str(
+            row["member"]
+            or ""
+        ): {
+            "battle_total": float(
+                row["battle_total"]
+                or 0
+            ),
+        }
+        for row in latest_rows
+        if str(
+            row["member"]
+            or ""
+        )
+    }
+
+    member_names = set(
+        latest_by_member
+    )
+
+    if not member_names:
+        return {}
+
+    history_rows = conn.execute(
+        """
+        SELECT
+            pr.member,
+            pr.snapshot_time,
+            COALESCE(
+                pr.battle_gain,
+                0
+            ) AS battle_gain,
+            COALESCE(
+                pr.assist_gain,
+                0
+            ) AS assist_gain,
+            COALESCE(
+                pr.donate_gain,
+                0
+            ) AS donate_gain
+        FROM player_records AS pr
+        WHERE pr.battle_id = ?
+          AND pr.snapshot_time > ?
+          AND pr.snapshot_time <= ?
+          AND COALESCE(
+              pr.is_deleted,
+              0
+          ) = 0
+          AND pr.id = (
+              SELECT MAX(p2.id)
+              FROM player_records AS p2
+              WHERE p2.battle_id
+                    = pr.battle_id
+                AND p2.snapshot_time
+                    = pr.snapshot_time
+                AND p2.member
+                    = pr.member
+                AND COALESCE(
+                    p2.is_deleted,
+                    0
+                ) = 0
+          )
+        """,
+        (
+            battle_id,
+            window_start,
+            snapshot_time,
+        ),
+    ).fetchall()
+
+    evidence = defaultdict(
+        lambda: {
+            "battle_gain": 0.0,
+            "weighted_gain": 0.0,
+            "hard_gain": 0.0,
+            "active_buckets": set(),
+        }
+    )
+
+    bucket_seconds = (
+        bucket_hours
+        * 3600
+    )
+
+    max_bucket_index = (
+        window_hours
+        // bucket_hours
+        - 1
+    )
+
+    for row in history_rows:
+        member = str(
+            row["member"]
+            or ""
+        )
+
+        if member not in member_names:
+            continue
+
+        battle_gain = max(
+            0.0,
+            float(
+                row["battle_gain"]
+                or 0
+            ),
+        )
+
+        assist_gain = max(
+            0.0,
+            float(
+                row["assist_gain"]
+                or 0
+            ),
+        )
+
+        donate_gain = max(
+            0.0,
+            float(
+                row["donate_gain"]
+                or 0
+            ),
+        )
+
+        hard_gain = (
+            battle_gain
+            + assist_gain
+            + donate_gain
+        )
+
+        weighted_gain = (
+            battle_gain
+            + assist_gain * 2
+            + donate_gain
+        )
+
+        item = evidence[
+            member
+        ]
+
+        item["battle_gain"] += (
+            battle_gain
+        )
+
+        item["weighted_gain"] += (
+            weighted_gain
+        )
+
+        item["hard_gain"] += (
+            hard_gain
+        )
+
+        if hard_gain <= 0:
+            continue
+
+        row_dt = datetime.fromisoformat(
+            str(
+                row["snapshot_time"]
+            )
+        )
+
+        seconds_from_latest = max(
+            0.0,
+            (
+                latest_dt
+                - row_dt
+            ).total_seconds(),
+        )
+
+        bucket_index = int(
+            seconds_from_latest
+            // bucket_seconds
+        )
+
+        bucket_index = min(
+            bucket_index,
+            max_bucket_index,
+        )
+
+        item[
+            "active_buckets"
+        ].add(
+            bucket_index
+        )
+
+    for member in member_names:
+        evidence[
+            member
+        ]
+
+    def rank_map(field):
+        values = {
+            member: float(
+                evidence[
+                    member
+                ][field]
+            )
+            for member in member_names
+        }
+
+        return {
+            member: (
+                1
+                + sum(
+                    1
+                    for other_value
+                    in values.values()
+                    if other_value
+                       > target_value
+                )
+            )
+            for member, target_value
+            in values.items()
+        }
+
+    battle_gain_rank = rank_map(
+        "battle_gain"
+    )
+
+    weighted_gain_rank = rank_map(
+        "weighted_gain"
+    )
+
+    battle_total_values = {
+        member: float(
+            latest_by_member[
+                member
+            ]["battle_total"]
+        )
+        for member in member_names
+    }
+
+    battle_total_rank = {
+        member: (
+            1
+            + sum(
+                1
+                for other_value
+                in battle_total_values.values()
+                if other_value
+                   > target_value
+            )
+        )
+        for member, target_value
+        in battle_total_values.items()
+    }
+
+    member_count = len(
+        member_names
+    )
+
+    top_5_limit = max(
+        1,
+        math.ceil(
+            member_count
+            * 0.05
+        ),
+    )
+
+    top_10_limit = max(
+        1,
+        math.ceil(
+            member_count
+            * 0.10
+        ),
+    )
+
+    protected = {}
+
+    for member in member_names:
+        item = evidence[
+            member
+        ]
+
+        battle_gain = float(
+            item["battle_gain"]
+        )
+
+        weighted_gain = float(
+            item["weighted_gain"]
+        )
+
+        hard_gain = float(
+            item["hard_gain"]
+        )
+
+        active_buckets = len(
+            item["active_buckets"]
+        )
+
+        battle_rank = (
+            battle_gain_rank[
+                member
+            ]
+        )
+
+        weighted_rank = (
+            weighted_gain_rank[
+                member
+            ]
+        )
+
+        total_rank = (
+            battle_total_rank[
+                member
+            ]
+        )
+
+        battle_top_5 = (
+            battle_gain > 0
+            and battle_rank
+                <= top_5_limit
+        )
+
+        weighted_top_5 = (
+            weighted_gain > 0
+            and weighted_rank
+                <= top_5_limit
+        )
+
+        battle_top_10 = (
+            battle_gain > 0
+            and battle_rank
+                <= top_10_limit
+        )
+
+        weighted_top_10 = (
+            weighted_gain > 0
+            and weighted_rank
+                <= top_10_limit
+        )
+
+        season_top_5 = (
+            total_rank
+            <= top_5_limit
+            and hard_gain > 0
+        )
+
+        if (
+            battle_top_5
+            and active_buckets >= 1
+        ):
+            protected[member] = (
+                "近48小时战功增长前5%，"
+                "高贡献保护"
+            )
+
+        elif (
+            weighted_top_5
+            and active_buckets >= 1
+        ):
+            protected[member] = (
+                "近48小时综合贡献前5%，"
+                "高贡献保护"
+            )
+
+        elif (
+            battle_top_10
+            and active_buckets >= 2
+        ):
+            protected[member] = (
+                "近48小时战功增长前10%"
+                f"且覆盖{active_buckets}个"
+                "独立6小时观察段，"
+                "高贡献保护"
+            )
+
+        elif (
+            weighted_top_10
+            and active_buckets >= 2
+        ):
+            protected[member] = (
+                "近48小时综合贡献前10%"
+                f"且覆盖{active_buckets}个"
+                "独立6小时观察段，"
+                "高贡献保护"
+            )
+
+        elif (
+            season_top_5
+            and active_buckets >= 1
+        ):
+            protected[member] = (
+                "赛季战功总量前5%"
+                "且近48小时仍有贡献，"
+                "高贡献保护"
+            )
+
+    return protected
+
+
+
 # =========================
 # A15.4.24-F：身份建议与风险等级一致性
 # =========================
@@ -2571,6 +3044,14 @@ def calculate_risk(
             )
         ).fetchall()
 
+        high_contribution_protection = (
+            _build_high_contribution_protection_map(
+                conn=conn,
+                battle_id=battle_id,
+                snapshot_time=snapshot_time,
+            )
+        )
+
         updated_count = 0
 
         for row in rows:
@@ -2779,9 +3260,32 @@ def calculate_risk(
                     evidence=recent_evidence,
                 )
 
+            high_contribution_reason = (
+                high_contribution_protection.get(
+                    member
+                )
+            )
+
+            if (
+                high_contribution_reason
+                and risk_level in (
+                    "clear",
+                    "danger",
+                )
+            ):
+                risk_level = "warning"
+
             if protection_reason:
                 reasons.append(
                     protection_reason
+                )
+
+            if (
+                high_contribution_reason
+                and risk_level == "warning"
+            ):
+                reasons.append(
+                    high_contribution_reason
                 )
 
             # =====================
