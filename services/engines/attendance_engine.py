@@ -6,12 +6,14 @@ from typing import Any
 
 STATUS_EXEMPT = "豁免"
 STATUS_ANOMALY = "数据异常"
+STATUS_NO_BASELINE = "无基线"
 STATUS_ABSENT = "缺勤"
 STATUS_BELOW = "未达标"
 STATUS_QUALIFIED = "合格"
 
 OVERALL_EXEMPT = "豁免"
 OVERALL_ANOMALY = "数据异常"
+OVERALL_NO_BASELINE = "无基线"
 OVERALL_ABSENT = "全项缺勤"
 OVERALL_IMPROVE = "待改进"
 OVERALL_QUALIFIED = "全部合格"
@@ -42,7 +44,8 @@ OVERALL_PRIORITY = {
     OVERALL_ABSENT: 1,
     OVERALL_IMPROVE: 2,
     OVERALL_QUALIFIED: 3,
-    OVERALL_EXEMPT: 4,
+    OVERALL_NO_BASELINE: 4,
+    OVERALL_EXEMPT: 5,
 }
 
 
@@ -230,6 +233,7 @@ def _build_member_result(
     *,
     thresholds: Mapping[str, float],
     exempt: bool,
+    has_baseline: bool,
     group_key: str,
 ) -> dict[str, Any]:
     result = dict(end_row)
@@ -243,6 +247,7 @@ def _build_member_result(
     statuses: list[str] = []
     qualified_count = 0
     abnormal_count = 0
+    no_baseline_count = 0
     failed_count = 0
 
     for metric in METRICS:
@@ -251,23 +256,32 @@ def _build_member_result(
         total_key = metric["total_key"]
         growth_key = metric["growth_key"]
 
-        start_total = _to_number(
-            start_row.get(total_key, 0)
-        )
-
         end_total = _to_number(
             end_row.get(total_key, 0)
         )
 
-        growth = _to_number(
-            end_total - start_total
-        )
+        if has_baseline:
+            start_total = _to_number(
+                start_row.get(total_key, 0)
+            )
 
-        status = classify_growth(
-            growth,
-            thresholds[code],
-            exempt=exempt,
-        )
+            growth: int | float | None = (
+                _to_number(
+                    end_total - start_total
+                )
+            )
+        else:
+            growth = None
+
+        if exempt:
+            status = STATUS_EXEMPT
+        elif not has_baseline:
+            status = STATUS_NO_BASELINE
+        else:
+            status = classify_growth(
+                growth,
+                thresholds[code],
+            )
 
         result[growth_key] = growth
         result[f"{label}考勤状态"] = status
@@ -279,6 +293,8 @@ def _build_member_result(
             qualified_count += 1
         elif status == STATUS_ANOMALY:
             abnormal_count += 1
+        elif status == STATUS_NO_BASELINE:
+            no_baseline_count += 1
         elif status in {
             STATUS_ABSENT,
             STATUS_BELOW,
@@ -287,6 +303,8 @@ def _build_member_result(
 
     if exempt:
         overall_status = OVERALL_EXEMPT
+    elif not has_baseline:
+        overall_status = OVERALL_NO_BASELINE
     elif abnormal_count > 0:
         overall_status = OVERALL_ANOMALY
     elif qualified_count == len(METRICS):
@@ -306,6 +324,8 @@ def _build_member_result(
     result["合格项数"] = qualified_count
     result["未达标项数"] = failed_count
     result["异常项数"] = abnormal_count
+    result["无基线项数"] = no_baseline_count
+    result["是否有基线"] = 1 if has_baseline else 0
     result["是否免考核"] = 1 if exempt else 0
 
     return result
@@ -328,7 +348,10 @@ def _build_metric_summary(
     valid = [
         member
         for member in assessed
-        if member[status_key] != STATUS_ANOMALY
+        if member[status_key] not in {
+            STATUS_ANOMALY,
+            STATUS_NO_BASELINE,
+        }
     ]
 
     qualified = [
@@ -353,6 +376,12 @@ def _build_metric_summary(
         member
         for member in assessed
         if member[status_key] == STATUS_ANOMALY
+    ]
+
+    no_baseline = [
+        member
+        for member in assessed
+        if member[status_key] == STATUS_NO_BASELINE
     ]
 
     active = [
@@ -418,6 +447,7 @@ def _build_metric_summary(
         "缺勤人数": len(absent),
         "未达标人数": len(below),
         "数据异常人数": len(anomaly),
+        "无基线人数": len(no_baseline),
         "总增长": _to_number(total_growth),
         "人均增长": (
             round(total_growth / valid_count, 1)
@@ -437,6 +467,10 @@ def _build_metric_summary(
         "数据异常名单": sorted(
             str(member["成员"])
             for member in anomaly
+        ),
+        "无基线名单": sorted(
+            str(member["成员"])
+            for member in no_baseline
         ),
     }
 
@@ -467,6 +501,24 @@ def _build_scope_summary(
         if member["是否免考核"]
     )
 
+    baseline_names = {
+        str(member["成员"])
+        for member in members
+        if (
+            not member["是否免考核"]
+            and member["是否有基线"]
+        )
+    }
+
+    no_baseline_names = sorted(
+        str(member["成员"])
+        for member in members
+        if (
+            not member["是否免考核"]
+            and not member["是否有基线"]
+        )
+    )
+
     comprehensive_score = sum(
         metrics[metric["code"]]["合格率"]
         * weights[metric["code"]]
@@ -476,6 +528,9 @@ def _build_scope_summary(
     return {
         "总人数": len(members),
         "考核人数": len(assessed_names),
+        "有基线人数": len(baseline_names),
+        "无基线人数": len(no_baseline_names),
+        "无基线名单": no_baseline_names,
         "豁免人数": len(exempt_names),
         "豁免名单": exempt_names,
         "战功": metrics["battle"],
@@ -582,6 +637,9 @@ def build_attendance_dashboard(
                 end_row,
                 thresholds=normalized_thresholds,
                 exempt=exempt,
+                has_baseline=(
+                    member_name in start_index
+                ),
                 group_key=group_key,
             )
         )
@@ -692,8 +750,10 @@ def build_attendance_dashboard(
             "离开成员名单": sorted(
                 start_names - end_names
             ),
-            "考勤分母规则":
-                "仅统计结束快照成员",
+            "考勤分母规则": (
+                "成员范围为结束快照；"
+                "无基线成员不进入有效合格率分母"
+            ),
         },
         "配置": {
             "考核标准":

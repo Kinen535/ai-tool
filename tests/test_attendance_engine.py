@@ -6,11 +6,13 @@ import unittest
 from services.engines.attendance_engine import (
     OVERALL_ABSENT,
     OVERALL_ANOMALY,
+    OVERALL_NO_BASELINE,
     OVERALL_QUALIFIED,
     STATUS_ABSENT,
     STATUS_ANOMALY,
     STATUS_BELOW,
     STATUS_EXEMPT,
+    STATUS_NO_BASELINE,
     STATUS_QUALIFIED,
     build_attendance_dashboard,
     classify_growth,
@@ -284,7 +286,7 @@ class AttendanceEngineTests(unittest.TestCase):
             STATUS_EXEMPT,
         )
 
-    def test_new_member_uses_zero_start_totals(self):
+    def test_new_member_is_no_baseline(self):
         result = build_attendance_dashboard(
             [],
             [
@@ -300,18 +302,54 @@ class AttendanceEngineTests(unittest.TestCase):
         )
 
         member = result["成员明细"][0]
+        overview = result["同盟概览"]
 
         self.assertEqual(
             result["范围"]["新增成员数"],
             1,
         )
-        self.assertEqual(
+        self.assertIsNone(
             member["战功增长"],
-            2500,
+        )
+        self.assertEqual(
+            member["战功考勤状态"],
+            STATUS_NO_BASELINE,
+        )
+        self.assertEqual(
+            member["助攻考勤状态"],
+            STATUS_NO_BASELINE,
+        )
+        self.assertEqual(
+            member["捐献考勤状态"],
+            STATUS_NO_BASELINE,
         )
         self.assertEqual(
             member["综合考勤状态"],
-            OVERALL_QUALIFIED,
+            OVERALL_NO_BASELINE,
+        )
+        self.assertEqual(
+            member["是否有基线"],
+            0,
+        )
+        self.assertEqual(
+            overview["无基线人数"],
+            1,
+        )
+        self.assertEqual(
+            overview["有基线人数"],
+            0,
+        )
+        self.assertEqual(
+            overview["战功"]["无基线人数"],
+            1,
+        )
+        self.assertEqual(
+            overview["战功"]["有效考核人数"],
+            0,
+        )
+        self.assertEqual(
+            overview["战功"]["合格人数"],
+            0,
         )
 
     def test_duplicate_member_is_rejected(self):
