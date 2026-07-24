@@ -921,151 +921,29 @@ def rebuild_gain(battle_id: int):
     finally:
         conn.close()
 
-def sync_member_profiles(
-    battle_id: int,
-    snapshot_time: str
-):
-
+def sync_member_profiles(battle_id: int, snapshot_time: str):
     conn = get_conn()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                member,
-                av,
-                bs,
-                trend,
-                risk_level,
-                risk_reason
-            FROM player_records
-            WHERE battle_id = ?
-            AND snapshot_time = ?
-            AND is_deleted = 0
-            """,
-            (
-                battle_id,
-                snapshot_time
-            )
-        ).fetchall()
-
+        rows = conn.execute('\n            SELECT\n                member,\n                av,\n                bs,\n                trend,\n                risk_level,\n                risk_reason\n            FROM player_records\n            WHERE battle_id = ?\n            AND snapshot_time = ?\n            AND is_deleted = 0\n            ', (battle_id, snapshot_time)).fetchall()
         updated_count = 0
-
         for row in rows:
-
-            member_name = row["member"]
-
-            exists = conn.execute(
-                """
-                SELECT
-                    id
-                FROM member_profiles
-                WHERE member_name = ?
-                """,
-                (
-                    member_name,
-                )
-            ).fetchone()
-
+            member_name = row['member']
+            exists = conn.execute('\n                SELECT id\n                FROM member_battle_profiles\n                WHERE battle_id=?\n                  AND member_name=?\n                ', (battle_id, member_name)).fetchone()
             if exists:
-
-                conn.execute(
-                    """
-                    UPDATE member_profiles
-                    SET
-
-                        av = ?,
-                        bs = ?,
-                        trend = ?,
-                        risk_level = ?,
-                        risk_reason = ?,
-                        last_seen = ?
-
-                    WHERE member_name = ?
-                    """,
-                    (
-                        row["av"] or 0,
-                        row["bs"] or 0,
-                        row["trend"] or "stable",
-                        row["risk_level"] or "safe",
-                        row["risk_reason"] or "",
-                        snapshot_time,
-                        member_name
-                    )
-                )
-
+                conn.execute('\n                UPDATE member_battle_profiles\n                SET\n                    av=?,\n                    bs=?,\n                    trend=?,\n                    risk_level=?,\n                    risk_reason=?,\n                    last_seen=?\n                WHERE battle_id=?\n                  AND member_name=?\n                ', (row['av'] or 0, row['bs'] or 0, row['trend'] or 'stable', row['risk_level'] or 'safe', row['risk_reason'] or '', snapshot_time, battle_id, member_name))
             else:
-
-                conn.execute(
-                    """
-                    INSERT INTO member_profiles (
-
-                        member_name,
-                        av,
-                        bs,
-                        trend,
-                        risk_level,
-                        risk_reason,
-
-                        role_tag,
-                        identity_score,
-                        is_protected,
-
-                        first_seen,
-                        last_seen,
-                        created_at
-
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        member_name,
-                        row["av"] or 0,
-                        row["bs"] or 0,
-                        row["trend"] or "stable",
-                        row["risk_level"] or "safe",
-                        row["risk_reason"] or "",
-
-                        "member",
-                        0,
-                        0,
-
-                        snapshot_time,
-                        snapshot_time,
-                        datetime.now().strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                )
-
+                conn.execute('\n                INSERT INTO member_battle_profiles (\n                    battle_id,\n                    member_name,\n                    av,\n                    bs,\n                    trend,\n                    risk_level,\n                    risk_reason,\n                    role_tag,\n                    identity_score,\n                    is_protected,\n                    first_seen,\n                    last_seen,\n                    created_at\n                )\n                VALUES (\n                    ?, ?, ?, ?, ?, ?, ?,\n                    ?, ?, ?, ?, ?, ?\n                )\n                ', (battle_id, member_name, row['av'] or 0, row['bs'] or 0, row['trend'] or 'stable', row['risk_level'] or 'safe', row['risk_reason'] or '', 'member', 0, 0, snapshot_time, snapshot_time, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             updated_count += 1
-
         conn.commit()
-
-        print(
-            f"👤 MemberProfile同步完成: "
-            f"{updated_count} 条"
-        )
-
+        print(f'👤 MemberProfile同步完成: {updated_count} 条')
         return updated_count
-
     except Exception as e:
-
         conn.rollback()
-
-        print(
-            "❌ sync_member_profiles 出错:",
-            e
-        )
-
+        print('❌ sync_member_profiles 出错:', e)
         traceback.print_exc()
-
         raise
-
     finally:
-
-        conn.close()        
+        conn.close()
 
 
 def calculate_wv(
@@ -1177,292 +1055,142 @@ def calculate_wv(
 
         conn.close()
 
-def calculate_identity_score(
-    battle_id: int,
-    snapshot_time: str
-):
-
+def calculate_identity_score(battle_id: int, snapshot_time: str):
     conn = get_conn()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                member_name,
-                av,
-                bs,
-                trend,
-                risk_level,
-                role_tag,
-                is_protected,
-                exempt_stall
-            FROM member_profiles
-            """
-        ).fetchall()
-
+        rows = conn.execute('\n                SELECT\n                    mbp.member_name,\n                    mbp.av,\n                    mbp.bs,\n                    mbp.trend,\n                    mbp.risk_level,\n                    mbp.role_tag,\n                    mbp.is_protected,\n                    mbp.exempt_stall\n\n                FROM member_battle_profiles\n                     AS mbp\n\n                INNER JOIN player_records\n                           AS pr\n\n                  ON pr.battle_id\n                     =mbp.battle_id\n\n                 AND pr.member\n                     =mbp.member_name\n\n                WHERE mbp.battle_id=?\n                  AND pr.snapshot_time=?\n                  AND COALESCE(\n                      pr.is_deleted,\n                      0\n                  )=0\n\n                ORDER BY mbp.member_name\n                ', (battle_id, snapshot_time)).fetchall()
         updated_count = 0
-
         for row in rows:
-
             score = 0
-
-            role_tag = row["role_tag"] or "member"
-
-            # =====================
-            # 基础表现分
-            # =====================
-
-            score += min(
-                40,
-                (row["bs"] or 0) * 0.4
-            )
-
-            score += min(
-                25,
-                (row["av"] or 0) * 0.25
-            )
-
-            trend = row["trend"] or "stable"
-
-            if trend == "explosive":
-
+            role_tag = row['role_tag'] or 'member'
+            score += min(40, (row['bs'] or 0) * 0.4)
+            score += min(25, (row['av'] or 0) * 0.25)
+            trend = row['trend'] or 'stable'
+            if trend == 'explosive':
                 score += 15
-
-            elif trend == "up":
-
+            elif trend == 'up':
                 score += 10
-
-            elif trend == "stable":
-
+            elif trend == 'stable':
                 score += 5
-
-            risk = row["risk_level"] or ""
-
-            if risk == "protected":
-
+            risk = row['risk_level'] or ''
+            if risk == 'protected':
                 score += 15
-
-            elif risk == "safe":
-
+            elif risk == 'safe':
                 score += 10
-
-            elif risk == "warning":
-
+            elif risk == 'warning':
                 score += 5
-
-            # =====================
-            # 身份加成
-            # =====================
-
-            if role_tag == "admin":
-
+            if role_tag == 'admin':
                 score += 30
-
-            elif role_tag == "warehouse":
-
+            elif role_tag == 'warehouse':
                 score += 25
-
-            elif role_tag == "core":
-
+            elif role_tag == 'core':
                 score += 20
-
-            if row["is_protected"] == 1:
-
+            if row['is_protected'] == 1:
                 score += 10
-
-            if row["exempt_stall"] == 1:
-
+            if row['exempt_stall'] == 1:
                 score += 5
-
-            # =====================
-            # 特殊身份保底
-            # =====================
-
-            if role_tag == "admin":
-
-                score = max(
-                    score,
-                    90
-                )
-
-            elif role_tag == "warehouse":
-
-                score = max(
-                    score,
-                    80
-                )
-
-            elif role_tag == "core":
-
-                score = max(
-                    score,
-                    85
-                )
-
-            elif row["is_protected"] == 1:
-
-                score = max(
-                    score,
-                    75
-                )
-
-            score = min(
-                100,
-                round(score, 1)
-            )
-
-            conn.execute(
-                """
-                UPDATE member_profiles
-                SET identity_score = ?
-                WHERE member_name = ?
-                """,
+            if role_tag == 'admin':
+                score = max(score, 90)
+            elif role_tag == 'warehouse':
+                score = max(score, 80)
+            elif role_tag == 'core':
+                score = max(score, 85)
+            elif row['is_protected'] == 1:
+                score = max(score, 75)
+            score = min(100, round(score, 1))
+            conn.execute('\n                UPDATE member_battle_profiles\n                SET identity_score=?\n                WHERE battle_id=?\n                  AND member_name=?\n                ', (score, battle_id, row['member_name']))
+            history_update = conn.execute(
+                '''
+                UPDATE identity_history
+                SET
+                    av=?,
+                    bs=?,
+                    trend=?,
+                    risk_level=?,
+                    identity_score=?
+                WHERE battle_id=?
+                  AND member_name=?
+                  AND snapshot_time=?
+                ''',
                 (
+                    row['av'] or 0,
+                    row['bs'] or 0,
+                    row['trend'] or 'stable',
+                    row['risk_level'] or 'safe',
                     score,
-                    row["member_name"]
-                )
+                    battle_id,
+                    row['member_name'],
+                    snapshot_time,
+                ),
             )
 
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO identity_history (
-
-                    member_name,
-                    snapshot_time,
-
-                    av,
-                    bs,
-
-                    trend,
-                    risk_level,
-
-                    identity_score,
-
-                    created_at
-
+            if history_update.rowcount == 0:
+                conn.execute(
+                    '''
+                    INSERT INTO identity_history (
+                        battle_id,
+                        member_name,
+                        snapshot_time,
+                        av,
+                        bs,
+                        trend,
+                        risk_level,
+                        identity_score,
+                        created_at
+                    )
+                    VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?,
+                        datetime('now')
+                    )
+                    ON CONFLICT (
+                        battle_id,
+                        member_name,
+                        snapshot_time
+                    )
+                    WHERE battle_id IS NOT NULL
+                    DO UPDATE SET
+                        av=excluded.av,
+                        bs=excluded.bs,
+                        trend=excluded.trend,
+                        risk_level=excluded.risk_level,
+                        identity_score=excluded.identity_score
+                    ''',
+                    (
+                        battle_id,
+                        row['member_name'],
+                        snapshot_time,
+                        row['av'] or 0,
+                        row['bs'] or 0,
+                        row['trend'] or 'stable',
+                        row['risk_level'] or 'safe',
+                        score,
+                    ),
                 )
-                VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, datetime('now')
-                )
-                """,
-                (
-                    row["member_name"],
-                    snapshot_time,
-
-                    row["av"] or 0,
-                    row["bs"] or 0,
-
-                    row["trend"] or "stable",
-                    row["risk_level"] or "safe",
-
-                    score
-                )
-            )
-
             updated_count += 1
-
         conn.commit()
-
-        print(
-            f"🏅 IdentityScore完成: "
-            f"{updated_count} 条"
-        )
-
+        print(f'🏅 IdentityScore完成: {updated_count} 条')
         return updated_count
-
     finally:
-
         conn.close()
 
 
-def sync_identity(
-    battle_id: int,
-    snapshot_time: str
-):
-
+def sync_identity(battle_id: int, snapshot_time: str):
     conn = get_conn()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                member_name,
-                role_tag,
-                role_desc,
-                role_rule,
-                role_weight,
-                identity_score,
-                is_protected,
-                exempt_stall
-            FROM member_profiles
-            """
-        ).fetchall()
-
+        rows = conn.execute('\n                SELECT\n                    mbp.member_name,\n                    mbp.role_tag,\n                    mbp.role_desc,\n                    mbp.role_rule,\n                    mbp.role_weight,\n                    mbp.identity_score,\n                    mbp.is_protected,\n                    mbp.exempt_stall\n\n                FROM member_battle_profiles\n                     AS mbp\n\n                INNER JOIN player_records\n                           AS pr\n\n                  ON pr.battle_id\n                     =mbp.battle_id\n\n                 AND pr.member\n                     =mbp.member_name\n\n                WHERE mbp.battle_id=?\n                  AND pr.snapshot_time=?\n                  AND COALESCE(\n                      pr.is_deleted,\n                      0\n                  )=0\n\n                ORDER BY mbp.member_name\n                ', (battle_id, snapshot_time)).fetchall()
         updated_count = 0
-
         for row in rows:
-
-            conn.execute(
-                """
-                UPDATE player_records
-                SET
-
-                    role_tag = ?,
-                    role_desc = ?,
-                    role_rule = ?,
-                    role_weight = ?,
-
-                    identity_score = ?,
-                    is_protected = ?,
-                    exempt_stall = ?
-                WHERE battle_id = ?
-                AND snapshot_time = ?
-                AND member = ?
-                """,
-                (
-                    row["role_tag"] or "member",
-                    row["role_desc"] or "",
-                    row["role_rule"] or "normal",
-                    row["role_weight"] or 1,
-
-                    row["identity_score"] or 0,
-                    row["is_protected"] or 0,
-                    row["exempt_stall"] or 0,
-
-                    battle_id,
-                    snapshot_time,
-                    row["member_name"]
-                )
-            )
-
+            conn.execute('\n                UPDATE player_records\n                SET\n\n                    role_tag = ?,\n                    role_desc = ?,\n                    role_rule = ?,\n                    role_weight = ?,\n\n                    identity_score = ?,\n                    is_protected = ?,\n                    exempt_stall = ?\n                WHERE battle_id = ?\n                AND snapshot_time = ?\n                AND member = ?\n                ', (row['role_tag'] or 'member', row['role_desc'] or '', row['role_rule'] or 'normal', row['role_weight'] or 1, row['identity_score'] or 0, row['is_protected'] or 0, row['exempt_stall'] or 0, battle_id, snapshot_time, row['member_name']))
             updated_count += 1
-
         conn.commit()
-
-        print(
-            f"🛡 Identity同步完成: "
-            f"{updated_count} 条"
-        )
-
+        print(f'🛡 Identity同步完成: {updated_count} 条')
         return updated_count
-
     except Exception as e:
-
         conn.rollback()
-
-        print(
-            "❌ sync_identity 出错:",
-            e
-        )
-
+        print('❌ sync_identity 出错:', e)
         traceback.print_exc()
-
         raise
-
     finally:
-
         conn.close()
 
 
@@ -3500,574 +3228,152 @@ def _build_identity_decision(
     }
 
 
-def calculate_risk(
-    battle_id: int,
-    snapshot_time: str
-):
-
+def calculate_risk(battle_id: int, snapshot_time: str):
     conn = get_conn()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                id,
-                member,
-                av,
-                bs,
-                trend,
-                stall_count
-            FROM player_records
-            WHERE battle_id = ?
-            AND snapshot_time = ?
-            AND is_deleted = 0
-            """,
-            (
-                battle_id,
-                snapshot_time
-            )
-        ).fetchall()
-
-        high_contribution_protection = (
-            _build_high_contribution_protection_map(
-                conn=conn,
-                battle_id=battle_id,
-                snapshot_time=snapshot_time,
-            )
-        )
-
+        rows = conn.execute('\n            SELECT\n                id,\n                member,\n                av,\n                bs,\n                trend,\n                stall_count\n            FROM player_records\n            WHERE battle_id = ?\n            AND snapshot_time = ?\n            AND is_deleted = 0\n            ', (battle_id, snapshot_time)).fetchall()
+        high_contribution_protection = _build_high_contribution_protection_map(conn=conn, battle_id=battle_id, snapshot_time=snapshot_time)
         updated_count = 0
-
         for row in rows:
-
-            member = row["member"]
-            profile = conn.execute(
-                """
-                SELECT
-                    is_protected,
-                    role_tag,
-                    role_weight,
-                    exempt_stall
-                FROM member_profiles
-                WHERE member_name = ?
-                """,
-                (
-                    member,
-                )
-            ).fetchone()
-
-            if (
-                profile
-                and
-                profile["is_protected"] == 1
-            ):
-
-                conn.execute(
-                    """
-                    UPDATE player_records
-                    SET
-                        risk_level = 'protected'
-                    WHERE id = ?
-                    """,
-                    (
-                        row["id"],
-                    )
-                )
-
+            member = row['member']
+            profile = conn.execute('\n                SELECT\n                    is_protected,\n                    role_tag,\n                    role_weight,\n                    exempt_stall\n                FROM member_battle_profiles\n                WHERE battle_id=?\n                  AND member_name=?\n                ', (battle_id, member)).fetchone()
+            if profile and profile['is_protected'] == 1:
+                conn.execute("\n                    UPDATE player_records\n                    SET\n                        risk_level = 'protected'\n                    WHERE id = ?\n                    ", (row['id'],))
                 updated_count += 1
-
                 continue
-
-            av = row["av"] or 0
-            bs = row["bs"] or 0
-            trend = row["trend"] or "stable"
-            stall_count = row["stall_count"] or 0
-
+            av = row['av'] or 0
+            bs = row['bs'] or 0
+            trend = row['trend'] or 'stable'
+            stall_count = row['stall_count'] or 0
             role_weight = 1
-            role_tag = "member"
+            role_tag = 'member'
             exempt_stall = 0
-
             if profile:
-
-                role_tag = (
-                    profile["role_tag"]
-                    or "member"
-                )
-
-                role_weight = (
-                    profile["role_weight"]
-                    or 1
-                )
-
-                exempt_stall = (
-                    profile["exempt_stall"]
-                    or 0
-                )
+                role_tag = profile['role_tag'] or 'member'
+                role_weight = profile['role_weight'] or 1
+                exempt_stall = profile['exempt_stall'] or 0
             reasons = []
-
             risk_score = 8
-
-            # =====================
-            # BS
-            # =====================
-
             risk_score += bs * 0.5 * role_weight
-
-            # =====================
-            # 核心成员加成
-            # =====================
-
-            if role_tag == "core":
-
+            if role_tag == 'core':
                 risk_score += 5
-
-                reasons.append(
-                    "核心成员加成"
-                )
-
-            # =====================
-            # AV
-            # =====================
-
+                reasons.append('核心成员加成')
             risk_score += av * 0.2 * role_weight
-
-            # =====================
-            # Trend
-            # =====================
-
-            if trend == "explosive":
-
+            if trend == 'explosive':
                 risk_score += 20
-                reasons.append("高速成长")
-
-            elif trend == "up":
-
+                reasons.append('高速成长')
+            elif trend == 'up':
                 risk_score += 10
-
-            elif trend == "stable":
-
+            elif trend == 'stable':
                 risk_score += 0
-
-            elif trend == "down":
-
+            elif trend == 'down':
                 risk_score -= 10
-                reasons.append("持续下滑")
-
-            elif trend == "dead":
-
+                reasons.append('持续下滑')
+            elif trend == 'dead':
                 risk_score -= 20
-                reasons.append("长期停滞")
-
-            # =====================
-            # Stall
-            # =====================
-
+                reasons.append('长期停滞')
             if exempt_stall == 1:
-
-                reasons.append(
-                    "身份免停滞"
-                )
-
+                reasons.append('身份免停滞')
             else:
-
                 risk_score -= stall_count * 3
-
                 if stall_count >= 2:
-
-                    reasons.append(
-                        f"连续停滞{stall_count}期"
-                    )
-
-            # =====================
-            # 风险等级
-            # =====================
-
-            if role_tag == "admin":
-
-                risk_level = "safe"
-
-                reasons.append(
-                    "管理员保护"
-                )
-
-            elif role_tag == "warehouse":
-
-                risk_level = "safe"
-
-                reasons.append(
-                    "仓库号保护"
-                )
-
+                    reasons.append(f'连续停滞{stall_count}期')
+            if role_tag == 'admin':
+                risk_level = 'safe'
+                reasons.append('管理员保护')
+            elif role_tag == 'warehouse':
+                risk_level = 'safe'
+                reasons.append('仓库号保护')
+            elif risk_score >= 50:
+                risk_level = 'safe'
+            elif risk_score >= 30:
+                risk_level = 'warning'
+            elif risk_score >= 10:
+                risk_level = 'danger'
             else:
-
-                if risk_score >= 50:
-
-                    risk_level = "safe"
-
-                elif risk_score >= 30:
-
-                    risk_level = "warning"
-
-                elif risk_score >= 10:
-
-                    risk_level = "danger"
-
-                else:
-
-                    risk_level = "clear"
-
-            # =====================
-            # 最近5期贡献保护
-            # =====================
-
+                risk_level = 'clear'
             protection_reason = None
-
-            if risk_level in (
-                "danger",
-                "clear",
-            ):
-                recent_evidence = (
-                    _build_recent_risk_evidence(
-                        conn=conn,
-                        battle_id=battle_id,
-                        member=member,
-                        snapshot_time=snapshot_time,
-                    )
-                )
-
-                (
-                    risk_level,
-                    protection_reason,
-                ) = _apply_recent_risk_protection(
-                    base_level=risk_level,
-                    latest_trend=trend,
-                    evidence=recent_evidence,
-                )
-
-            high_contribution_reason = (
-                high_contribution_protection.get(
-                    member
-                )
-            )
-
-            if (
-                high_contribution_reason
-                and risk_level in (
-                    "clear",
-                    "danger",
-                )
-            ):
-                risk_level = "warning"
-
+            if risk_level in ('danger', 'clear'):
+                recent_evidence = _build_recent_risk_evidence(conn=conn, battle_id=battle_id, member=member, snapshot_time=snapshot_time)
+                (risk_level, protection_reason) = _apply_recent_risk_protection(base_level=risk_level, latest_trend=trend, evidence=recent_evidence)
+            high_contribution_reason = high_contribution_protection.get(member)
+            if high_contribution_reason and risk_level in ('clear', 'danger'):
+                risk_level = 'warning'
             if protection_reason:
-                reasons.append(
-                    protection_reason
-                )
-
-            if (
-                high_contribution_reason
-                and risk_level == "warning"
-            ):
-                reasons.append(
-                    high_contribution_reason
-                )
-
-            # =====================
-            # 额外标签
-            # =====================
-
+                reasons.append(protection_reason)
+            if high_contribution_reason and risk_level == 'warning':
+                reasons.append(high_contribution_reason)
             if bs < 20:
-
-                reasons.append(
-                    "长期低贡献"
-                )
-
+                reasons.append('长期低贡献')
             if av < 20:
-
-                reasons.append(
-                    "活跃不足"
-                )
-
-            # 风险等级补充原因
-
-            if risk_level == "danger":
-
-                reasons.append(
-                    f"综合健康分过低({round(risk_score,1)})"
-                )
-
-            elif risk_level == "warning":
-
-                reasons.append(
-                    f"综合健康分偏低({round(risk_score,1)})"
-                )
-
-            # 去重
-
-            reasons = list(
-                dict.fromkeys(reasons)
-            )
-
-            risk_reason = "｜".join(
-                reasons
-            )
-
-            conn.execute(
-                """
-                UPDATE player_records
-                SET
-                    risk_level = ?,
-                    risk_reason = ?
-                WHERE id = ?
-                """,
-                (
-                    risk_level,
-                    risk_reason,
-                    row["id"]
-                )
-            )
-
+                reasons.append('活跃不足')
+            if risk_level == 'danger':
+                reasons.append(f'综合健康分过低({round(risk_score, 1)})')
+            elif risk_level == 'warning':
+                reasons.append(f'综合健康分偏低({round(risk_score, 1)})')
+            reasons = list(dict.fromkeys(reasons))
+            risk_reason = '｜'.join(reasons)
+            conn.execute('\n                UPDATE player_records\n                SET\n                    risk_level = ?,\n                    risk_reason = ?\n                WHERE id = ?\n                ', (risk_level, risk_reason, row['id']))
             updated_count += 1
-
         conn.commit()
-
-        print(
-            f"🚨 Risk计算完成: "
-            f"{snapshot_time} "
-            f"更新 {updated_count} 条"
-        )
-
+        print(f'🚨 Risk计算完成: {snapshot_time} 更新 {updated_count} 条')
         return updated_count
-
     except Exception as e:
-
         conn.rollback()
-
-        print(
-            "❌ calculate_risk 出错:",
-            e
-        )
-
+        print('❌ calculate_risk 出错:', e)
         traceback.print_exc()
-
         raise
-
     finally:
-
         conn.close()
 
-def calculate_stall(
-    battle_id: int,
-    snapshot_time: str
-):
-
+def calculate_stall(battle_id: int, snapshot_time: str):
     conn = get_conn()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                id,
-                member
-            FROM player_records
-            WHERE battle_id = ?
-            AND snapshot_time = ?
-            AND is_deleted = 0
-            """,
-            (
-                battle_id,
-                snapshot_time
-            )
-        ).fetchall()
-
+        rows = conn.execute('\n            SELECT\n                id,\n                member\n            FROM player_records\n            WHERE battle_id = ?\n            AND snapshot_time = ?\n            AND is_deleted = 0\n            ', (battle_id, snapshot_time)).fetchall()
         updated_count = 0
-
-        current_time = datetime.strptime(
-            snapshot_time,
-            "%Y-%m-%d %H:%M:%S"
-        )
-
+        current_time = datetime.strptime(snapshot_time, '%Y-%m-%d %H:%M:%S')
         for row in rows:
-
-            member = row["member"]
-
-            profile = conn.execute(
-                """
-                SELECT
-                    exempt_stall
-                FROM member_profiles
-                WHERE member_name = ?
-                """,
-                (
-                   member,
-                )
-            ).fetchone()
-
-            if (
-               profile
-               and
-               profile["exempt_stall"] == 1
-            ):
-
-               conn.execute(
-                   """
-                   UPDATE player_records
-                   SET
-                       stall_count = 0
-                   WHERE id = ?
-                   """,
-                   (
-                       row["id"],
-                   )
-               )
-
-               updated_count += 1
-
-               continue
-
-            previous = conn.execute(
-                """
-                SELECT
-                    stall_count
-                FROM player_records
-                WHERE battle_id = ?
-                AND member = ?
-                AND snapshot_time < ?
-                AND is_deleted = 0
-                ORDER BY snapshot_time DESC
-                LIMIT 1
-                """,
-                (
-                    battle_id,
-                    member,
-                    snapshot_time
-                )
-            ).fetchone()
-
-            previous_stall = (
-                previous["stall_count"]
-                if previous
-                else 0
-            )
-
-            history = conn.execute(
-                """
-                SELECT
-                    snapshot_time,
-                    battle_gain,
-                    assist_gain,
-                    power_gain,
-                    donate_gain
-                FROM player_records
-                WHERE battle_id = ?
-                AND member = ?
-                AND snapshot_time <= ?
-                AND is_deleted = 0
-                ORDER BY snapshot_time DESC
-                LIMIT 3
-                """,
-                (
-                    battle_id,
-                    member,
-                    snapshot_time
-                )
-            ).fetchall()
-
+            member = row['member']
+            profile = conn.execute('\n                SELECT exempt_stall\n                FROM member_battle_profiles\n                WHERE battle_id=?\n                  AND member_name=?\n                ', (battle_id, member)).fetchone()
+            if profile and profile['exempt_stall'] == 1:
+                conn.execute('\n                   UPDATE player_records\n                   SET\n                       stall_count = 0\n                   WHERE id = ?\n                   ', (row['id'],))
+                updated_count += 1
+                continue
+            previous = conn.execute('\n                SELECT\n                    stall_count\n                FROM player_records\n                WHERE battle_id = ?\n                AND member = ?\n                AND snapshot_time < ?\n                AND is_deleted = 0\n                ORDER BY snapshot_time DESC\n                LIMIT 1\n                ', (battle_id, member, snapshot_time)).fetchone()
+            previous_stall = previous['stall_count'] if previous else 0
+            history = conn.execute('\n                SELECT\n                    snapshot_time,\n                    battle_gain,\n                    assist_gain,\n                    power_gain,\n                    donate_gain\n                FROM player_records\n                WHERE battle_id = ?\n                AND member = ?\n                AND snapshot_time <= ?\n                AND is_deleted = 0\n                ORDER BY snapshot_time DESC\n                LIMIT 3\n                ', (battle_id, member, snapshot_time)).fetchall()
             active = False
             last_active_time = None
-
             for h in history:
-
-                gain_active = (
-                    (h["battle_gain"] or 0) > 0
-                    or
-                    (h["assist_gain"] or 0) > 0
-                    or
-                    (h["power_gain"] or 0) > 0
-                    or
-                    (h["donate_gain"] or 0) > 0
-                )
-
+                gain_active = (h['battle_gain'] or 0) > 0 or (h['assist_gain'] or 0) > 0 or (h['power_gain'] or 0) > 0 or ((h['donate_gain'] or 0) > 0)
                 if gain_active:
-
                     active = True
-
-                    last_active_time = datetime.strptime(
-                        h["snapshot_time"],
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-
+                    last_active_time = datetime.strptime(h['snapshot_time'], '%Y-%m-%d %H:%M:%S')
                     break
-
             if active:
-
                 stall_count = 0
-
             elif last_active_time:
-
-                hours_gap = (
-                    current_time
-                    -
-                    last_active_time
-                ).total_seconds() / 3600
-
+                hours_gap = (current_time - last_active_time).total_seconds() / 3600
                 if hours_gap < 6:
-
                     stall_count = previous_stall
-
                 else:
-
                     stall_count = previous_stall + 1
-
             else:
-
                 stall_count = previous_stall + 1
-
-            conn.execute(
-                """
-                UPDATE player_records
-                SET
-                    stall_count = ?
-                WHERE id = ?
-                """,
-                (
-                    stall_count,
-                    row["id"]
-                )
-            )
-
+            conn.execute('\n                UPDATE player_records\n                SET\n                    stall_count = ?\n                WHERE id = ?\n                ', (stall_count, row['id']))
             updated_count += 1
-
         conn.commit()
-
-        print(
-            f"⏸ Stall计算完成: "
-            f"{snapshot_time} "
-            f"更新 {updated_count} 条"
-        )
-
+        print(f'⏸ Stall计算完成: {snapshot_time} 更新 {updated_count} 条')
         return updated_count
-
     except Exception as e:
-
         conn.rollback()
-
-        print(
-            "❌ calculate_stall 出错:",
-            e
-        )
-
+        print('❌ calculate_stall 出错:', e)
         traceback.print_exc()
-
         raise
-
     finally:
-
         conn.close()
 
-        
+
 
 def calculate_stall_penalty(
     battle_id: int,
@@ -4165,7 +3471,7 @@ def calculate_stall_penalty(
 
     finally:
 
-        conn.close()        
+        conn.close()
 
 
 def process_snapshot_pipeline(
@@ -4197,7 +3503,7 @@ def process_snapshot_pipeline(
         rebuild_gain(
             battle_id
         )
-   
+
         calculate_wv(
             battle_id,
             snapshot_time
@@ -6185,533 +5491,127 @@ def members():
     return render_template("members.html", members=df.to_dict("records"))
 
 
-@app.route("/identity")
+@app.route('/identity')
 def identity():
     conn = get_conn()
-
-    keyword = request.args.get(
-        "keyword",
-        "",
-    ).strip()
-
-    role = request.args.get(
-        "role",
-        "",
-    ).strip()
-
-    grade = request.args.get(
-        "grade",
-        "",
-    ).strip()
-
-    current_battle = conn.execute(
-        """
-        SELECT id
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-        """
-    ).fetchone()
-
+    keyword = request.args.get('keyword', '').strip()
+    role = request.args.get('role', '').strip()
+    grade = request.args.get('grade', '').strip()
+    current_battle = conn.execute('\n        SELECT id\n        FROM battles\n        WHERE is_current = 1\n        LIMIT 1\n        ').fetchone()
     all_members = []
-
     if current_battle:
         battle_id = current_battle[0]
-
-        latest_row = conn.execute(
-            """
-            SELECT MAX(snapshot_time)
-            FROM player_records
-            WHERE battle_id = ?
-              AND is_deleted = 0
-              AND TRIM(
-                  COALESCE(snapshot_time, '')
-              ) <> ''
-            """,
-            (battle_id,),
-        ).fetchone()
-
-        latest_time = (
-            latest_row[0]
-            if latest_row
-            else None
-        )
-
+        latest_row = conn.execute("\n            SELECT MAX(snapshot_time)\n            FROM player_records\n            WHERE battle_id = ?\n              AND is_deleted = 0\n              AND TRIM(\n                  COALESCE(snapshot_time, '')\n              ) <> ''\n            ", (battle_id,)).fetchone()
+        latest_time = latest_row[0] if latest_row else None
         if latest_time:
-            records = conn.execute(
-                """
-                SELECT
-                    pr.member AS member_name,
-
-                    COALESCE(
-                        mp.role_tag,
-                        pr.role_tag,
-                        'member'
-                    ) AS role_tag,
-
-                    COALESCE(
-                        mp.role_desc,
-                        pr.role_desc,
-                        ''
-                    ) AS role_desc,
-
-                    COALESCE(
-                        mp.role_rule,
-                        pr.role_rule,
-                        'normal'
-                    ) AS role_rule,
-
-                    COALESCE(
-                        mp.role_weight,
-                        pr.role_weight,
-                        1
-                    ) AS role_weight,
-
-                    COALESCE(
-                        pr.identity_score,
-                        0
-                    ) AS identity_score,
-
-                    COALESCE(
-                        mp.is_protected,
-                        pr.is_protected,
-                        0
-                    ) AS is_protected,
-
-                    COALESCE(
-                        mp.exempt_stall,
-                        pr.exempt_stall,
-                        0
-                    ) AS exempt_stall,
-
-                    COALESCE(pr.av, 0) AS av,
-                    COALESCE(pr.bs, 0) AS bs,
-                    COALESCE(pr.wv, 0) AS wv,
-                    COALESCE(pr.bv, 0) AS bv,
-
-                    COALESCE(
-                        pr.trend,
-                        'stable'
-                    ) AS trend,
-
-                    COALESCE(
-                        pr.risk_level,
-                        'safe'
-                    ) AS risk_level,
-
-                    COALESCE(
-                        pr.risk_reason,
-                        ''
-                    ) AS risk_reason,
-
-                    COALESCE(
-                        pr.battle_gain,
-                        0
-                    ) AS battle_gain,
-
-                    COALESCE(
-                        pr.assist_gain,
-                        0
-                    ) AS assist_gain,
-
-                    COALESCE(
-                        pr.donate_gain,
-                        0
-                    ) AS donate_gain,
-
-                    pr.group_name
-
-                FROM player_records AS pr
-
-                LEFT JOIN member_profiles AS mp
-                  ON mp.member_name = pr.member
-
-                WHERE pr.battle_id = ?
-                  AND pr.snapshot_time = ?
-                  AND pr.is_deleted = 0
-
-                ORDER BY pr.member
-                """,
-                (
-                    battle_id,
-                    latest_time,
-                ),
-            ).fetchall()
-
-            all_members = [
-                dict(record)
-                for record in records
-            ]
-
+            records = conn.execute("\n                SELECT\n                    pr.member AS member_name,\n\n                    COALESCE(\n                        mp.role_tag,\n                        pr.role_tag,\n                        'member'\n                    ) AS role_tag,\n\n                    COALESCE(\n                        mp.role_desc,\n                        pr.role_desc,\n                        ''\n                    ) AS role_desc,\n\n                    COALESCE(\n                        mp.role_rule,\n                        pr.role_rule,\n                        'normal'\n                    ) AS role_rule,\n\n                    COALESCE(\n                        mp.role_weight,\n                        pr.role_weight,\n                        1\n                    ) AS role_weight,\n\n                    COALESCE(\n                        pr.identity_score,\n                        0\n                    ) AS identity_score,\n\n                    COALESCE(\n                        mp.is_protected,\n                        pr.is_protected,\n                        0\n                    ) AS is_protected,\n\n                    COALESCE(\n                        mp.exempt_stall,\n                        pr.exempt_stall,\n                        0\n                    ) AS exempt_stall,\n\n                    COALESCE(pr.av, 0) AS av,\n                    COALESCE(pr.bs, 0) AS bs,\n                    COALESCE(pr.wv, 0) AS wv,\n                    COALESCE(pr.bv, 0) AS bv,\n\n                    COALESCE(\n                        pr.trend,\n                        'stable'\n                    ) AS trend,\n\n                    COALESCE(\n                        pr.risk_level,\n                        'safe'\n                    ) AS risk_level,\n\n                    COALESCE(\n                        pr.risk_reason,\n                        ''\n                    ) AS risk_reason,\n\n                    COALESCE(\n                        pr.battle_gain,\n                        0\n                    ) AS battle_gain,\n\n                    COALESCE(\n                        pr.assist_gain,\n                        0\n                    ) AS assist_gain,\n\n                    COALESCE(\n                        pr.donate_gain,\n                        0\n                    ) AS donate_gain,\n\n                    pr.group_name\n\n                FROM player_records AS pr\n\n                \n                LEFT JOIN\n                    member_battle_profiles AS mp\n\n                  ON mp.member_name=pr.member\n                 AND mp.battle_id=pr.battle_id\n                \n\n                WHERE pr.battle_id = ?\n                  AND pr.snapshot_time = ?\n                  AND pr.is_deleted = 0\n\n                ORDER BY pr.member\n                ", (battle_id, latest_time)).fetchall()
+            all_members = [dict(record) for record in records]
     conn.close()
 
     def matches_grade(member):
-        score = member["identity_score"] or 0
-
-        if grade == "S":
+        score = member['identity_score'] or 0
+        if grade == 'S':
             return score >= 90
-
-        if grade == "A":
+        if grade == 'A':
             return 70 <= score < 90
-
-        if grade == "B":
+        if grade == 'B':
             return 50 <= score < 70
-
-        if grade == "C":
+        if grade == 'C':
             return 30 <= score < 50
-
-        if grade == "D":
+        if grade == 'D':
             return score < 30
-
         return True
-
     rows = []
-
     for member in all_members:
-        if (
-            keyword
-            and keyword not in (
-                member["member_name"] or ""
-            )
-        ):
+        if keyword and keyword not in (member['member_name'] or ''):
             continue
-
-        if (
-            role
-            and member["role_tag"] != role
-        ):
+        if role and member['role_tag'] != role:
             continue
-
         if not matches_grade(member):
             continue
-
         rows.append(member)
-
-    rows.sort(
-        key=lambda member: (
-            -(member["identity_score"] or 0),
-            member["role_tag"] or "",
-            member["member_name"] or "",
-        )
-    )
-
+    rows.sort(key=lambda member: (-(member['identity_score'] or 0), member['role_tag'] or '', member['member_name'] or ''))
     filter_labels = []
-
-    role_labels = {
-        "admin": "管理员",
-        "warehouse": "仓库号",
-        "core": "核心成员",
-    }
-
-    grade_labels = {
-        "S": "S级核心成员",
-        "A": "A级骨干成员",
-        "B": "B级稳定成员",
-        "C": "C级观察成员",
-        "D": "D级待淘汰成员",
-    }
-
+    role_labels = {'admin': '管理员', 'warehouse': '仓库号', 'core': '核心成员'}
+    grade_labels = {'S': 'S级核心成员', 'A': 'A级骨干成员', 'B': 'B级稳定成员', 'C': 'C级观察成员', 'D': 'D级待淘汰成员'}
     if role in role_labels:
-        filter_labels.append(
-            role_labels[role]
-        )
-
+        filter_labels.append(role_labels[role])
     if grade in grade_labels:
-        filter_labels.append(
-            grade_labels[grade]
-        )
-
-    current_filter = (
-        " + ".join(filter_labels)
-        if filter_labels
-        else "全部成员"
-    )
-
+        filter_labels.append(grade_labels[grade])
+    current_filter = ' + '.join(filter_labels) if filter_labels else '全部成员'
     total_members = len(all_members)
-
-    admin_count = sum(
-        member["role_tag"] == "admin"
-        for member in all_members
-    )
-
-    warehouse_count = sum(
-        member["role_tag"] == "warehouse"
-        for member in all_members
-    )
-
-    core_count = sum(
-        member["role_tag"] == "core"
-        for member in all_members
-    )
-
-    protected_count = sum(
-        member["is_protected"] == 1
-        for member in all_members
-    )
-
-    exempt_count = sum(
-        member["exempt_stall"] == 1
-        for member in all_members
-    )
-
-    s_count = sum(
-        (member["identity_score"] or 0) >= 90
-        for member in all_members
-    )
-
-    a_count = sum(
-        70 <= (member["identity_score"] or 0) < 90
-        for member in all_members
-    )
-
-    b_count = sum(
-        50 <= (member["identity_score"] or 0) < 70
-        for member in all_members
-    )
-
-    c_count = sum(
-        30 <= (member["identity_score"] or 0) < 50
-        for member in all_members
-    )
-
-    d_count = sum(
-        (member["identity_score"] or 0) < 30
-        for member in all_members
-    )
-
-    top_identity = sorted(
-        all_members,
-        key=lambda member: (
-            member["identity_score"] or 0,
-            member["member_name"] or "",
-        ),
-        reverse=True,
-    )[:10]
-
-    risk_members = sorted(
-        [
-            member
-            for member in all_members
-            if (
-                member["identity_score"] or 0
-            ) < 50
-        ],
-        key=lambda member: (
-            member["identity_score"] or 0,
-            member["member_name"] or "",
-        ),
-    )[:10]
-
-    grow_members = sorted(
-        [
-            member
-            for member in all_members
-            if (
-                60
-                <= (
-                    member["identity_score"]
-                    or 0
-                )
-                < 85
-                and member["trend"]
-                in ("explosive", "up")
-            )
-        ],
-        key=lambda member: (
-            member["identity_score"] or 0,
-            member["member_name"] or "",
-        ),
-        reverse=True,
-    )[:10]
-
+    admin_count = sum((member['role_tag'] == 'admin' for member in all_members))
+    warehouse_count = sum((member['role_tag'] == 'warehouse' for member in all_members))
+    core_count = sum((member['role_tag'] == 'core' for member in all_members))
+    protected_count = sum((member['is_protected'] == 1 for member in all_members))
+    exempt_count = sum((member['exempt_stall'] == 1 for member in all_members))
+    s_count = sum(((member['identity_score'] or 0) >= 90 for member in all_members))
+    a_count = sum((70 <= (member['identity_score'] or 0) < 90 for member in all_members))
+    b_count = sum((50 <= (member['identity_score'] or 0) < 70 for member in all_members))
+    c_count = sum((30 <= (member['identity_score'] or 0) < 50 for member in all_members))
+    d_count = sum(((member['identity_score'] or 0) < 30 for member in all_members))
+    top_identity = sorted(all_members, key=lambda member: (member['identity_score'] or 0, member['member_name'] or ''), reverse=True)[:10]
+    risk_members = sorted([member for member in all_members if (member['identity_score'] or 0) < 50], key=lambda member: (member['identity_score'] or 0, member['member_name'] or ''))[:10]
+    grow_members = sorted([member for member in all_members if 60 <= (member['identity_score'] or 0) < 85 and member['trend'] in ('explosive', 'up')], key=lambda member: (member['identity_score'] or 0, member['member_name'] or ''), reverse=True)[:10]
     growth_members = []
-
     for member in all_members:
         item = dict(member)
-
-        item["score_change"] = (
-            (member["battle_gain"] or 0)
-            + (member["assist_gain"] or 0) * 2
-        )
-
+        item['score_change'] = (member['battle_gain'] or 0) + (member['assist_gain'] or 0) * 2
         growth_members.append(item)
-
-    growth_members.sort(
-        key=lambda member: (
-            member["score_change"],
-            member["member_name"] or "",
-        ),
-        reverse=True,
-    )
-
+    growth_members.sort(key=lambda member: (member['score_change'], member['member_name'] or ''), reverse=True)
     growth_members = growth_members[:10]
-
     focus_members = []
-
     for member in all_members:
         focus_score = 0
-
-        if member["trend"] == "dead":
+        if member['trend'] == 'dead':
             focus_score += 100
-
-        elif member["trend"] == "down":
+        elif member['trend'] == 'down':
             focus_score += 50
-
-        focus_score += max(
-            0,
-            30 - (member["av"] or 0),
-        )
-
-        focus_score += max(
-            0,
-            30 - (member["bs"] or 0),
-        )
-
-        focus_score += (
-            member["identity_score"] or 0
-        ) * 0.2
-
-        focus_score += (
-            member["wv"] or 0
-        ) * 0.1
-
-        focus_score += (
-            member["bv"] or 0
-        ) * 0.05
-
-        if (
-            member["trend"] in ("dead", "down")
-            or member["risk_level"]
-            in ("warning", "danger")
-            or (member["av"] or 0) < 20
-            or (member["bs"] or 0) < 30
-        ):
+        focus_score += max(0, 30 - (member['av'] or 0))
+        focus_score += max(0, 30 - (member['bs'] or 0))
+        focus_score += (member['identity_score'] or 0) * 0.2
+        focus_score += (member['wv'] or 0) * 0.1
+        focus_score += (member['bv'] or 0) * 0.05
+        if member['trend'] in ('dead', 'down') or member['risk_level'] in ('warning', 'danger') or (member['av'] or 0) < 20 or ((member['bs'] or 0) < 30):
             item = dict(member)
-            item["focus_score"] = round(
-                focus_score,
-                1,
-            )
+            item['focus_score'] = round(focus_score, 1)
             focus_members.append(item)
-
-    focus_members.sort(
-        key=lambda member: (
-            member["focus_score"],
-            member["member_name"] or "",
-        ),
-        reverse=True,
-    )
-
+    focus_members.sort(key=lambda member: (member['focus_score'], member['member_name'] or ''), reverse=True)
     focus_members = focus_members[:10]
-
-    excellent_count = (
-        s_count
-        + a_count
-        + b_count
-    )
-
-    health_score = round(
-        excellent_count
-        / max(total_members, 1)
-        * 100,
-        1,
-    )
-
+    excellent_count = s_count + a_count + b_count
+    health_score = round(excellent_count / max(total_members, 1) * 100, 1)
     if health_score >= 80:
-        health_level = "卓越"
-
+        health_level = '卓越'
     elif health_score >= 60:
-        health_level = "健康"
-
+        health_level = '健康'
     elif health_score >= 40:
-        health_level = "警戒"
-
+        health_level = '警戒'
     else:
-        health_level = "危险"
-
+        health_level = '危险'
     ai_advice = []
-
     if total_members == 0:
-        ai_advice.append(
-            "当前战场暂无可用成员数据"
-        )
-
+        ai_advice.append('当前战场暂无可用成员数据')
     else:
         if s_count == 0:
-            ai_advice.append(
-                "当前无S级核心成员，核心梯队存在断层风险"
-            )
-
-        if a_count < max(
-            total_members * 0.03,
-            5,
-        ):
-            ai_advice.append(
-                "A级骨干占比偏低，建议重点培养成长成员"
-            )
-
+            ai_advice.append('当前无S级核心成员，核心梯队存在断层风险')
+        if a_count < max(total_members * 0.03, 5):
+            ai_advice.append('A级骨干占比偏低，建议重点培养成长成员')
         if d_count >= 50:
-            ai_advice.append(
-                f"D级成员 {d_count} 人，建议启动清理计划"
-            )
-
+            ai_advice.append(f'D级成员 {d_count} 人，建议启动清理计划')
         elif d_count > total_members * 0.3:
-            ai_advice.append(
-                "D级成员占比过高，建议开展成员优化"
-            )
-
+            ai_advice.append('D级成员占比过高，建议开展成员优化')
         if growth_members:
             top = growth_members[0]
-
-            ai_advice.append(
-                f"{top['member_name']}近期成长最快，建议重点关注"
-            )
-
+            ai_advice.append(f"{top['member_name']}近期成长最快，建议重点关注")
         if top_identity:
             top = top_identity[0]
-
-            ai_advice.append(
-                f"{top['member_name']}为当前核心战力，建议重点保护"
-            )
-
+            ai_advice.append(f"{top['member_name']}为当前核心战力，建议重点保护")
         if protected_count > 10:
-            ai_advice.append(
-                "身份保护人数偏多，建议定期复核"
-            )
-
+            ai_advice.append('身份保护人数偏多，建议定期复核')
         if not ai_advice:
-            ai_advice.append(
-                "当前身份体系运行健康"
-            )
-
+            ai_advice.append('当前身份体系运行健康')
     ai_advice = ai_advice[:5]
-
-    return render_template(
-        "identity.html",
-        members=rows,
-        keyword=keyword,
-        role=role,
-        grade=grade,
-        current_filter=current_filter,
-        admin_count=admin_count,
-        warehouse_count=warehouse_count,
-        core_count=core_count,
-        protected_count=protected_count,
-        exempt_count=exempt_count,
-        s_count=s_count,
-        a_count=a_count,
-        b_count=b_count,
-        c_count=c_count,
-        d_count=d_count,
-        total_members=total_members,
-        top_identity=top_identity,
-        risk_members=risk_members,
-        grow_members=grow_members,
-        health_score=health_score,
-        health_level=health_level,
-        growth_members=growth_members,
-        focus_members=focus_members,
-        ai_advice=ai_advice,
-    )
+    return render_template('identity.html', members=rows, keyword=keyword, role=role, grade=grade, current_filter=current_filter, admin_count=admin_count, warehouse_count=warehouse_count, core_count=core_count, protected_count=protected_count, exempt_count=exempt_count, s_count=s_count, a_count=a_count, b_count=b_count, c_count=c_count, d_count=d_count, total_members=total_members, top_identity=top_identity, risk_members=risk_members, grow_members=grow_members, health_score=health_score, health_level=health_level, growth_members=growth_members, focus_members=focus_members, ai_advice=ai_advice)
 
 @app.route("/talent")
 def talent():
@@ -7115,394 +6015,81 @@ def talent():
 def rules():
     return render_template("rules.html", high_power=HIGH_POWER, mid_power=MID_POWER, high_battle_min=HIGH_BATTLE_MIN, mid_battle_min=MID_BATTLE_MIN, core_battle_min=CORE_BATTLE_MIN)
 
-@app.route("/identity/logs")
+@app.route('/identity/logs')
 def identity_logs():
-
     conn = get_conn()
-
-    logs = conn.execute(
-        """
-        SELECT *
-        FROM identity_logs
-        ORDER BY id DESC
-        LIMIT 500
-        """
-    ).fetchall()
-
+    logs = conn.execute('\n                SELECT il.*\n                FROM identity_logs AS il\n\n                INNER JOIN battles AS b\n                  ON b.id=il.battle_id\n                 AND b.is_current=1\n\n                ORDER BY il.id DESC\n                LIMIT 500\n                ').fetchall()
     conn.close()
+    return render_template('identity_logs.html', logs=logs)
 
-    return render_template(
-        "identity_logs.html",
-        logs=logs
-    )
-
-@app.route("/identity/log/<int:log_id>")
+@app.route('/identity/log/<int:log_id>')
 def identity_log_detail(log_id):
-
     conn = get_conn()
-
-    row = conn.execute(
-        """
-        SELECT *
-        FROM identity_logs
-        WHERE id = ?
-        """,
-        (log_id,)
-    ).fetchone()
-
+    row = conn.execute('\n                SELECT il.*\n                FROM identity_logs AS il\n\n                INNER JOIN battles AS b\n                  ON b.id=il.battle_id\n                 AND b.is_current=1\n\n                WHERE il.id=?\n                ', (log_id,)).fetchone()
     conn.close()
-
     if not row:
-        return "日志不存在"
-
+        return '日志不存在'
     analysis = []
-
-    # 身份变化
-
-    if row["old_role"] != row["new_role"]:
-
-        role_map = {
-            "member": "普通成员",
-            "core": "核心成员",
-            "warehouse": "仓库号",
-            "admin": "管理员"
-        }
-
-        old_role_name = role_map.get(
-            row["old_role"],
-            row["old_role"]
-        )
-
-        new_role_name = role_map.get(
-            row["new_role"],
-            row["new_role"]
-        )
-
-        analysis.append(
-            f"成员身份由【{old_role_name}】调整为【{new_role_name}】"
-        )
-
-        
-
-    # 身份保护
-
-    if row["old_protect"] != row["new_protect"]:
-
-        if row["new_protect"] == 1:
-            analysis.append(
-                "已开启身份保护，将不会进入自动清理名单"
-            )
-
-            analysis.append(
-                 "该成员已进入长期保留名单"
-            )
+    if row['old_role'] != row['new_role']:
+        role_map = {'member': '普通成员', 'core': '核心成员', 'warehouse': '仓库号', 'admin': '管理员'}
+        old_role_name = role_map.get(row['old_role'], row['old_role'])
+        new_role_name = role_map.get(row['new_role'], row['new_role'])
+        analysis.append(f'成员身份由【{old_role_name}】调整为【{new_role_name}】')
+    if row['old_protect'] != row['new_protect']:
+        if row['new_protect'] == 1:
+            analysis.append('已开启身份保护，将不会进入自动清理名单')
+            analysis.append('该成员已进入长期保留名单')
         else:
-            analysis.append(
-                "已取消身份保护"
-            )
-
-    else:
-
-        if row["new_protect"] == 1:
-            analysis.append(
-                "身份保护保持开启"
-            )
-
-    # 免停滞
-
-    if row["old_exempt"] != row["new_exempt"]:
-
-        if row["new_exempt"] == 1:
-            analysis.append(
-                "已开启免停滞处罚"
-            )
+            analysis.append('已取消身份保护')
+    elif row['new_protect'] == 1:
+        analysis.append('身份保护保持开启')
+    if row['old_exempt'] != row['new_exempt']:
+        if row['new_exempt'] == 1:
+            analysis.append('已开启免停滞处罚')
         else:
-            analysis.append(
-                "已取消免停滞处罚"
-            )
-
+            analysis.append('已取消免停滞处罚')
+    elif row['new_exempt'] == 1:
+        analysis.append('免停滞状态保持开启')
+    if row['old_score'] != row['new_score']:
+        analysis.append(f"身份分由 {row['old_score']} 调整至 {row['new_score']}")
     else:
+        analysis.append(f"身份分保持 {row['new_score']}")
+    if row['new_role'] == 'admin':
+        analysis.append('成员已进入管理层序列')
+    elif row['new_role'] == 'warehouse':
+        analysis.append('成员已进入仓储管理序列')
+    elif row['new_role'] == 'core':
+        analysis.append('成员已进入核心成员序列')
+    return render_template('identity_log_detail.html', row=row, analysis=analysis)
 
-        if row["new_exempt"] == 1:
-            analysis.append(
-                "免停滞状态保持开启"
-            )
-
-    # 身份分变化
-
-    if row["old_score"] != row["new_score"]:
-
-        analysis.append(
-            f"身份分由 {row['old_score']} 调整至 {row['new_score']}"
-        )
-
-    else:
-
-        analysis.append(
-            f"身份分保持 {row['new_score']}"
-        )
-
-    if row["new_role"] == "admin":
-
-        analysis.append(
-            "成员已进入管理层序列"
-        )
-
-    elif row["new_role"] == "warehouse":
-
-        analysis.append(
-            "成员已进入仓储管理序列"
-        )
-
-    elif row["new_role"] == "core":
-
-        analysis.append(
-            "成员已进入核心成员序列"
-        )
-
-    return render_template(
-        "identity_log_detail.html",
-        row=row,
-        analysis=analysis
-    )
-
-@app.route(
-    "/identity/edit/<member_name>",
-    methods=["GET", "POST"]
-)
+@app.route('/identity/edit/<member_name>', methods=['GET', 'POST'])
 def identity_edit(member_name):
-
     conn = get_conn()
-
-    if request.method == "POST":
-
-        # ======================
-        # 修改前数据
-        # ======================
-
-        old_row = conn.execute(
-            """
-            SELECT
-                role_tag,
-                identity_score,
-                is_protected,
-                exempt_stall
-            FROM member_profiles
-            WHERE member_name = ?
-            """,
-            (member_name,)
-        ).fetchone()
-
-        # ======================
-        # 更新身份档案
-        # ======================
-
-        conn.execute(
-            """
-            UPDATE member_profiles
-            SET
-                role_tag = ?,
-                role_desc = ?,
-                role_rule = ?,
-                role_weight = ?,
-                is_protected = ?,
-                exempt_stall = ?
-            WHERE member_name = ?
-            """,
-            (
-                request.form.get("role_tag"),
-                request.form.get("role_desc"),
-                request.form.get("role_rule"),
-                float(request.form.get("role_weight", 1)),
-                1 if request.form.get("is_protected") else 0,
-                1 if request.form.get("exempt_stall") else 0,
-                member_name
-            )
-        )
-
+    if request.method == 'POST':
+        old_row = conn.execute('\n                SELECT\n                    role_tag,\n                    identity_score,\n                    is_protected,\n                    exempt_stall\n\n                FROM member_battle_profiles\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
+        conn.execute('\n                UPDATE member_battle_profiles\n                SET\n                    role_tag=?,\n                    role_desc=?,\n                    role_rule=?,\n                    role_weight=?,\n                    is_protected=?,\n                    exempt_stall=?\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (request.form.get('role_tag'), request.form.get('role_desc'), request.form.get('role_rule'), float(request.form.get('role_weight', 1)), 1 if request.form.get('is_protected') else 0, 1 if request.form.get('exempt_stall') else 0, member_name))
         conn.commit()
-
-        # ======================
-        # 修改后数据
-        # ======================
-
-        new_row = conn.execute(
-            """
-            SELECT
-                role_tag,
-                identity_score,
-                is_protected,
-                exempt_stall
-            FROM member_profiles
-            WHERE member_name = ?
-            """,
-            (member_name,)
-        ).fetchone()
-
-        # ======================
-        # 写入操作日志
-        # ======================
-
-        conn.execute(
-            """
-            INSERT INTO identity_logs (
-                member_name,
-                old_role,
-                new_role,
-                old_score,
-                new_score,
-                old_protect,
-                new_protect,
-                old_exempt,
-                new_exempt,
-                operator,
-                created_at
-            )
-            VALUES (
-                ?,?,?,?,?,?,?,?,?,?,datetime('now')
-            )
-            """,
-            (
-                member_name,
-                old_row["role_tag"],
-                new_row["role_tag"],
-                old_row["identity_score"],
-                new_row["identity_score"],
-                old_row["is_protected"],
-                new_row["is_protected"],
-                old_row["exempt_stall"],
-                new_row["exempt_stall"],
-                "admin"
-            )
-        )
-
+        new_row = conn.execute('\n                SELECT\n                    role_tag,\n                    identity_score,\n                    is_protected,\n                    exempt_stall\n\n                FROM member_battle_profiles\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
+        conn.execute("\n                INSERT INTO identity_logs (\n                    battle_id,\n                    member_name,\n                    old_role,\n                    new_role,\n                    old_score,\n                    new_score,\n                    old_protect,\n                    new_protect,\n                    old_exempt,\n                    new_exempt,\n                    operator,\n                    created_at\n                )\n                VALUES (\n                    (\n                        SELECT id\n                        FROM battles\n                        WHERE is_current=1\n                        LIMIT 1\n                    ),\n                    ?,?,?,?,?,?,?,?,?,?,\n                    datetime('now')\n                )\n                ", (member_name, old_row['role_tag'], new_row['role_tag'], old_row['identity_score'], new_row['identity_score'], old_row['is_protected'], new_row['is_protected'], old_row['exempt_stall'], new_row['exempt_stall'], 'admin'))
         conn.commit()
-
-        # ======================
-        # 同步 player_records
-        # ======================
-
-        conn.execute(
-            """
-            UPDATE player_records
-            SET
-                role_tag = (
-                    SELECT role_tag
-                    FROM member_profiles
-                    WHERE member_name = ?
-                ),
-                role_desc = (
-                    SELECT role_desc
-                    FROM member_profiles
-                    WHERE member_name = ?
-                ),
-                role_rule = (
-                    SELECT role_rule
-                    FROM member_profiles
-                    WHERE member_name = ?
-                ),
-                role_weight = (
-                    SELECT role_weight
-                    FROM member_profiles
-                    WHERE member_name = ?
-                ),
-                is_protected = (
-                    SELECT is_protected
-                    FROM member_profiles
-                    WHERE member_name = ?
-                ),
-                exempt_stall = (
-                    SELECT exempt_stall
-                    FROM member_profiles
-                    WHERE member_name = ?
-                )
-            WHERE member = ?
-            """,
-            (
-                member_name,
-                member_name,
-                member_name,
-                member_name,
-                member_name,
-                member_name,
-                member_name
-            )
-        )
-
+        conn.execute('\n                UPDATE player_records\n\n                SET\n                    role_tag=(\n                        SELECT role_tag\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_desc=(\n                        SELECT role_desc\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_rule=(\n                        SELECT role_rule\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_weight=(\n                        SELECT role_weight\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    is_protected=(\n                        SELECT is_protected\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    exempt_stall=(\n                        SELECT exempt_stall\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    )\n\n                WHERE member=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name, member_name, member_name, member_name, member_name, member_name, member_name))
         conn.commit()
-
-        # ======================
-        # 重新计算风险
-        # ======================
-
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
-
-        battle_id = (
-            battle_row["id"]
-            if battle_row
-            else 1
-        )
-
-        latest_snapshot = conn.execute(
-            """
-            SELECT snapshot_time
-            FROM snapshots
-            WHERE is_deleted = 0
-            AND battle_id = ?
-            ORDER BY snapshot_time DESC
-            LIMIT 1
-            """,
-            (
-                battle_id,
-            )
-        ).fetchone()
-
-        latest_time = (
-            latest_snapshot["snapshot_time"]
-            if latest_snapshot
-            else None
-        )
-
+        battle_row = conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n            ').fetchone()
+        battle_id = battle_row['id'] if battle_row else 1
+        latest_snapshot = conn.execute('\n            SELECT snapshot_time\n            FROM snapshots\n            WHERE is_deleted = 0\n            AND battle_id = ?\n            ORDER BY snapshot_time DESC\n            LIMIT 1\n            ', (battle_id,)).fetchone()
+        latest_time = latest_snapshot['snapshot_time'] if latest_snapshot else None
         conn.close()
-
         if latest_time:
-
-            calculate_risk(
-                battle_id,
-                latest_time
-            )
-
-            sync_member_profiles(
-                battle_id,
-                latest_time
-            )
-
-        return redirect("/identity")
-
-    row = conn.execute(
-        """
-        SELECT *
-        FROM member_profiles
-        WHERE member_name = ?
-        """,
-        (
-            member_name,
-        )
-    ).fetchone()
-
+            calculate_stall(battle_id, latest_time)
+            calculate_stall_penalty(battle_id, latest_time)
+            calculate_risk(battle_id, latest_time)
+            sync_member_profiles(battle_id, latest_time)
+            calculate_identity_score(battle_id, latest_time)
+            sync_identity(battle_id, latest_time)
+        return redirect('/identity')
+    row = conn.execute('\n                SELECT *\n                FROM member_battle_profiles\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
     conn.close()
-
-    return render_template(
-        "identity_edit.html",
-        row=row
-    )
+    return render_template('identity_edit.html', row=row)
 
 @app.route("/identity/view")
 def identity_view_legacy():
@@ -7558,767 +6145,220 @@ def identity_view_legacy():
     )
 
 
-@app.route("/identity/view/<member_name>")
+@app.route('/identity/view/<member_name>')
 def identity_view(member_name):
-
-    source = request.args.get("from")
-    group_name = request.args.get("group")
-
+    source = request.args.get('from')
+    group_name = request.args.get('group')
     conn = get_conn()
-
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
-
+        battle_row = conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n            ').fetchone()
         if not battle_row:
-            return "当前未设置战场"
-
-        battle_id = battle_row["id"]
-
-        latest_record = conn.execute(
-            """
-            SELECT *
-            FROM player_records
-            WHERE battle_id = ?
-              AND member = ?
-              AND is_deleted = 0
-            ORDER BY
-                snapshot_time DESC,
-                id DESC
-            LIMIT 1
-            """,
-            (
-                battle_id,
-                member_name,
-            ),
-        ).fetchone()
-
+            return '当前未设置战场'
+        battle_id = battle_row['id']
+        latest_record = conn.execute('\n            SELECT *\n            FROM player_records\n            WHERE battle_id = ?\n              AND member = ?\n              AND is_deleted = 0\n            ORDER BY\n                snapshot_time DESC,\n                id DESC\n            LIMIT 1\n            ', (battle_id, member_name)).fetchone()
         if not latest_record:
-            return "当前战场不存在该成员"
-
-        seen_row = conn.execute(
-            """
-            SELECT
-                MIN(snapshot_time) AS first_seen,
-                MAX(snapshot_time) AS last_seen
-            FROM player_records
-            WHERE battle_id = ?
-              AND member = ?
-              AND is_deleted = 0
-            """,
-            (
-                battle_id,
-                member_name,
-            ),
-        ).fetchone()
-
-        artificial_profile = conn.execute(
-            """
-            SELECT *
-            FROM member_profiles
-            WHERE member_name = ?
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (
-                member_name,
-            ),
-        ).fetchone()
-
+            return '当前战场不存在该成员'
+        seen_row = conn.execute('\n            SELECT\n                MIN(snapshot_time) AS first_seen,\n                MAX(snapshot_time) AS last_seen\n            FROM player_records\n            WHERE battle_id = ?\n              AND member = ?\n              AND is_deleted = 0\n            ', (battle_id, member_name)).fetchone()
+        artificial_profile = conn.execute('\n                SELECT *\n                FROM member_battle_profiles\n                WHERE battle_id=?\n                  AND member_name=?\n                ORDER BY id DESC\n                LIMIT 1\n                ', (battle_id, member_name)).fetchone()
         latest_data = dict(latest_record)
-
-        # 分组名称以当前战场最新成员记录为准，
-        # 不再依赖网址是否携带group参数。
-        group_name = str(
-            latest_data.get("group_name")
-            or ""
-        ).strip()
-
-        profile = (
-            dict(artificial_profile)
-            if artificial_profile
-            else {}
-        )
-
-        profile.update({
-            "member_name": member_name,
-            "group_name": group_name,
-            "first_seen": seen_row["first_seen"],
-            "last_seen": seen_row["last_seen"],
-            "av": latest_data.get("av") or 0,
-            "bs": latest_data.get("bs") or 0,
-            "trend": (
-                latest_data.get("trend")
-                or "stable"
-            ),
-            "risk_level": (
-                latest_data.get("risk_level")
-                or "safe"
-            ),
-            "risk_reason": (
-                latest_data.get("risk_reason")
-                or ""
-            ),
-            "identity_score": (
-                latest_data.get("identity_score")
-                or 0
-            ),
-        })
-
-        artificial_defaults = {
-            "role_tag": "member",
-            "role_desc": "",
-            "role_rule": "normal",
-            "role_weight": 1,
-            "is_protected": 0,
-            "exempt_stall": 0,
-        }
-
-        for field, default in artificial_defaults.items():
+        group_name = str(latest_data.get('group_name') or '').strip()
+        profile = dict(artificial_profile) if artificial_profile else {}
+        profile.update({'member_name': member_name, 'group_name': group_name, 'first_seen': seen_row['first_seen'], 'last_seen': seen_row['last_seen'], 'av': latest_data.get('av') or 0, 'bs': latest_data.get('bs') or 0, 'trend': latest_data.get('trend') or 'stable', 'risk_level': latest_data.get('risk_level') or 'safe', 'risk_reason': latest_data.get('risk_reason') or '', 'identity_score': latest_data.get('identity_score') or 0})
+        artificial_defaults = {'role_tag': 'member', 'role_desc': '', 'role_rule': 'normal', 'role_weight': 1, 'is_protected': 0, 'exempt_stall': 0}
+        for (field, default) in artificial_defaults.items():
             if profile.get(field) is None:
-                profile[field] = (
-                    latest_data.get(field)
-                    if latest_data.get(field) is not None
-                    else default
-                )
-
-        records = conn.execute(
-            """
-            SELECT
-                snapshot_time,
-                COALESCE(av, 0) AS av,
-                COALESCE(bs, 0) AS bs,
-                COALESCE(
-                    identity_score,
-                    0
-                ) AS identity_score,
-                COALESCE(
-                    trend,
-                    'stable'
-                ) AS trend,
-                COALESCE(
-                    risk_level,
-                    'safe'
-                ) AS risk_level
-            FROM player_records
-            WHERE battle_id = ?
-              AND member = ?
-              AND is_deleted = 0
-            ORDER BY
-                snapshot_time DESC,
-                id DESC
-            LIMIT 10
-            """,
-            (
-                battle_id,
-                member_name,
-            ),
-        ).fetchall()
-
-        history_logs = conn.execute(
-            """
-            SELECT *
-            FROM identity_logs
-            WHERE member_name = ?
-            ORDER BY created_at DESC
-            LIMIT 20
-            """,
-            (
-                member_name,
-            ),
-        ).fetchall()
-
+                profile[field] = latest_data.get(field) if latest_data.get(field) is not None else default
+        records = conn.execute("\n            SELECT\n                snapshot_time,\n                COALESCE(av, 0) AS av,\n                COALESCE(bs, 0) AS bs,\n                COALESCE(\n                    identity_score,\n                    0\n                ) AS identity_score,\n                COALESCE(\n                    trend,\n                    'stable'\n                ) AS trend,\n                COALESCE(\n                    risk_level,\n                    'safe'\n                ) AS risk_level\n            FROM player_records\n            WHERE battle_id = ?\n              AND member = ?\n              AND is_deleted = 0\n            ORDER BY\n                snapshot_time DESC,\n                id DESC\n            LIMIT 10\n            ", (battle_id, member_name)).fetchall()
+        history_logs = conn.execute('\n                SELECT *\n                FROM identity_logs\n                WHERE battle_id=?\n                  AND member_name=?\n                ORDER BY created_at DESC\n                LIMIT 20\n                ', (battle_id, member_name)).fetchall()
     finally:
         conn.close()
-
     profile = dict(profile)
-
-    identity_score = float(
-        profile.get(
-            "identity_score",
-            0
-        ) or 0
-    )
-
-    # =====================
-    # 中文映射
-    # =====================
-
-    role_map = {
-        "member": "普通成员",
-        "admin": "管理员",
-        "warehouse": "仓库号",
-        "core": "核心成员"
-    }
-
-    trend_map = {
-        "explosive": "爆发增长",
-        "up": "持续增长",
-        "stable": "稳定",
-        "down": "持续下降",
-        "dead": "停滞"
-    }
-
-    risk_map = {
-        "protected": "身份保护",
-        "safe": "安全",
-        "warning": "警告",
-        "danger": "危险",
-        "clear": "清理"
-    }
-
-    # =====================
-    # 趋势分析
-    # =====================
-
+    identity_score = float(profile.get('identity_score', 0) or 0)
+    role_map = {'member': '普通成员', 'admin': '管理员', 'warehouse': '仓库号', 'core': '核心成员'}
+    trend_map = {'explosive': '爆发增长', 'up': '持续增长', 'stable': '稳定', 'down': '持续下降', 'dead': '停滞'}
+    risk_map = {'protected': '身份保护', 'safe': '安全', 'warning': '警告', 'danger': '危险', 'clear': '清理'}
     scores = []
-
     for r in records:
-
-        if r["identity_score"] is not None:
-
-            scores.append(
-                float(
-                    r["identity_score"]
-                )
-            )
-
+        if r['identity_score'] is not None:
+            scores.append(float(r['identity_score']))
     if scores:
-
         current_score = scores[0]
-
         max_score = max(scores)
-
         min_score = min(scores)
-
-        score_range = round(
-            max_score - min_score,
-            1
-        )
-
-        change_score = round(
-            scores[0] - scores[-1],
-            1
-        )
-
-        volatility = round(
-            max_score - min_score,
-            1
-        )
-
+        score_range = round(max_score - min_score, 1)
+        change_score = round(scores[0] - scores[-1], 1)
+        volatility = round(max_score - min_score, 1)
         growth_rate = 0
-
         if scores and scores[-1] != 0:
-
-            growth_rate = round(
-                (
-                   current_score - scores[-1]
-                )
-                / abs(scores[-1])
-                * 100,
-                1
-            )
-
+            growth_rate = round((current_score - scores[-1]) / abs(scores[-1]) * 100, 1)
     else:
-
         current_score = 0
         max_score = 0
         min_score = 0
         change_score = 0
         volatility = 0
         growth_rate = 0
-
-    # =====================
-    # 成长跨度
-    # =====================
-
-    score_range = round(
-        max_score - min_score,
-        1
-    )
-
-    # =====================
-    # 真实波动指数
-    # =====================
-
+    score_range = round(max_score - min_score, 1)
     jumps = []
-
     for i in range(len(scores) - 1):
-
-        jumps.append(
-            abs(scores[i] - scores[i + 1])
-        )
-
+        jumps.append(abs(scores[i] - scores[i + 1]))
     if jumps:
-
-       volatility = round(
-           sum(jumps) / len(jumps),
-           1
-        )
-
+        volatility = round(sum(jumps) / len(jumps), 1)
     else:
-
         volatility = 0
-
-    # =====================
-    # 趋势评级
-    # =====================
-
     if change_score >= 20:
-
-        trend_level = "爆发增长"
-
+        trend_level = '爆发增长'
     elif change_score >= 10:
-
-        trend_level = "持续增长"
-
+        trend_level = '持续增长'
     elif change_score >= -10:
-
-        trend_level = "稳定"
-
+        trend_level = '稳定'
     elif change_score >= -20:
-
-        trend_level = "下滑"
-
+        trend_level = '下滑'
     else:
-
-        trend_level = "崩盘风险"
-
-    profile["risk_name"] = risk_map.get(
-        profile.get("risk_level"),
-        "未知"
-    )
-
-    # =====================
-    # V9.3成员画像引擎
-    # =====================
-
+        trend_level = '崩盘风险'
+    profile['risk_name'] = risk_map.get(profile.get('risk_level'), '未知')
     tags = []
-
-    # 成长标签
-
     if change_score >= 20:
-        tags.append("高速成长")
-
+        tags.append('高速成长')
     elif change_score >= 10:
-        tags.append("持续成长")
-
+        tags.append('持续成长')
     elif change_score <= -20:
-        tags.append("明显下滑")
-
-    # 贡献标签
-
-    bs_value = float(
-        profile.get("bs", 0) or 0
-    )
-
+        tags.append('明显下滑')
+    bs_value = float(profile.get('bs', 0) or 0)
     if bs_value >= 70:
-        tags.append("高贡献")
-
+        tags.append('高贡献')
     elif bs_value <= 20:
-        tags.append("低贡献")
-
-    # 活跃标签
-
-    av_value = float(
-        profile.get("av", 0) or 0
-    )
-
+        tags.append('低贡献')
+    av_value = float(profile.get('av', 0) or 0)
     if av_value >= 70:
-        tags.append("高活跃")
-
+        tags.append('高活跃')
     elif av_value <= 20:
-        tags.append("低活跃")
-
-    # 稳定标签
-
+        tags.append('低活跃')
     if volatility <= 10:
-        tags.append("稳定")
-
+        tags.append('稳定')
     elif volatility >= 30:
-        tags.append("波动大")
-
-    # 风险标签
-
-    risk_name = profile.get("risk_name", "")
-
-    if risk_name == "安全":
-        tags.append("安全")
-
-    elif risk_name == "警告":
-        tags.append("警告")
-
-    elif risk_name == "危险":
-        tags.append("危险")
-
-    elif risk_name == "身份保护":
-        tags.append("身份保护")
-
-    #最终画像
-
+        tags.append('波动大')
+    risk_name = profile.get('risk_name', '')
+    if risk_name == '安全':
+        tags.append('安全')
+    elif risk_name == '警告':
+        tags.append('警告')
+    elif risk_name == '危险':
+        tags.append('危险')
+    elif risk_name == '身份保护':
+        tags.append('身份保护')
     member_style = tags
-
-    # =====================
-    # V9.4 智能画像引擎
-    # =====================
-
-    member_type = "普通成员"
-    member_advice = "持续观察"
-
-    if "高速成长" in tags and "高贡献" in tags:
-
-        member_type = "核心培养对象"
-        member_advice = "优先培养"
-
-    elif "高贡献" in tags and "高活跃" in tags:
-
-        member_type = "主力战将"
-        member_advice = "重点扶持"
-
-    elif "高速成长" in tags:
-
-        member_type = "潜力新星"
-        member_advice = "持续培养"
-
-    elif "危险" in tags:
-
-        member_type = "风险成员"
-        member_advice = "重点观察"
-
-    elif "警告" in tags:
-
-        member_type = "观察成员"
-        member_advice = "跟踪表现"
-
-    elif "低贡献" in tags:
-
-        member_type = "边缘成员"
-        member_advice = "限制资源"
-
-    elif "身份保护" in tags:
-
-        member_type = "特殊成员"
-        member_advice = "避免误判"
-
-    # =====================
-    # V9.5 管理等级引擎
-    # =====================
-
-    management_level = "B级"
-    management_action = "持续观察"
-
-    if member_type == "核心培养对象":
-
-        management_level = "S级"
-        management_action = "重点培养"
-
-    elif member_type == "主力战将":
-
-        management_level = "A级"
-        management_action = "重点扶持"
-
-    elif member_type == "潜力新星":
-
-        management_level = "A级"
-        management_action = "持续培养"
-
-    elif member_type == "观察成员":
-
-        management_level = "C级"
-        management_action = "持续观察"
-
-    elif member_type == "边缘成员":
-
-        management_level = "D级"
-        management_action = "限制资源"
-
-    elif member_type == "风险成员":
-
-        management_level = "F级"
-        management_action = "进入清理观察"
-
-    # =====================
-    # 稳定评级
-    # =====================
-
+    member_type = '普通成员'
+    member_advice = '持续观察'
+    if '高速成长' in tags and '高贡献' in tags:
+        member_type = '核心培养对象'
+        member_advice = '优先培养'
+    elif '高贡献' in tags and '高活跃' in tags:
+        member_type = '主力战将'
+        member_advice = '重点扶持'
+    elif '高速成长' in tags:
+        member_type = '潜力新星'
+        member_advice = '持续培养'
+    elif '危险' in tags:
+        member_type = '风险成员'
+        member_advice = '重点观察'
+    elif '警告' in tags:
+        member_type = '观察成员'
+        member_advice = '跟踪表现'
+    elif '低贡献' in tags:
+        member_type = '边缘成员'
+        member_advice = '限制资源'
+    elif '身份保护' in tags:
+        member_type = '特殊成员'
+        member_advice = '避免误判'
+    management_level = 'B级'
+    management_action = '持续观察'
+    if member_type == '核心培养对象':
+        management_level = 'S级'
+        management_action = '重点培养'
+    elif member_type == '主力战将':
+        management_level = 'A级'
+        management_action = '重点扶持'
+    elif member_type == '潜力新星':
+        management_level = 'A级'
+        management_action = '持续培养'
+    elif member_type == '观察成员':
+        management_level = 'C级'
+        management_action = '持续观察'
+    elif member_type == '边缘成员':
+        management_level = 'D级'
+        management_action = '限制资源'
+    elif member_type == '风险成员':
+        management_level = 'F级'
+        management_action = '进入清理观察'
     if volatility <= 5:
-
-        stability_level = "⭐⭐⭐⭐⭐ 非常稳定"
-
+        stability_level = '⭐⭐⭐⭐⭐ 非常稳定'
     elif volatility <= 10:
-
-        stability_level = "⭐⭐⭐⭐ 稳定"
-
+        stability_level = '⭐⭐⭐⭐ 稳定'
     elif volatility <= 15:
-
-        stability_level = "⭐⭐⭐ 波动明显"
-
+        stability_level = '⭐⭐⭐ 波动明显'
     elif volatility <= 25:
-
-        stability_level = "⭐⭐ 风险较高"
-
+        stability_level = '⭐⭐ 风险较高'
     else:
-
-        stability_level = "⭐ 极不稳定"
-
-    # =====================
-    # AI点评
-    # =====================
-
+        stability_level = '⭐ 极不稳定'
     if change_score >= 20:
-
-        ai_comment = (
-            "身份价值持续快速增长，"
-            "🌱 潜力成员名单。"
-        )
-
+        ai_comment = '身份价值持续快速增长，🌱 潜力成员名单。'
     elif change_score >= 10:
-
-        ai_comment = (
-            "近期成长明显，"
-            "具备核心成员潜力。"
-        )
-
+        ai_comment = '近期成长明显，具备核心成员潜力。'
     elif change_score >= -10:
-
-        ai_comment = (
-            "整体表现稳定，"
-            "暂时无明显风险。"
-        )
-
+        ai_comment = '整体表现稳定，暂时无明显风险。'
     elif change_score >= -20:
-
-        ai_comment = (
-            "身份价值出现下滑，"
-            "建议持续观察。"
-        )
-
+        ai_comment = '身份价值出现下滑，建议持续观察。'
     else:
-
-        ai_comment = (
-            "身份价值连续下降，"
-            "存在流失风险。"
-        )
-
-    # =====================
-    # 身份拆解
-    # =====================
-
-    profile["score_av"] = round(
-        float(profile.get("av", 0)) * 0.6,
-        1
-    )
-
-    profile["score_bs"] = round(
-        float(profile.get("bs", 0)) * 0.6,
-        1
-    )
-
-    trend_bonus = {
-        "explosive": 10,
-        "up": 5,
-        "stable": 0,
-        "down": -5,
-        "dead": -10
-    }
-
-    role_bonus = {
-        "admin": 15,
-        "core": 10,
-        "warehouse": 5,
-        "member": 0
-    }
-
-    profile["score_trend"] = trend_bonus.get(
-        profile.get("trend"),
-        0
-    )
-
-    profile["score_role"] = role_bonus.get(
-        profile.get("role_tag"),
-        0
-    )
-
-    profile["score_protect"] = (
-        5 if profile.get("is_protected") else 0
-    )
-
-    # =====================
-    # 身份等级
-    # =====================
-
-    profile.update(
-        _build_identity_grade(
-            identity_score,
-        )
-    )
-
-    profile["role_name"] = role_map.get(
-        profile.get("role_tag"),
-        "普通成员"
-    )
-
-    profile["trend_name"] = trend_map.get(
-        profile.get("trend"),
-        "未知"
-    )
-
-    profile["risk_name"] = risk_map.get(
-        profile.get("risk_level"),
-        "未知"
-    )
-
-    # =====================
-    # 决策建议
-    # =====================
-
-    profile.update(
-        _build_identity_decision(
-            profile=profile,
-            identity_score=identity_score,
-        )
-    )
-
+        ai_comment = '身份价值连续下降，存在流失风险。'
+    profile['score_av'] = round(float(profile.get('av', 0)) * 0.6, 1)
+    profile['score_bs'] = round(float(profile.get('bs', 0)) * 0.6, 1)
+    trend_bonus = {'explosive': 10, 'up': 5, 'stable': 0, 'down': -5, 'dead': -10}
+    role_bonus = {'admin': 15, 'core': 10, 'warehouse': 5, 'member': 0}
+    profile['score_trend'] = trend_bonus.get(profile.get('trend'), 0)
+    profile['score_role'] = role_bonus.get(profile.get('role_tag'), 0)
+    profile['score_protect'] = 5 if profile.get('is_protected') else 0
+    profile.update(_build_identity_grade(identity_score))
+    profile['role_name'] = role_map.get(profile.get('role_tag'), '普通成员')
+    profile['trend_name'] = trend_map.get(profile.get('trend'), '未知')
+    profile['risk_name'] = risk_map.get(profile.get('risk_level'), '未知')
+    profile.update(_build_identity_decision(profile=profile, identity_score=identity_score))
     records_cn = []
-
     for r in records:
-
         item = dict(r)
-
-        item["trend_name"] = trend_map.get(
-            item["trend"],
-            "未知"
-        )
-
-        item["risk_name"] = risk_map.get(
-            item["risk_level"],
-            "未知"
-        )
-
+        item['trend_name'] = trend_map.get(item['trend'], '未知')
+        item['risk_name'] = risk_map.get(item['risk_level'], '未知')
         records_cn.append(item)
-    # =====================
-    # AI幕僚决策
-    # =====================
-
     ai_decision = None
-
-    member_strategy = {
-        "talent":"普通成员",
-        "actions":[]
-    }
-
+    member_strategy = {'talent': '普通成员', 'actions': []}
     conn = get_conn()
-
     try:
-
         report = build_staff_report(conn)
-
-        for item in report.get(
-            "decision_list",
-            []
-        ):
-
-            if item["member"] == member_name:
-
+        for item in report.get('decision_list', []):
+            if item['member'] == member_name:
                 ai_decision = item
-
                 break
     finally:
-
         conn.close()
-
-    # AI人才画像
-
-    member_strategy = build_member_strategy(
-        records_cn[0]
-    )
-
-    # =====================
-    # 成长履历
-    # =====================
-
+    member_strategy = build_member_strategy(records_cn[0])
     growth_events = []
-
     if len(scores) >= 2:
-
-        # 晋升A级
         if current_score >= 70:
-            growth_events.append(
-                "🏅 晋升A级骨干成员"
-            )
-
-        # 晋升B级
+            growth_events.append('🏅 晋升A级骨干成员')
         elif current_score >= 60:
-            growth_events.append(
-                "⭐ 晋升B级稳定成员"
-            )
-
-        # 摆脱危险
-        if records_cn[0]["risk_name"] in ["安全", "身份保护"]:
-
+            growth_events.append('⭐ 晋升B级稳定成员')
+        if records_cn[0]['risk_name'] in ['安全', '身份保护']:
             for r in records_cn[1:]:
-
-                if r["risk_name"] in ["危险", "清理", "警告"]:
-
-                    growth_events.append(
-                        "🛡️ 脱离风险名单"
-                    )
+                if r['risk_name'] in ['危险', '清理', '警告']:
+                    growth_events.append('🛡️ 脱离风险名单')
                     break
-
-        # 身份值突破
         if current_score >= 60 and min_score < 60:
-
-            growth_events.append(
-                "📈 身份值突破60"
-            )
-
-        # 爆发增长
+            growth_events.append('📈 身份值突破60')
         if change_score >= 20:
-
-            growth_events.append(
-                "🚀 进入爆发增长阶段"
-            )
-
+            growth_events.append('🚀 进入爆发增长阶段')
     if not growth_events:
-
-        growth_events.append(
-            "暂无重大成长事件"
-        )
-
-    return render_template(
-        "identity_view.html",
-        profile=profile,
-        ai_decision=ai_decision,
-        member_strategy=member_strategy,
-        source=source,
-        group_name=group_name,
-        records=records_cn,
-        tags=tags,
-        history_logs=history_logs,
-        current_score=current_score,
-        max_score=max_score,
-        min_score=min_score,
-        score_range=score_range,
-        change_score=change_score,
-        member_style=member_style,
-        member_tags=member_style,
-        member_type=member_type,
-        member_advice=member_advice,
-        management_level=management_level,
-        management_action=management_action,
-        volatility=volatility,
-        growth_rate=growth_rate,
-        growth_events=growth_events,
-        trend_level=trend_level,
-        stability_level=stability_level,
-        ai_comment=ai_comment
-    )
+        growth_events.append('暂无重大成长事件')
+    return render_template('identity_view.html', profile=profile, ai_decision=ai_decision, member_strategy=member_strategy, source=source, group_name=group_name, records=records_cn, tags=tags, history_logs=history_logs, current_score=current_score, max_score=max_score, min_score=min_score, score_range=score_range, change_score=change_score, member_style=member_style, member_tags=member_style, member_type=member_type, member_advice=member_advice, management_level=management_level, management_action=management_action, volatility=volatility, growth_rate=growth_rate, growth_events=growth_events, trend_level=trend_level, stability_level=stability_level, ai_comment=ai_comment)
 
 @app.route("/battles")
 def battles():
