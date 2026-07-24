@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='compare_attendance.css') }}"
+>
 
 <style>
 /* V15.7-H4 sticky compare table */
@@ -61,7 +65,396 @@
 }
 </style>
 
-<h1 class="page-title">对比分析（A+B）</h1>
+{% set ca = attendance|default({}) or {} %}
+{% set ca_overview = ca.get('同盟概览', {}) %}
+{% set ca_groups = ca.get('分组概览', []) %}
+{% set ca_config = ca.get('配置', {}) %}
+{% set ca_thresholds = ca_config.get('考核标准', {}) %}
+{% set ca_scope = ca.get('范围', {}) %}
+{% set ca_period = ca.get('统计周期', {}) %}
+{% set ca_battle = ca_overview.get('战功', {}) %}
+{% set ca_assist = ca_overview.get('助攻', {}) %}
+{% set ca_donate = ca_overview.get('捐献', {}) %}
+
+<div class="ca-page-heading">
+    <div>
+        <div class="ca-eyebrow">
+            A15.4.29 · 对比分析
+        </div>
+
+        <h1 class="page-title">
+            同盟考勤驾驶舱
+        </h1>
+
+        <p class="ca-page-subtitle">
+            基于所选起止快照计算战功、助攻和捐献增量。
+            同盟及分组概览始终使用完整结束快照，
+            下方成员明细可继续按现有条件筛选。
+        </p>
+    </div>
+</div>
+
+{% if ca and ca_overview %}
+<section
+    class="ca-dashboard"
+    data-ca-dashboard
+>
+    <div class="ca-dashboard-head">
+        <div>
+            <h2 class="ca-dashboard-title">
+                同盟考勤总览
+            </h2>
+
+            <div class="ca-dashboard-meta">
+                <span>
+                    周期：
+                    {{ ca_period.get('开始', '-') }}
+                    至
+                    {{ ca_period.get('结束', '-') }}
+                </span>
+
+                <span>
+                    {{ ca.get('配置状态', '') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="ca-dashboard-actions">
+            <button
+                type="button"
+                class="ca-dashboard-button"
+                data-ca-toggle-groups
+                aria-expanded="true"
+            >
+                收起分组概览
+            </button>
+        </div>
+    </div>
+
+    <div class="ca-summary-grid">
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                同盟总人数
+            </div>
+
+            <div class="ca-summary-value">
+                {{
+                    ca_overview.get(
+                        '总人数',
+                        ca_scope.get('结束快照人数', 0)
+                    )
+                }}
+            </div>
+
+            <div class="ca-summary-note">
+                以结束快照成员范围为准
+            </div>
+        </article>
+
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                有效考核人数
+            </div>
+
+            <div class="ca-summary-value">
+                {{ ca_overview.get('考核人数', 0) }}
+            </div>
+
+            <div class="ca-summary-note">
+                无基线成员不进入合格率分母
+            </div>
+        </article>
+
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                豁免人数
+            </div>
+
+            <div class="ca-summary-value">
+                {{
+                    ca_overview.get(
+                        '豁免人数',
+                        ca.get('豁免成员数', 0)
+                    )
+                }}
+            </div>
+
+            <div class="ca-summary-note">
+                当前战场独立豁免规则
+            </div>
+        </article>
+
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                综合考勤分
+            </div>
+
+            <div class="ca-summary-value">
+                {{ ca_overview.get('综合考勤分', 0) }}
+            </div>
+
+            <div class="ca-summary-note">
+                战功50% · 助攻30% · 捐献20%
+            </div>
+        </article>
+    </div>
+
+    <div class="ca-metric-grid">
+        {% for metric_name, metric_key, metric in [
+            ('战功', 'battle', ca_battle),
+            ('助攻', 'assist', ca_assist),
+            ('捐献', 'donate', ca_donate)
+        ] %}
+        <article
+            class="ca-metric-card"
+            data-ca-metric="{{ metric_key }}"
+        >
+            <div class="ca-metric-head">
+                <h3 class="ca-metric-title">
+                    {{ metric_name }}考勤
+                </h3>
+
+                <div class="ca-metric-standard">
+                    标准 ≥
+                    {{ ca_thresholds.get(metric_key, 0) }}
+                </div>
+            </div>
+
+            <div class="ca-metric-rate">
+                {{ metric.get('合格率', 0) }}%
+            </div>
+
+            <div class="ca-metric-rate-label">
+                有效考核合格率
+            </div>
+
+            <div class="ca-metric-stats">
+                <div class="ca-metric-stat">
+                    <span>合格人数</span>
+                    <strong>
+                        {{ metric.get('合格人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>参与人数</span>
+                    <strong>
+                        {{ metric.get('参与人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>缺勤人数</span>
+                    <strong>
+                        {{ metric.get('缺勤人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>未达标人数</span>
+                    <strong>
+                        {{ metric.get('未达标人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>数据异常</span>
+                    <strong>
+                        {{ metric.get('数据异常人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>总增长</span>
+                    <strong>
+                        {{ metric.get('总增长', 0) }}
+                    </strong>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="ca-scope-strip">
+        <div class="ca-scope-item">
+            <span>起始人数</span>
+            <strong>
+                {{ ca_scope.get('起始快照人数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>结束人数</span>
+            <strong>
+                {{ ca_scope.get('结束快照人数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>匹配成员</span>
+            <strong>
+                {{ ca_scope.get('匹配成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>新增成员</span>
+            <strong>
+                {{ ca_scope.get('新增成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>离开成员</span>
+            <strong>
+                {{ ca_scope.get('离开成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>无基线成员</span>
+            <strong>
+                {{ ca_overview.get('无基线人数', 0) }}
+            </strong>
+        </div>
+    </div>
+
+    <section
+        class="ca-group-panel"
+        data-ca-groups
+    >
+        <div class="ca-group-panel-head">
+            <div>
+                <h3 class="ca-group-panel-title">
+                    分组考勤概览
+                </h3>
+
+                <div class="ca-group-panel-note">
+                    共 {{ ca_groups|length }} 个分组，
+                    总人数由完整结束快照统计。
+                </div>
+            </div>
+        </div>
+
+        <div class="ca-group-table-wrap">
+            <table class="ca-group-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>分组</th>
+                        <th>总人数</th>
+                        <th>考核人数</th>
+                        <th>豁免</th>
+                        <th>综合分</th>
+                        <th>战功合格率</th>
+                        <th>助攻合格率</th>
+                        <th>捐献合格率</th>
+                        <th>无基线</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for group in ca_groups %}
+                    <tr data-ca-group-row>
+                        <td>
+                            {{ group.get('综合排名', '-') }}
+                        </td>
+
+                        <td>
+                            {{ group.get('分组', '未分组') }}
+                        </td>
+
+                        <td>
+                            {{ group.get('总人数', 0) }}
+                        </td>
+
+                        <td>
+                            {{ group.get('考核人数', 0) }}
+                        </td>
+
+                        <td>
+                            {{ group.get('豁免人数', 0) }}
+                        </td>
+
+                        <td>
+                            <strong>
+                                {{ group.get('综合考勤分', 0) }}
+                            </strong>
+                        </td>
+
+                        {% for rate in [
+                            group.get('战功合格率', 0),
+                            group.get('助攻合格率', 0),
+                            group.get('捐献合格率', 0)
+                        ] %}
+                        <td>
+                            <span class="
+                                {% if rate >= 80 %}
+                                    ca-rate-strong
+                                {% elif rate >= 50 %}
+                                    ca-rate-warning
+                                {% else %}
+                                    ca-rate-danger
+                                {% endif %}
+                            ">
+                                {{ rate }}%
+                            </span>
+                        </td>
+                        {% endfor %}
+
+                        <td>
+                            {{ group.get('无基线人数', 0) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <details class="ca-method">
+        <summary>
+            查看统计口径
+        </summary>
+
+        <div class="ca-method-body">
+            <div>
+                {{ ca_scope.get('考勤分母规则', '') }}
+            </div>
+
+            <div>
+                豁免规则：{{ ca.get('豁免规则', '') }}
+            </div>
+
+            <div>
+                默认排序：
+                {{
+                    ca.get('默认排序', {}).get(
+                        '模式',
+                        '异常优先'
+                    )
+                }}
+            </div>
+        </div>
+    </details>
+</section>
+{% else %}
+<section
+    class="ca-dashboard"
+    data-ca-dashboard
+>
+    <div class="ca-empty-state">
+        <h2>
+            当前缓存尚无考勤驾驶舱数据
+        </h2>
+
+        <p>
+            请在下方重新执行一次自动或手动对比分析。
+            新生成的结果会显示完整同盟概览和分组考勤。
+        </p>
+    </div>
+</section>
+{% endif %}
 
 <div class="card">
     <div class="card-title">对比设置</div>
@@ -594,4 +987,8 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script
+    src="{{ url_for('static', filename='compare_attendance.js') }}"
+    defer
+></script>
 {% endblock %}
