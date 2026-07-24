@@ -6,6 +6,7 @@ import unittest
 
 from services.engines.compare_attendance_adapter import (
     NOT_INCLUDED_STATUS,
+    build_compare_attendance_cache_payload,
     build_compare_attendance_context,
     enrich_compare_rows,
 )
@@ -319,6 +320,54 @@ class CompareAttendanceAdapterTests(
                 [{"评分": 90}],
                 dashboard,
             )
+
+
+    def test_compact_cache_payload_omits_full_member_copy(
+        self,
+    ):
+        payload = (
+            build_compare_attendance_cache_payload(
+                self.start_rows,
+                self.end_rows,
+                thresholds=THRESHOLDS,
+                weights=WEIGHTS,
+                visible_compare_rows=[
+                    {"成员": "A"},
+                ],
+            )
+        )
+
+        self.assertEqual(
+            payload["attendance"][
+                "同盟概览"
+            ]["总人数"],
+            3,
+        )
+
+        self.assertEqual(
+            len(payload["visible_rows"]),
+            1,
+        )
+
+        self.assertNotIn(
+            "完整成员明细",
+            payload["attendance"],
+        )
+
+        self.assertNotIn(
+            "成员明细",
+            payload["attendance"],
+        )
+
+        self.assertIn(
+            "分组概览",
+            payload["attendance"],
+        )
+
+        self.assertIn(
+            "范围",
+            payload["attendance"],
+        )
 
 
 if __name__ == "__main__":

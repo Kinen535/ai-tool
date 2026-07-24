@@ -397,3 +397,38 @@ def build_compare_attendance_context(
     }
 
     return _json_safe(context)
+
+def build_compare_attendance_cache_payload(
+    start_snapshot: Any,
+    end_snapshot: Any,
+    *,
+    thresholds: Mapping[str, Any],
+    weights: Mapping[str, Any] | None = None,
+    exempt_names: Iterable[str] | None = None,
+    visible_compare_rows: Any = None,
+) -> dict[str, Any]:
+    context = build_compare_attendance_context(
+        start_snapshot,
+        end_snapshot,
+        thresholds=thresholds,
+        weights=weights,
+        exempt_names=exempt_names,
+        visible_compare_rows=visible_compare_rows,
+    )
+
+    dashboard = context["考勤驾驶舱"]
+
+    attendance = {
+        "范围": dashboard["范围"],
+        "配置": dashboard["配置"],
+        "同盟概览": context["同盟概览"],
+        "分组概览": context["分组概览"],
+        "默认排序": dashboard["默认排序"],
+        "适配契约": context["适配契约"],
+    }
+
+    return _json_safe({
+        "attendance": attendance,
+        "visible_rows":
+            context["当前显示明细"],
+    })

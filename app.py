@@ -4301,6 +4301,8 @@ def compare():
 
     kick_text = ""
 
+    attendance = {}
+
     page = 1
     total_pages = 1
 
@@ -4342,6 +4344,16 @@ def compare():
 
                 cached_data = json.loads(row[0])
 
+                cached_data.setdefault(
+                    "attendance",
+                    {},
+                )
+
+                cached_data.setdefault(
+                    "member_keyword",
+                    "",
+                )
+
                 requested_page = request.args.get(
                     "page",
                     "1",
@@ -4376,6 +4388,13 @@ def compare():
 
             power_growth_max="",
 
+            war_min="",
+            war_max="",
+            assist_min="",
+            assist_max="",
+            donate_min="",
+            donate_max="",
+
             data=[],
 
             groups=[],
@@ -4383,6 +4402,8 @@ def compare():
             advice=advice,
 
             kick_text="",
+
+            attendance={},
 
             selected_old="",
 
@@ -4644,6 +4665,94 @@ def compare():
             orient="records"
         )
 
+        from services.engines.compare_attendance_adapter import (
+            build_compare_attendance_cache_payload,
+        )
+
+        attendance_thresholds = {
+            "battle": 5000,
+            "assist": 1000,
+            "donate": 100,
+        }
+
+        attendance_weights = {
+            "battle": 50,
+            "assist": 30,
+            "donate": 20,
+        }
+
+        attendance_profile_conn = get_conn()
+
+        try:
+            exempt_rows = (
+                attendance_profile_conn.execute(
+                    """
+                    SELECT DISTINCT member_name
+                    FROM member_battle_profiles
+                    WHERE battle_id = ?
+                      AND COALESCE(
+                          exempt_stall,
+                          0
+                      ) = 1
+                      AND TRIM(
+                          COALESCE(
+                              member_name,
+                              ''
+                          )
+                      ) <> ''
+                    ORDER BY member_name
+                    """,
+                    (battle_id,),
+                ).fetchall()
+            )
+        finally:
+            attendance_profile_conn.close()
+
+        attendance_exempt_names = [
+            str(row["member_name"]).strip()
+            for row in exempt_rows
+        ]
+
+        attendance_bundle = (
+            build_compare_attendance_cache_payload(
+                df_old,
+                df_new,
+                thresholds=attendance_thresholds,
+                weights=attendance_weights,
+                exempt_names=(
+                    attendance_exempt_names
+                ),
+                visible_compare_rows=all_rows,
+            )
+        )
+
+        attendance = attendance_bundle[
+            "attendance"
+        ]
+
+        attendance["统计周期"] = {
+            "开始": selected_old,
+            "结束": selected_new,
+        }
+
+        attendance["配置状态"] = (
+            "后端默认值，待页面独立配置"
+        )
+
+        attendance["豁免规则"] = (
+            "当前战场"
+            " member_battle_profiles."
+            "exempt_stall=1"
+        )
+
+        attendance["豁免成员数"] = len(
+            attendance_exempt_names
+        )
+
+        all_rows = attendance_bundle[
+            "visible_rows"
+        ]
+
         per_page = 50
 
         result_rows = all_rows[:per_page]
@@ -4694,6 +4803,8 @@ def compare():
             "total_rows": len(all_rows),
 
             "groups": group_rows,
+
+            "attendance": attendance,
 
             "advice": advice,
 
@@ -4777,9 +4888,18 @@ def compare():
 
         team_keyword=team_keyword,
 
+        member_keyword=member_keyword,
+
         power_growth_min=power_growth_min,
 
         power_growth_max=power_growth_max,
+
+        war_min=war_min,
+        war_max=war_max,
+        assist_min=assist_min,
+        assist_max=assist_max,
+        donate_min=donate_min,
+        donate_max=donate_max,
 
         data=result_rows,
 
@@ -4788,6 +4908,8 @@ def compare():
         advice=advice,
 
         kick_text=kick_text,
+
+        attendance=attendance,
 
         selected_old=selected_old,
 
