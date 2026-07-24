@@ -6028,7 +6028,7 @@ def identity_log_detail(log_id):
     row = conn.execute('\n                SELECT il.*\n                FROM identity_logs AS il\n\n                INNER JOIN battles AS b\n                  ON b.id=il.battle_id\n                 AND b.is_current=1\n\n                WHERE il.id=?\n                ', (log_id,)).fetchone()
     conn.close()
     if not row:
-        return '日志不存在'
+        return '日志不存在', 404
     analysis = []
     if row['old_role'] != row['new_role']:
         role_map = {'member': '普通成员', 'core': '核心成员', 'warehouse': '仓库号', 'admin': '管理员'}
