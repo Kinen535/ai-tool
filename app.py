@@ -4272,6 +4272,136 @@ def compare():
     import json
     import sqlite3
 
+    # A15.4.29-E4 attendance route integration
+    from services.attendance_config_store import (
+        TABLE_NAME as ATTENDANCE_CONFIG_TABLE,
+        default_attendance_config,
+        load_attendance_config,
+        save_attendance_config,
+    )
+
+    attendance_form_fields = (
+        "attendance_threshold_battle",
+        "attendance_threshold_assist",
+        "attendance_threshold_donate",
+        "attendance_weight_battle",
+        "attendance_weight_assist",
+        "attendance_weight_donate",
+        "attendance_enable_battle",
+        "attendance_enable_assist",
+        "attendance_enable_donate",
+        "attendance_auto_disable_empty",
+    )
+
+    def _default_attendance_form_config(
+        battle_id=1,
+    ):
+        config = default_attendance_config()
+        config["battle_id"] = int(battle_id)
+        config["persisted"] = False
+        config["updated_at"] = ""
+        return config
+
+    def _load_attendance_form_config(
+        battle_id,
+    ):
+        connection = get_conn()
+
+        try:
+            table_exists = connection.execute(
+                """
+                SELECT 1
+                FROM sqlite_master
+                WHERE type='table'
+                  AND name=?
+                LIMIT 1
+                """,
+                (ATTENDANCE_CONFIG_TABLE,),
+            ).fetchone()
+
+            if table_exists is None:
+                return (
+                    _default_attendance_form_config(
+                        battle_id
+                    )
+                )
+
+            return load_attendance_config(
+                connection,
+                battle_id,
+            )
+        finally:
+            connection.close()
+
+    def _attendance_form_payload():
+        return {
+            "thresholds": {
+                "battle": (
+                    request.form.get(
+                        "attendance_threshold_battle",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+                "assist": (
+                    request.form.get(
+                        "attendance_threshold_assist",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+                "donate": (
+                    request.form.get(
+                        "attendance_threshold_donate",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+            },
+            "weights": {
+                "battle": (
+                    request.form.get(
+                        "attendance_weight_battle",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+                "assist": (
+                    request.form.get(
+                        "attendance_weight_assist",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+                "donate": (
+                    request.form.get(
+                        "attendance_weight_donate",
+                        "",
+                    )
+                    or ""
+                ).strip(),
+            },
+            "enabled_metrics": {
+                "battle": (
+                    "attendance_enable_battle"
+                    in request.form
+                ),
+                "assist": (
+                    "attendance_enable_assist"
+                    in request.form
+                ),
+                "donate": (
+                    "attendance_enable_donate"
+                    in request.form
+                ),
+            },
+            "auto_disable_empty_metrics": (
+                "attendance_auto_disable_empty"
+                in request.form
+            ),
+            "config_version": 1,
+        }
+
     print("🚀 进入 compare 路由，method:", request.method)
 
     init_db()
@@ -4302,6 +4432,9 @@ def compare():
     kick_text = ""
 
     attendance = {}
+    attendance_config = (
+        _default_attendance_form_config()
+    )
 
     page = 1
     total_pages = 1
@@ -4325,6 +4458,12 @@ def compare():
             """).fetchone()
 
             battle_id = battle_row["id"] if battle_row else 1
+
+            attendance_config = (
+                _load_attendance_form_config(
+                    battle_id
+                )
+            )
 
             cur.execute("""
                 SELECT data_json
@@ -4365,6 +4504,10 @@ def compare():
                     per_page=50,
                 )
 
+                cached_data[
+                    "attendance_config"
+                ] = attendance_config
+
                 return render_template(
                     "compare.html",
                     **cached_data
@@ -4404,6 +4547,7 @@ def compare():
             kick_text="",
 
             attendance={},
+            attendance_config=attendance_config,
 
             selected_old="",
 
@@ -4513,6 +4657,71 @@ def compare():
             battle_row["id"]
             if battle_row
             else 1
+        )
+
+        attendance_config_submitted = any(
+            field_name in request.form
+            for field_name in attendance_form_fields
+        )
+
+        if attendance_config_submitted:
+            attendance_config_input = (
+                _attendance_form_payload()
+            )
+
+            attendance_config = dict(
+                attendance_config_input
+            )
+
+            attendance_config[
+                "battle_id"
+            ] = battle_id
+
+            attendance_config[
+                "persisted"
+            ] = False
+
+            attendance_config[
+                "updated_at"
+            ] = ""
+
+            attendance_config_conn = get_conn()
+
+            try:
+                attendance_config = (
+                    save_attendance_config(
+                        attendance_config_conn,
+                        battle_id,
+                        attendance_config_input,
+                    )
+                )
+            finally:
+                attendance_config_conn.close()
+        else:
+            attendance_config = (
+                _load_attendance_form_config(
+                    battle_id
+                )
+            )
+
+        attendance_thresholds = (
+            attendance_config["thresholds"]
+        )
+
+        attendance_weights = (
+            attendance_config["weights"]
+        )
+
+        attendance_enabled_metrics = (
+            attendance_config[
+                "enabled_metrics"
+            ]
+        )
+
+        attendance_auto_disable_empty = (
+            attendance_config[
+                "auto_disable_empty_metrics"
+            ]
         )
 
         df_old = load_snapshot_df(
@@ -4669,18 +4878,6 @@ def compare():
             build_compare_attendance_cache_payload,
         )
 
-        attendance_thresholds = {
-            "battle": 5000,
-            "assist": 1000,
-            "donate": 100,
-        }
-
-        attendance_weights = {
-            "battle": 50,
-            "assist": 30,
-            "donate": 20,
-        }
-
         attendance_profile_conn = get_conn()
 
         try:
@@ -4719,6 +4916,12 @@ def compare():
                 df_new,
                 thresholds=attendance_thresholds,
                 weights=attendance_weights,
+                enabled_metrics=(
+                    attendance_enabled_metrics
+                ),
+                auto_disable_empty_metrics=(
+                    attendance_auto_disable_empty
+                ),
                 exempt_names=(
                     attendance_exempt_names
                 ),
@@ -4736,8 +4939,27 @@ def compare():
         }
 
         attendance["配置状态"] = (
-            "后端默认值，待页面独立配置"
+            "当前战场自定义配置"
+            if attendance_config.get(
+                "persisted"
+            )
+            else "当前战场默认配置"
         )
+
+        attendance["配置来源"] = {
+            "battle_id": battle_id,
+            "persisted": bool(
+                attendance_config.get(
+                    "persisted"
+                )
+            ),
+            "updated_at": str(
+                attendance_config.get(
+                    "updated_at",
+                    "",
+                )
+            ),
+        }
 
         attendance["豁免规则"] = (
             "当前战场"
@@ -4910,6 +5132,7 @@ def compare():
         kick_text=kick_text,
 
         attendance=attendance,
+        attendance_config=attendance_config,
 
         selected_old=selected_old,
 

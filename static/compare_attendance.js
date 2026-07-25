@@ -1135,4 +1135,190 @@
             initialiseMemberTable();
         }
     );
+
+    function initialiseAttendanceConfigurationForm() {
+        const editor = document.querySelector(
+            "[data-attendance-config-form]"
+        );
+
+        if (!editor) {
+            return;
+        }
+
+        const form = editor.closest("form");
+
+        if (!form) {
+            return;
+        }
+
+        const metricEditors = Array.from(
+            editor.querySelectorAll(
+                "[data-attendance-metric]"
+            )
+        );
+
+        const statusElement = editor.querySelector(
+            "[data-attendance-config-status]"
+        );
+
+        function readMetric(editorElement) {
+            const code = editorElement.getAttribute(
+                "data-attendance-metric"
+            );
+
+            const enableInput = editorElement.querySelector(
+                "[data-attendance-enable]"
+            );
+
+            const weightInput = editorElement.querySelector(
+                "[data-attendance-weight]"
+            );
+
+            const preview = editor.querySelector(
+                `[data-attendance-weight-preview="${code}"]`
+            );
+
+            const parsedWeight = Number(
+                weightInput ? weightInput.value : 0
+            );
+
+            return {
+                code,
+                enabled: Boolean(
+                    enableInput && enableInput.checked
+                ),
+                weight: Number.isFinite(parsedWeight)
+                    ? Math.max(parsedWeight, 0)
+                    : 0,
+                preview,
+            };
+        }
+
+        function updateWeightPreview() {
+            const metrics = metricEditors.map(
+                readMetric
+            );
+
+            const enabledMetrics = metrics.filter(
+                (metric) => metric.enabled
+            );
+
+            const totalWeight = enabledMetrics.reduce(
+                (total, metric) => (
+                    total + metric.weight
+                ),
+                0
+            );
+
+            metrics.forEach((metric) => {
+                if (!metric.preview) {
+                    return;
+                }
+
+                if (!metric.enabled) {
+                    metric.preview.textContent = "未纳入";
+                    return;
+                }
+
+                if (totalWeight <= 0) {
+                    metric.preview.textContent = "待设置";
+                    return;
+                }
+
+                const percentage = (
+                    metric.weight
+                    / totalWeight
+                    * 100
+                );
+
+                metric.preview.textContent = (
+                    percentage.toFixed(1)
+                    + "%"
+                );
+            });
+
+            if (!statusElement) {
+                return;
+            }
+
+            if (enabledMetrics.length === 0) {
+                statusElement.textContent = (
+                    "至少启用一项指标"
+                );
+                return;
+            }
+
+            if (totalWeight <= 0) {
+                statusElement.textContent = (
+                    "启用指标权重必须大于0"
+                );
+                return;
+            }
+
+            statusElement.textContent = (
+                "已启用"
+                + enabledMetrics.length
+                + "项，权重自动归一化"
+            );
+        }
+
+        metricEditors.forEach((metricEditor) => {
+            metricEditor.addEventListener(
+                "input",
+                updateWeightPreview
+            );
+
+            metricEditor.addEventListener(
+                "change",
+                updateWeightPreview
+            );
+        });
+
+        form.addEventListener(
+            "submit",
+            (event) => {
+                const metrics = metricEditors.map(
+                    readMetric
+                );
+
+                const enabledMetrics = metrics.filter(
+                    (metric) => metric.enabled
+                );
+
+                if (enabledMetrics.length === 0) {
+                    event.preventDefault();
+
+                    window.alert(
+                        "至少启用一项考勤指标。"
+                    );
+
+                    return;
+                }
+
+                const enabledWeightTotal = (
+                    enabledMetrics.reduce(
+                        (total, metric) => (
+                            total + metric.weight
+                        ),
+                        0
+                    )
+                );
+
+                if (enabledWeightTotal <= 0) {
+                    event.preventDefault();
+
+                    window.alert(
+                        "已启用指标的权重总和必须大于0。"
+                    );
+                }
+            }
+        );
+
+        updateWeightPreview();
+    }
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initialiseAttendanceConfigurationForm
+    );
 })();

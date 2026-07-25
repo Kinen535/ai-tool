@@ -70,6 +70,13 @@
 {% set ca_groups = ca.get('分组概览', []) %}
 {% set ca_config = ca.get('配置', {}) %}
 {% set ca_thresholds = ca_config.get('考核标准', {}) %}
+{% set ca_weights = ca_config.get('权重', {}) %}
+{% set ca_enabled = ca_config.get('启用指标', {'battle': True, 'assist': True, 'donate': True}) %}
+
+{% set attendance_form = attendance_config if attendance_config is mapping else {} %}
+{% set attendance_form_thresholds = attendance_form.get('thresholds', {}) %}
+{% set attendance_form_weights = attendance_form.get('weights', {}) %}
+{% set attendance_form_enabled = attendance_form.get('enabled_metrics', {'battle': True, 'assist': True, 'donate': True}) %}
 {% set ca_scope = ca.get('范围', {}) %}
 {% set ca_period = ca.get('统计周期', {}) %}
 {% set ca_battle = ca_overview.get('战功', {}) %}
@@ -217,6 +224,12 @@
                 <div class="ca-metric-standard">
                     标准 ≥
                     {{ ca_thresholds.get(metric_key, 0) }}
+                    {% if ca_enabled.get(metric_key, True) %}
+                    · 有效权重
+                    {{ (ca_weights.get(metric_key, 0) * 100)|round(1) }}%
+                    {% else %}
+                    · 本轮未纳入
+                    {% endif %}
                 </div>
             </div>
 
@@ -560,6 +573,200 @@
 
 </div>
 
+
+<!-- ===== 自定义考勤标准 ===== -->
+<section
+    class="ca-attendance-config-editor"
+    data-attendance-config-form
+    data-battle-id="{{ attendance_form.get('battle_id', '') }}"
+>
+    <div class="ca-attendance-config-heading">
+        <div>
+            <h3>考勤标准设置</h3>
+            <p>
+                达标值和权重按当前战场保存。关闭的指标不参与综合考勤，
+                其余指标权重会自动归一化。
+            </p>
+        </div>
+
+        <div
+            class="ca-attendance-config-status"
+            data-attendance-config-status
+        >
+            {% if attendance_form.get('persisted') %}
+            已保存当前战场配置
+            {% else %}
+            当前使用系统默认配置
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="ca-attendance-config-grid">
+        <article
+            class="ca-attendance-metric-editor"
+            data-attendance-metric="battle"
+        >
+            <label class="ca-attendance-enable">
+                <input
+                    type="checkbox"
+                    name="attendance_enable_battle"
+                    value="1"
+                    data-attendance-enable
+                    {% if attendance_form_enabled.get('battle', True) %}checked{% endif %}
+                >
+                <span>纳入战功考核</span>
+            </label>
+
+            <label>
+                战功达标值
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="attendance_threshold_battle"
+                    value="{{ attendance_form_thresholds.get('battle', 5000) }}"
+                    data-attendance-threshold
+                    required
+                >
+            </label>
+
+            <label>
+                原始权重
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    name="attendance_weight_battle"
+                    value="{{ attendance_form_weights.get('battle', 50) }}"
+                    data-attendance-weight
+                    required
+                >
+            </label>
+
+            <div class="ca-attendance-weight-preview">
+                有效权重：
+                <strong data-attendance-weight-preview="battle">--</strong>
+            </div>
+        </article>
+
+        <article
+            class="ca-attendance-metric-editor"
+            data-attendance-metric="assist"
+        >
+            <label class="ca-attendance-enable">
+                <input
+                    type="checkbox"
+                    name="attendance_enable_assist"
+                    value="1"
+                    data-attendance-enable
+                    {% if attendance_form_enabled.get('assist', True) %}checked{% endif %}
+                >
+                <span>纳入助攻考核</span>
+            </label>
+
+            <label>
+                助攻达标值
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="attendance_threshold_assist"
+                    value="{{ attendance_form_thresholds.get('assist', 1000) }}"
+                    data-attendance-threshold
+                    required
+                >
+            </label>
+
+            <label>
+                原始权重
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    name="attendance_weight_assist"
+                    value="{{ attendance_form_weights.get('assist', 30) }}"
+                    data-attendance-weight
+                    required
+                >
+            </label>
+
+            <div class="ca-attendance-weight-preview">
+                有效权重：
+                <strong data-attendance-weight-preview="assist">--</strong>
+            </div>
+        </article>
+
+        <article
+            class="ca-attendance-metric-editor"
+            data-attendance-metric="donate"
+        >
+            <label class="ca-attendance-enable">
+                <input
+                    type="checkbox"
+                    name="attendance_enable_donate"
+                    value="1"
+                    data-attendance-enable
+                    {% if attendance_form_enabled.get('donate', True) %}checked{% endif %}
+                >
+                <span>纳入捐献考核</span>
+            </label>
+
+            <label>
+                捐献达标值
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="attendance_threshold_donate"
+                    value="{{ attendance_form_thresholds.get('donate', 100) }}"
+                    data-attendance-threshold
+                    required
+                >
+            </label>
+
+            <label>
+                原始权重
+                <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    name="attendance_weight_donate"
+                    value="{{ attendance_form_weights.get('donate', 20) }}"
+                    data-attendance-weight
+                    required
+                >
+            </label>
+
+            <div class="ca-attendance-weight-preview">
+                有效权重：
+                <strong data-attendance-weight-preview="donate">--</strong>
+            </div>
+        </article>
+    </div>
+
+    <label class="ca-attendance-auto-disable">
+        <input
+            type="checkbox"
+            name="attendance_auto_disable_empty"
+            value="1"
+            {% if attendance_form.get('auto_disable_empty_metrics', True) %}checked{% endif %}
+        >
+        <span>
+            本周期某项没有任何参与数据时，自动将该项标记为“未纳入”
+        </span>
+    </label>
+
+    <div class="ca-attendance-config-note">
+        至少启用一项指标，且已启用指标的权重总和必须大于0。
+        页面显示的有效权重会根据启用状态自动换算。
+    </div>
+</section>
 
 <!-- ===== 按钮 ===== -->
 <button class="btn primary" type="submit">开始分析</button>

@@ -739,3 +739,118 @@
         width: min(320px, 85vw);
     }
 }
+
+/* A15.4.29-E4 自定义考勤配置 */
+.ca-attendance-config-editor {
+    margin: 22px 0 18px;
+    padding: 20px;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.ca-attendance-config-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.ca-attendance-config-heading h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
+.ca-attendance-config-heading p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.65;
+}
+
+.ca-attendance-config-status {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ca-attendance-config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ca-attendance-metric-editor {
+    padding: 16px;
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.ca-attendance-metric-editor > label:not(.ca-attendance-enable) {
+    display: block;
+    margin-top: 12px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ca-attendance-metric-editor .input {
+    margin-top: 6px;
+}
+
+.ca-attendance-enable {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f172a;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ca-attendance-enable input,
+.ca-attendance-auto-disable input {
+    width: 17px;
+    height: 17px;
+}
+
+.ca-attendance-weight-preview {
+    margin-top: 12px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.ca-attendance-weight-preview strong {
+    color: #0f172a;
+}
+
+.ca-attendance-auto-disable {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 16px;
+    color: #334155;
+    line-height: 1.55;
+    cursor: pointer;
+}
+
+.ca-attendance-config-note {
+    margin-top: 10px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+    .ca-attendance-config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ca-attendance-config-heading {
+        flex-direction: column;
+    }
+}
