@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from services.engines.attendance_engine import (
-    build_attendance_dashboard,
+    build_configurable_attendance_dashboard,
 )
 
 
@@ -342,6 +342,8 @@ def build_compare_attendance_context(
     *,
     thresholds: Mapping[str, Any],
     weights: Mapping[str, Any] | None = None,
+    enabled_metrics: Mapping[str, Any] | None = None,
+    auto_disable_empty_metrics: bool = False,
     exempt_names: Iterable[str] | None = None,
     visible_compare_rows: Any = None,
 ) -> dict[str, Any]:
@@ -355,11 +357,13 @@ def build_compare_attendance_context(
         source_label="结束快照",
     )
 
-    dashboard = build_attendance_dashboard(
+    dashboard = build_configurable_attendance_dashboard(
         start_rows,
         end_rows,
         thresholds=thresholds,
         weights=weights,
+        enabled_metrics=enabled_metrics,
+        auto_disable_empty_metrics=auto_disable_empty_metrics,
         exempt_names=exempt_names,
     )
 
@@ -404,6 +408,8 @@ def build_compare_attendance_cache_payload(
     *,
     thresholds: Mapping[str, Any],
     weights: Mapping[str, Any] | None = None,
+    enabled_metrics: Mapping[str, Any] | None = None,
+    auto_disable_empty_metrics: bool = False,
     exempt_names: Iterable[str] | None = None,
     visible_compare_rows: Any = None,
 ) -> dict[str, Any]:
@@ -412,6 +418,8 @@ def build_compare_attendance_cache_payload(
         end_snapshot,
         thresholds=thresholds,
         weights=weights,
+        enabled_metrics=enabled_metrics,
+        auto_disable_empty_metrics=auto_disable_empty_metrics,
         exempt_names=exempt_names,
         visible_compare_rows=visible_compare_rows,
     )

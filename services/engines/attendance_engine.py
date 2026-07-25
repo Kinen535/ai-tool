@@ -776,3 +776,396 @@ def build_attendance_dashboard(
             ],
         },
     }
+
+
+# A15.4.29-E4 configurable attendance backend
+
+ATTENDANCE_METRIC_CODES = (
+    "battle",
+    "assist",
+    "donate",
+)
+
+ATTENDANCE_METRIC_LABELS = {
+    "battle": "战功",
+    "assist": "助攻",
+    "donate": "捐献",
+}
+
+
+def normalize_enabled_metrics(
+    enabled_metrics: Mapping[str, Any] | None,
+) -> dict[str, bool]:
+    if enabled_metrics is None:
+        return {
+            code: True
+            for code in ATTENDANCE_METRIC_CODES
+        }
+
+    if not isinstance(enabled_metrics, Mapping):
+        raise TypeError(
+            "启用指标必须是映射"
+        )
+
+    unknown_codes = sorted(
+        str(code)
+        for code in enabled_metrics
+        if code not in ATTENDANCE_METRIC_CODES
+    )
+
+    if unknown_codes:
+        raise ValueError(
+            "存在未知考勤指标："
+            + "、".join(unknown_codes)
+        )
+
+    normalized = {
+        code: (
+            _is_truthy(
+                enabled_metrics.get(
+                    code,
+                    True,
+                )
+            )
+        )
+        for code in ATTENDANCE_METRIC_CODES
+    }
+
+    if not any(normalized.values()):
+        raise ValueError(
+            "至少启用一项考勤指标"
+        )
+
+    return normalized
+
+
+def _resolve_configurable_weights(
+    weights: Mapping[str, Any] | None,
+    enabled_metrics: Mapping[str, bool],
+) -> tuple[
+    dict[str, float],
+    dict[str, float],
+]:
+    if weights is None:
+        raw_weights = {
+            code: 1.0
+            for code in ATTENDANCE_METRIC_CODES
+        }
+    else:
+        raw_weights = _resolve_metric_values(
+            weights,
+            label="权重",
+            allow_zero_total=False,
+        )
+
+    effective_input = {
+        code: (
+            raw_weights[code]
+            if enabled_metrics[code]
+            else 0.0
+        )
+        for code in ATTENDANCE_METRIC_CODES
+    }
+
+    effective_weights = normalize_weights(
+        effective_input
+    )
+
+    return (
+        dict(raw_weights),
+        effective_weights,
+    )
+
+
+def _mark_disabled_metric_summary(
+    summary: Mapping[str, Any] | None,
+    enabled: bool,
+) -> None:
+    if not isinstance(summary, dict):
+        return
+
+    summary["是否启用"] = bool(enabled)
+    summary["纳入综合评分"] = bool(enabled)
+
+    if enabled:
+        return
+
+    summary["状态"] = "未纳入"
+    summary["合格率"] = 0.0
+
+    for count_key in (
+        "合格人数",
+        "未达标人数",
+        "缺勤人数",
+        "数据异常",
+        "数据异常人数",
+    ):
+        if count_key in summary:
+            summary[count_key] = 0
+
+
+def _apply_enabled_metric_contract(
+    dashboard: dict[str, Any],
+    enabled_metrics: Mapping[str, bool],
+) -> None:
+    members = dashboard.get(
+        "成员明细",
+        [],
+    )
+
+    if isinstance(members, list):
+        for member in members:
+            if not isinstance(member, dict):
+                continue
+
+            for code in ATTENDANCE_METRIC_CODES:
+                label = ATTENDANCE_METRIC_LABELS[
+                    code
+                ]
+
+                member[
+                    f"{label}是否启用"
+                ] = bool(
+                    enabled_metrics[code]
+                )
+
+                if not enabled_metrics[code]:
+                    member[
+                        f"{label}考勤状态"
+                    ] = "未纳入"
+
+    scopes = []
+
+    alliance_scope = dashboard.get(
+        "同盟概览"
+    )
+
+    if isinstance(alliance_scope, dict):
+        scopes.append(alliance_scope)
+
+    group_scopes = dashboard.get(
+        "分组概览",
+        [],
+    )
+
+    if isinstance(group_scopes, list):
+        scopes.extend(
+            scope
+            for scope in group_scopes
+            if isinstance(scope, dict)
+        )
+
+    for scope in scopes:
+        for code in ATTENDANCE_METRIC_CODES:
+            label = ATTENDANCE_METRIC_LABELS[
+                code
+            ]
+
+            _mark_disabled_metric_summary(
+                scope.get(label),
+                enabled_metrics[code],
+            )
+
+
+def _metric_participant_count(
+    dashboard: Mapping[str, Any],
+    metric_code: str,
+) -> int:
+    overview = dashboard.get(
+        "同盟概览",
+        {}
+    )
+
+    if not isinstance(overview, Mapping):
+        return 0
+
+    label = ATTENDANCE_METRIC_LABELS[
+        metric_code
+    ]
+
+    summary = overview.get(
+        label,
+        {}
+    )
+
+    if not isinstance(summary, Mapping):
+        return 0
+
+    value = summary.get(
+        "参与人数",
+        0,
+    )
+
+    try:
+        return max(
+            int(float(value)),
+            0,
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return 0
+
+
+def build_configurable_attendance_dashboard(
+    start_rows: Iterable[Mapping[str, Any]],
+    end_rows: Iterable[Mapping[str, Any]],
+    thresholds: Mapping[str, Any],
+    weights: Mapping[str, Any] | None = None,
+    enabled_metrics: Mapping[str, Any] | None = None,
+    auto_disable_empty_metrics: bool = False,
+    exempt_names: Iterable[str] | None = None,
+    member_key: str = "成员",
+    group_key: str = "分组",
+    exempt_field: str = "是否免考核",
+) -> dict[str, Any]:
+    if (
+        enabled_metrics is None
+        and not auto_disable_empty_metrics
+    ):
+        return build_attendance_dashboard(
+            start_rows=start_rows,
+            end_rows=end_rows,
+            thresholds=thresholds,
+            weights=weights,
+            exempt_names=exempt_names,
+            member_key=member_key,
+            group_key=group_key,
+            exempt_field=exempt_field,
+        )
+
+    normalized_enabled = (
+        normalize_enabled_metrics(
+            enabled_metrics
+        )
+    )
+
+    raw_weights, effective_weights = (
+        _resolve_configurable_weights(
+            weights,
+            normalized_enabled,
+        )
+    )
+
+    dashboard = build_attendance_dashboard(
+        start_rows=start_rows,
+        end_rows=end_rows,
+        thresholds=thresholds,
+        weights=effective_weights,
+        exempt_names=exempt_names,
+        member_key=member_key,
+        group_key=group_key,
+        exempt_field=exempt_field,
+    )
+
+    effective_enabled = dict(
+        normalized_enabled
+    )
+
+    automatically_disabled: list[str] = []
+    auto_disable_skipped_reason = ""
+
+    if auto_disable_empty_metrics:
+        candidate_enabled = dict(
+            effective_enabled
+        )
+
+        for code in ATTENDANCE_METRIC_CODES:
+            if not candidate_enabled[code]:
+                continue
+
+            if (
+                _metric_participant_count(
+                    dashboard,
+                    code,
+                )
+                == 0
+            ):
+                candidate_enabled[code] = False
+
+        if any(candidate_enabled.values()):
+            if candidate_enabled != effective_enabled:
+                automatically_disabled = [
+                    code
+                    for code in ATTENDANCE_METRIC_CODES
+                    if (
+                        effective_enabled[code]
+                        and not candidate_enabled[code]
+                    )
+                ]
+
+                effective_enabled = (
+                    candidate_enabled
+                )
+
+                (
+                    raw_weights,
+                    effective_weights,
+                ) = _resolve_configurable_weights(
+                    weights,
+                    effective_enabled,
+                )
+
+                dashboard = (
+                    build_attendance_dashboard(
+                        start_rows=start_rows,
+                        end_rows=end_rows,
+                        thresholds=thresholds,
+                        weights=effective_weights,
+                        exempt_names=exempt_names,
+                        member_key=member_key,
+                        group_key=group_key,
+                        exempt_field=exempt_field,
+                    )
+                )
+        elif any(effective_enabled.values()):
+            auto_disable_skipped_reason = (
+                "所有已启用指标均无参与数据"
+            )
+
+    _apply_enabled_metric_contract(
+        dashboard,
+        effective_enabled,
+    )
+
+    config = dashboard.setdefault(
+        "配置",
+        {},
+    )
+
+    if not isinstance(config, dict):
+        config = {}
+        dashboard["配置"] = config
+
+    config["启用指标"] = dict(
+        effective_enabled
+    )
+
+    config["原始启用指标"] = dict(
+        normalized_enabled
+    )
+
+    config["原始权重"] = dict(
+        raw_weights
+    )
+
+    config["权重"] = dict(
+        effective_weights
+    )
+
+    config["自动停用空指标"] = bool(
+        auto_disable_empty_metrics
+    )
+
+    config["自动停用指标"] = list(
+        automatically_disabled
+    )
+
+    config["自动停用跳过原因"] = (
+        auto_disable_skipped_reason
+    )
+
+    config["配置版本"] = 1
+
+    return dashboard
