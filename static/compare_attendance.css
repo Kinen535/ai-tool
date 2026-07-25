@@ -854,3 +854,19 @@
         flex-direction: column;
     }
 }
+
+/* A15.4.29-E4 关闭指标显示一致性 */
+.ca-metric-rate-disabled {
+    color: #64748b;
+    font-size: 24px;
+    letter-spacing: 0.04em;
+}
+
+.ca-rate-disabled {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    color: #94a3b8;
+    font-weight: 700;
+}

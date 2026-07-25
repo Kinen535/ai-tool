@@ -211,6 +211,102 @@ class CompareAttendanceConfigurationUiTests(
             )
 
 
+
+class CompareAttendanceDisplayConsistencyTests(
+    unittest.TestCase
+):
+    @classmethod
+    def setUpClass(cls):
+        cls.template_source = (
+            TEMPLATE_PATH.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        cls.css_source = CSS_PATH.read_text(
+            encoding="utf-8"
+        )
+
+        Environment().parse(
+            cls.template_source
+        )
+
+    def test_summary_uses_effective_weights(
+        self,
+    ):
+        self.assertNotIn(
+            "战功50% · 助攻30% · 捐献20%",
+            self.template_source,
+        )
+
+        for token in (
+            "ca_weights.get('battle', 0)",
+            "ca_weights.get('assist', 0)",
+            "ca_weights.get('donate', 0)",
+            "ca_enabled.get('battle', True)",
+            "ca_enabled.get('assist', True)",
+            "ca_enabled.get('donate', True)",
+        ):
+            self.assertIn(
+                token,
+                self.template_source,
+            )
+
+    def test_disabled_metric_card_shows_unincluded(
+        self,
+    ):
+        self.assertIn(
+            "ca-metric-rate-disabled",
+            self.template_source,
+        )
+
+        self.assertIn(
+            "未纳入",
+            self.template_source,
+        )
+
+        self.assertIn(
+            "不参与综合考勤",
+            self.template_source,
+        )
+
+    def test_group_rates_respect_metric_enable_state(
+        self,
+    ):
+        self.assertIn(
+            "{% for metric_key, rate in [",
+            self.template_source,
+        )
+
+        self.assertIn(
+            "('donate', "
+            "group.get('捐献合格率', 0))",
+            self.template_source,
+        )
+
+        self.assertIn(
+            "ca-rate-disabled",
+            self.template_source,
+        )
+
+        self.assertIn(
+            "本轮未纳入综合考勤",
+            self.template_source,
+        )
+
+    def test_disabled_display_styles_exist(
+        self,
+    ):
+        self.assertIn(
+            ".ca-metric-rate-disabled",
+            self.css_source,
+        )
+
+        self.assertIn(
+            ".ca-rate-disabled",
+            self.css_source,
+        )
+
 if __name__ == "__main__":
     unittest.main(
         verbosity=2

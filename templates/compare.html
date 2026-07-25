@@ -201,7 +201,20 @@
             </div>
 
             <div class="ca-summary-note">
-                战功50% · 助攻30% · 捐献20%
+                {# A15.4.29-E4 disabled attendance display #}
+                {% if ca_enabled.get('battle', True) %}
+                战功{{ (ca_weights.get('battle', 0) * 100)|round(1) }}%
+                {% endif %}
+
+                {% if ca_enabled.get('assist', True) %}
+                    {% if ca_enabled.get('battle', True) %} · {% endif %}
+                助攻{{ (ca_weights.get('assist', 0) * 100)|round(1) }}%
+                {% endif %}
+
+                {% if ca_enabled.get('donate', True) %}
+                    {% if ca_enabled.get('battle', True) or ca_enabled.get('assist', True) %} · {% endif %}
+                捐献{{ (ca_weights.get('donate', 0) * 100)|round(1) }}%
+                {% endif %}
             </div>
         </article>
     </div>
@@ -233,6 +246,7 @@
                 </div>
             </div>
 
+            {% if ca_enabled.get(metric_key, True) %}
             <div class="ca-metric-rate">
                 {{ metric.get('合格率', 0) }}%
             </div>
@@ -240,6 +254,15 @@
             <div class="ca-metric-rate-label">
                 有效考核合格率
             </div>
+            {% else %}
+            <div class="ca-metric-rate ca-metric-rate-disabled">
+                未纳入
+            </div>
+
+            <div class="ca-metric-rate-label">
+                不参与综合考勤
+            </div>
+            {% endif %}
 
             <div class="ca-metric-stats">
                 <div class="ca-metric-stat">
@@ -395,12 +418,13 @@
                             </strong>
                         </td>
 
-                        {% for rate in [
-                            group.get('战功合格率', 0),
-                            group.get('助攻合格率', 0),
-                            group.get('捐献合格率', 0)
+                        {% for metric_key, rate in [
+                            ('battle', group.get('战功合格率', 0)),
+                            ('assist', group.get('助攻合格率', 0)),
+                            ('donate', group.get('捐献合格率', 0))
                         ] %}
                         <td>
+                            {% if ca_enabled.get(metric_key, True) %}
                             <span class="
                                 {% if rate >= 80 %}
                                     ca-rate-strong
@@ -412,6 +436,14 @@
                             ">
                                 {{ rate }}%
                             </span>
+                            {% else %}
+                            <span
+                                class="ca-rate-disabled"
+                                title="本轮未纳入综合考勤"
+                            >
+                                —
+                            </span>
+                            {% endif %}
                         </td>
                         {% endfor %}
 
