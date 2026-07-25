@@ -635,37 +635,193 @@
         表头与成员列已固定，可在表格区域内上下、左右滚动。
     </div>
 
-    <div class="table-container compare-table-shell">
-        <table class="table">
+    <section
+    class="ca-smart-table-toolbar"
+    data-ca-smart-table-toolbar
+>
+    <div class="ca-smart-table-heading">
+        <div>
+            <h2 class="ca-smart-table-title">
+                成员考勤明细
+            </h2>
+
+            <p class="ca-smart-table-description">
+                支持快捷筛选、表头排序、列显示配置和当前视图导出。
+                成员与分组列固定显示，原有点选与名单生成方式保持不变。
+            </p>
+        </div>
+
+        <div
+            class="ca-smart-table-count"
+            data-ca-table-count
+        >
+            当前显示 0 人
+        </div>
+    </div>
+
+    <div class="ca-smart-table-controls">
+        <label class="ca-control-field">
+            <span>表格视图</span>
+
+            <select
+                class="ca-control-select"
+                data-ca-table-preset
+            >
+                <option value="management">
+                    管理视图
+                </option>
+
+                <option value="attendance">
+                    考勤视图
+                </option>
+
+                <option value="full">
+                    完整视图
+                </option>
+
+                <option value="custom">
+                    自定义视图
+                </option>
+            </select>
+        </label>
+
+        <div
+            class="ca-status-filters"
+            aria-label="考勤状态快捷筛选"
+        >
+            <button
+                type="button"
+                class="ca-filter-button is-active"
+                data-ca-status-filter="all"
+            >
+                全部
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="数据异常"
+            >
+                数据异常
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="缺勤"
+            >
+                缺勤
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="未达标"
+            >
+                未达标
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="待改进"
+            >
+                待改进
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="合格"
+            >
+                合格
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="豁免"
+            >
+                豁免
+            </button>
+
+            <button
+                type="button"
+                class="ca-filter-button"
+                data-ca-status-filter="无基线"
+            >
+                无基线
+            </button>
+        </div>
+
+        <details class="ca-column-settings">
+            <summary>
+                列设置
+            </summary>
+
+            <div
+                class="ca-column-menu"
+                data-ca-column-menu
+            ></div>
+        </details>
+
+        <button
+            type="button"
+            class="ca-dashboard-button"
+            data-ca-export-visible
+        >
+            导出当前视图
+        </button>
+
+        <button
+            type="button"
+            class="ca-dashboard-button"
+            data-ca-reset-table
+        >
+            恢复默认
+        </button>
+    </div>
+</section>
+
+<div class="table-container compare-table-shell" data-ca-member-table-shell>
+        <table class="table ca-member-table" id="compare-member-table" data-ca-member-table>
             <thead>
                 <tr>
-                    <th>成员</th>
-                    <th>分组</th>
-                    <th>所属州</th>
+                    <th data-column="成员" data-sort-type="text" data-ca-locked-column="true"><button type="button" class="ca-sort-button" data-ca-sort-column="成员" aria-label="按成员排序"><span>成员</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="分组" data-sort-type="text" data-ca-locked-column="true"><button type="button" class="ca-sort-button" data-ca-sort-column="分组" aria-label="按分组排序"><span>分组</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="所属州" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="所属州" aria-label="按所属州排序"><span>所属州</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
                 
-                    <th>势力值</th>
-                    <th>贡献排行</th>
+                    <th data-column="势力值" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="势力值" aria-label="按势力值排序"><span>势力值</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="贡献排行" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="贡献排行" aria-label="按贡献排行排序"><span>贡献排行</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
                 
-                    <th>战功本周</th>
-                    <th>助攻本周</th>
-                    <th>捐献本周</th>
+                    <th data-column="战功本周" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="战功本周" aria-label="按战功本周排序"><span>战功本周</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="助攻本周" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="助攻本周" aria-label="按助攻本周排序"><span>助攻本周</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="捐献本周" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="捐献本周" aria-label="按捐献本周排序"><span>捐献本周</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
                 
-                    <th>战功总量</th>
-                    <th>助攻总量</th>
-                    <th>捐献总量</th>
+                    <th data-column="战功总量" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="战功总量" aria-label="按战功总量排序"><span>战功总量</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="助攻总量" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="助攻总量" aria-label="按助攻总量排序"><span>助攻总量</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="捐献总量" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="捐献总量" aria-label="按捐献总量排序"><span>捐献总量</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
                 
-                    <th>战功增长</th>
-                    <th>助攻增长</th>
-                    <th>捐献增长</th>
-                    <th>势力增长</th>
+                    <th data-column="战功增长" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="战功增长" aria-label="按战功增长排序"><span>战功增长</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="助攻增长" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="助攻增长" aria-label="按助攻增长排序"><span>助攻增长</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="捐献增长" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="捐献增长" aria-label="按捐献增长排序"><span>捐献增长</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="势力增长" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="势力增长" aria-label="按势力增长排序"><span>势力增长</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
                 
-                    <th>执行状态</th>
-                    <th>违规标记</th>
-                    <th>状态</th>
-                    <th>建议</th>
-                    <th>评分</th>
-                    <th>风险原因</th>
-                </tr>
+                    <th data-column="执行状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="执行状态" aria-label="按执行状态排序"><span>执行状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="违规标记" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="违规标记" aria-label="按违规标记排序"><span>违规标记</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="状态" aria-label="按状态排序"><span>状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="建议" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="建议" aria-label="按建议排序"><span>建议</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="评分" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="评分" aria-label="按评分排序"><span>评分</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                    <th data-column="风险原因" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="风险原因" aria-label="按风险原因排序"><span>风险原因</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+                <th data-column="综合考勤状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="综合考勤状态" aria-label="按综合考勤状态排序"><span>综合考勤状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="战功考勤状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="战功考勤状态" aria-label="按战功考勤状态排序"><span>战功考勤状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="助攻考勤状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="助攻考勤状态" aria-label="按助攻考勤状态排序"><span>助攻考勤状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="捐献考勤状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="捐献考勤状态" aria-label="按捐献考勤状态排序"><span>捐献考勤状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="考勤范围状态" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="考勤范围状态" aria-label="按考勤范围状态排序"><span>考勤范围状态</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="是否有基线" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="是否有基线" aria-label="按是否有基线排序"><span>是否有基线</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="考勤排除原因" data-sort-type="text"><button type="button" class="ca-sort-button" data-ca-sort-column="考勤排除原因" aria-label="按考勤排除原因排序"><span>考勤排除原因</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+<th data-column="考勤排序等级" data-sort-type="number"><button type="button" class="ca-sort-button" data-ca-sort-column="考勤排序等级" aria-label="按考勤排序等级排序"><span>考勤排序等级</span><span class="ca-sort-indicator" data-ca-sort-indicator aria-hidden="true">↕</span></button></th>
+</tr>
                 </thead>
 
                 <tbody>
@@ -676,43 +832,67 @@
                     {% if '偷地' in risk %}
                     <tr class="row-red selectable-row"
                         data-name="{{ row['成员'] }}"
-                        data-type="偷地">
+                        data-type="偷地"
+                        data-ca-attendance-status="{{ row.get('综合考勤状态', '')|e }}"
+                        data-ca-battle-status="{{ row.get('战功考勤状态', '')|e }}"
+                        data-ca-assist-status="{{ row.get('助攻考勤状态', '')|e }}"
+                        data-ca-donate-status="{{ row.get('捐献考勤状态', '')|e }}"
+                        data-ca-scope-status="{{ row.get('考勤范围状态', '')|e }}"
+                        data-ca-has-baseline="{{ row.get('是否有基线', '')|e }}">
                     {% elif '未参战' in exec or '完全摆烂' in exec or '无战功增长' in risk %}
                     <tr class="row-yellow selectable-row"
                         data-name="{{ row['成员'] }}"
-                        data-type="未执行">
+                        data-type="未执行"
+                        data-ca-attendance-status="{{ row.get('综合考勤状态', '')|e }}"
+                        data-ca-battle-status="{{ row.get('战功考勤状态', '')|e }}"
+                        data-ca-assist-status="{{ row.get('助攻考勤状态', '')|e }}"
+                        data-ca-donate-status="{{ row.get('捐献考勤状态', '')|e }}"
+                        data-ca-scope-status="{{ row.get('考勤范围状态', '')|e }}"
+                        data-ca-has-baseline="{{ row.get('是否有基线', '')|e }}">
                     {% elif '低活跃' in row.get('状态', '') or '低活跃' in row.get('违规', '') %}
                     <tr class="row-yellow selectable-row"
                         data-name="{{ row['成员'] }}"
-                        data-type="低活跃">
+                        data-type="低活跃"
+                        data-ca-attendance-status="{{ row.get('综合考勤状态', '')|e }}"
+                        data-ca-battle-status="{{ row.get('战功考勤状态', '')|e }}"
+                        data-ca-assist-status="{{ row.get('助攻考勤状态', '')|e }}"
+                        data-ca-donate-status="{{ row.get('捐献考勤状态', '')|e }}"
+                        data-ca-scope-status="{{ row.get('考勤范围状态', '')|e }}"
+                        data-ca-has-baseline="{{ row.get('是否有基线', '')|e }}">
                     {% else %}
                     <tr class="selectable-row"
                         data-name="{{ row['成员'] }}"
-                        data-type="正常">
+                        data-type="正常"
+                        data-ca-attendance-status="{{ row.get('综合考勤状态', '')|e }}"
+                        data-ca-battle-status="{{ row.get('战功考勤状态', '')|e }}"
+                        data-ca-assist-status="{{ row.get('助攻考勤状态', '')|e }}"
+                        data-ca-donate-status="{{ row.get('捐献考勤状态', '')|e }}"
+                        data-ca-scope-status="{{ row.get('考勤范围状态', '')|e }}"
+                        data-ca-has-baseline="{{ row.get('是否有基线', '')|e }}">
                     {% endif %}
-                        <td>{{ row["成员"] }}</td>
-                        <td>{{ row["分组"] }}</td>
-                        <td>{{ row["所属州"] }}</td>
+                        <td data-column="成员">{{ row["成员"] }}</td>
+                        <td data-column="分组">{{ row["分组"] }}</td>
+                        <td data-column="所属州">{{ row["所属州"] }}</td>
                 
-                        <td>{{ row["势力值"] }}</td>
-                        <td>{{ row["贡献排行"] }}</td>
+                        <td data-column="势力值">{{ row["势力值"] }}</td>
+                        <td data-column="贡献排行">{{ row["贡献排行"] }}</td>
                 
-                        <td>{{ row["战功本周"] }}</td>
-                        <td>{{ row["助攻本周"] }}</td>
-                        <td>{{ row["捐献本周"] }}</td>
+                        <td data-column="战功本周">{{ row["战功本周"] }}</td>
+                        <td data-column="助攻本周">{{ row["助攻本周"] }}</td>
+                        <td data-column="捐献本周">{{ row["捐献本周"] }}</td>
                 
-                        <td>{{ row["战功总量"] }}</td>
-                        <td>{{ row["助攻总量"] }}</td>
-                        <td>{{ row["捐献总量"] }}</td>
+                        <td data-column="战功总量">{{ row["战功总量"] }}</td>
+                        <td data-column="助攻总量">{{ row["助攻总量"] }}</td>
+                        <td data-column="捐献总量">{{ row["捐献总量"] }}</td>
                 
-                        <td>{{ row["战功增长"] }}</td>
-                        <td>{{ row["助攻增长"] }}</td>
-                        <td>{{ row["捐献增长"] }}</td>
-                        <td>{{ row["势力增长"] }}</td>
+                        <td data-column="战功增长">{{ row["战功增长"] }}</td>
+                        <td data-column="助攻增长">{{ row["助攻增长"] }}</td>
+                        <td data-column="捐献增长">{{ row["捐献增长"] }}</td>
+                        <td data-column="势力增长">{{ row["势力增长"] }}</td>
                 
-                        <td>{{ row["执行状态"] }}</td>
+                        <td data-column="执行状态">{{ row["执行状态"] }}</td>
                 
-                        <td>
+                        <td data-column="违规标记">
                             {% if row["违规"] == "疑似偷地" %}
                             🚨 偷地
                             {% elif row["违规"] == "未执行" %}
@@ -724,24 +904,108 @@
                             {% endif %}
                         </td>
                 
-                        <td>{{ row["状态"] }}</td>
-                        <td>{{ row["建议"] }}</td>
+                        <td data-column="状态">{{ row["状态"] }}</td>
+                        <td data-column="建议">{{ row["建议"] }}</td>
                 
-                        <td>
+                        <td data-column="评分">
                             <span style="font-weight:700; color:#2c3e50;">
                                 {{ row["评分"] }}
                             </span>
                         </td>
                 
-                        <td>
+                        <td data-column="风险原因">
                             <span style="color:#d48806;">
                                 {{ row["风险原因"] }}
                             </span>
                         </td>
-                    </tr>
+
+<td
+    data-column="综合考勤状态"
+    data-sort-value="{{ row.get('综合考勤状态', '')|e }}"
+>
+    <span
+        class="ca-status-badge"
+        data-status="{{ row.get('综合考勤状态', '')|e }}"
+    >
+        {{ row.get('综合考勤状态', '-') }}
+    </span>
+</td>
+<td
+    data-column="战功考勤状态"
+    data-sort-value="{{ row.get('战功考勤状态', '')|e }}"
+>
+    <span
+        class="ca-status-badge"
+        data-status="{{ row.get('战功考勤状态', '')|e }}"
+    >
+        {{ row.get('战功考勤状态', '-') }}
+    </span>
+</td>
+<td
+    data-column="助攻考勤状态"
+    data-sort-value="{{ row.get('助攻考勤状态', '')|e }}"
+>
+    <span
+        class="ca-status-badge"
+        data-status="{{ row.get('助攻考勤状态', '')|e }}"
+    >
+        {{ row.get('助攻考勤状态', '-') }}
+    </span>
+</td>
+<td
+    data-column="捐献考勤状态"
+    data-sort-value="{{ row.get('捐献考勤状态', '')|e }}"
+>
+    <span
+        class="ca-status-badge"
+        data-status="{{ row.get('捐献考勤状态', '')|e }}"
+    >
+        {{ row.get('捐献考勤状态', '-') }}
+    </span>
+</td>
+<td
+    data-column="考勤范围状态"
+    data-sort-value="{{ row.get('考勤范围状态', '')|e }}"
+>
+    <span
+        class="ca-status-badge"
+        data-status="{{ row.get('考勤范围状态', '')|e }}"
+    >
+        {{ row.get('考勤范围状态', '-') }}
+    </span>
+</td>
+<td
+    data-column="是否有基线"
+    data-sort-value="{{ row.get('是否有基线', 0) }}"
+>
+    {% if row.get('是否有基线', 0) %}
+        有
+    {% else %}
+        无
+    {% endif %}
+</td>
+<td
+    data-column="考勤排除原因"
+    data-sort-value="{{ row.get('考勤排除原因', '')|e }}"
+>
+    {{ row.get('考勤排除原因', '-') or '-' }}
+</td>
+<td
+    data-column="考勤排序等级"
+    data-sort-value="{{ row.get('考勤排序等级', 99) }}"
+>
+    {{ row.get('考勤排序等级', '-') }}
+</td>
+</tr>
                     {% endfor %}
                 </tbody>
         </table>
+<div
+    class="ca-member-table-empty ca-is-hidden"
+    data-ca-member-table-empty
+>
+    当前筛选条件下没有成员记录。
+</div>
         <div class="pagination" style="margin-top:20px;text-align:center;">
 
             {% if page > 1 %}
