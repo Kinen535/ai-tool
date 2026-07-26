@@ -1239,13 +1239,27 @@
             ></div>
         </details>
 
-        <button
-            type="button"
-            class="ca-dashboard-button"
-            data-ca-export-visible
-        >
-            导出当前视图
-        </button>
+        <details class="ca-export-settings" data-ca-export-menu>
+            <summary class="ca-dashboard-button">
+                导出Excel
+            </summary>
+
+            <div class="ca-export-menu">
+                <button
+                    type="button"
+                    data-ca-export-mode="current_view"
+                >
+                    导出当前筛选结果
+                </button>
+
+                <button
+                    type="button"
+                    data-ca-export-mode="smart_report"
+                >
+                    导出智能分析报告
+                </button>
+            </div>
+        </details>
 
         <button
             type="button"

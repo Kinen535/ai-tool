@@ -7932,6 +7932,86 @@ def usage():
     return render_template("usage.html")
 
 
+@app.route(
+    "/compare/export.xlsx",
+    methods=["POST"],
+)
+def export_compare_excel_xlsx():
+    from services.engines.compare_excel_export_engine import (
+        build_compare_excel,
+    )
+
+    body = request.get_json(silent=True) or {}
+    mode = str(
+        body.get("mode") or "smart_report"
+    )
+    client_state = body.get("client_state") or {}
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+            """
+        ).fetchone()
+
+        battle_id = (
+            int(battle_row["id"])
+            if battle_row
+            else 1
+        )
+
+        cache_row = conn.execute(
+            """
+            SELECT data_json
+            FROM compare_cache
+            WHERE battle_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (battle_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not cache_row:
+        abort(
+            404,
+            description="暂无可导出的对比分析结果",
+        )
+
+    payload = json.loads(
+        cache_row["data_json"]
+    )
+
+    try:
+        content, filename = build_compare_excel(
+            payload,
+            mode=mode,
+            client_state=client_state,
+        )
+    except ValueError as error:
+        abort(
+            400,
+            description=str(error),
+        )
+
+    return send_file(
+        io.BytesIO(content),
+        mimetype=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @app.route("/export/compare_result")
 def export_compare_result():
     if not COMPARE_RESULT_FILE.exists():

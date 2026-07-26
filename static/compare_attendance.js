@@ -735,85 +735,100 @@
         return text;
     }
 
-    function exportVisibleRows(context) {
-        const visibleColumns = context.headers
-            .filter(
-                (header) => (
-                    !header.classList.contains(
-                        "ca-column-hidden"
-                    )
-                )
-            )
-            .map(
-                (header) => header.dataset.column
+    function exportFilename(disposition) {
+        const utf8Match = disposition.match(
+            /filename\*=UTF-8''([^;]+)/i
+        );
+
+        if (utf8Match) {
+            return decodeURIComponent(utf8Match[1]);
+        }
+
+        const plainMatch = disposition.match(
+            /filename="?([^";]+)"?/i
+        );
+
+        return plainMatch
+            ? plainMatch[1]
+            : "compare-analysis.xlsx";
+    }
+
+    async function exportExcel(
+        context,
+        mode,
+        button
+    ) {
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "生成中...";
+
+        try {
+            const response = await fetch(
+                "/compare/export.xlsx",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        mode,
+                        client_state: {
+                            status_filter:
+                                context.activeFilter || "all",
+                            sort_column:
+                                context.sortState
+                                    ? context.sortState.column
+                                    : "",
+                            sort_direction:
+                                context.sortState
+                                    ? context.sortState.direction
+                                    : "asc",
+                            visible_columns:
+                                Array.isArray(context.visibleColumns)
+                                    ? context.visibleColumns
+                                    : []
+                        }
+                    })
+                }
             );
 
-        const visibleRows = context.rows.filter(
-            (row) => (
-                !row.classList.contains(
-                    "ca-smart-filter-hidden"
-                )
-            )
-        );
-
-        const csvRows = [
-            visibleColumns.map(csvEscape).join(",")
-        ];
-
-        visibleRows.forEach(
-            (row) => {
-                const values = visibleColumns.map(
-                    (column) => {
-                        const cell = getCellByColumn(
-                            row,
-                            context,
-                            column
-                        );
-
-                        return csvEscape(
-                            cell
-                                ? cell.textContent
-                                : ""
-                        );
-                    }
-                );
-
-                csvRows.push(
-                    values.join(",")
+            if (!response.ok) {
+                const message = await response.text();
+                throw new Error(
+                    message
+                    || `导出失败（${response.status}）`
                 );
             }
-        );
 
-        const blob = new Blob(
-            [
-                "\uFEFF",
-                csvRows.join("\r\n")
-            ],
-            {
-                type: (
-                    "text/csv;charset=utf-8"
-                )
-            }
-        );
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
 
-        const link = document.createElement("a");
-        const timestamp = new Date()
-            .toISOString()
-            .replace(/[:.]/g, "-");
+            link.href = objectUrl;
+            link.download = exportFilename(
+                response.headers.get(
+                    "Content-Disposition"
+                ) || ""
+            );
 
-        link.href = URL.createObjectURL(blob);
-        link.download = (
-            `compare-members-${timestamp}.csv`
-        );
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
 
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        window.setTimeout(
-            () => URL.revokeObjectURL(link.href),
-            0
-        );
+            window.setTimeout(
+                () => URL.revokeObjectURL(objectUrl),
+                0
+            );
+        } catch (error) {
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : "Excel导出失败"
+            );
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
     }
 
     function resetTable(context) {
@@ -1098,16 +1113,31 @@
             }
         );
 
-        const exportButton = toolbar.querySelector(
-            "[data-ca-export-visible]"
+        const exportButtons = toolbar.querySelectorAll(
+            "[data-ca-export-mode]"
         );
 
-        if (exportButton) {
-            exportButton.addEventListener(
-                "click",
-                () => exportVisibleRows(context)
-            );
-        }
+        exportButtons.forEach(
+            (button) => {
+                button.addEventListener(
+                    "click",
+                    () => {
+                        const menu = button.closest("details");
+
+                        if (menu) {
+                            menu.open = false;
+                        }
+
+                        exportExcel(
+                            context,
+                            button.dataset.caExportMode
+                                || "smart_report",
+                            button
+                        );
+                    }
+                );
+            }
+        );
 
         const resetButton = toolbar.querySelector(
             "[data-ca-reset-table]"
