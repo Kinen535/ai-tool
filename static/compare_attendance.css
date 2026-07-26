@@ -870,3 +870,139 @@
     color: #94a3b8;
     font-weight: 700;
 }
+
+
+/* A15.4.30-A4-B1 多范围驾驶舱 */
+.ca-analysis-scope-panel {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid #bfdbfe;
+    border-radius: 15px;
+    background: #eff6ff;
+}
+
+.ca-analysis-scope-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.ca-analysis-scope-heading h3 {
+    margin: 0 0 5px;
+    color: #0f172a;
+    font-size: 17px;
+}
+
+.ca-analysis-scope-heading p {
+    margin: 0;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.ca-analysis-scope-badge {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ca-analysis-scope-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 13px;
+}
+
+.ca-analysis-scope-field {
+    display: grid;
+    gap: 7px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ca-analysis-scope-field select {
+    min-height: 42px;
+    width: 100%;
+    padding: 8px 34px 8px 11px;
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font: inherit;
+}
+
+.ca-analysis-scope-field select:disabled {
+    background: #e2e8f0;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.ca-analysis-scope-detail-note {
+    margin: 13px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #bfdbfe;
+    color: #334155;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.ca-current-scope-caption {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: 12px;
+}
+
+.ca-current-scope-caption span {
+    color: #64748b;
+}
+
+.ca-current-scope-caption strong {
+    color: #1d4ed8;
+}
+
+.ca-member-scope-card {
+    margin-bottom: 12px;
+    padding: 13px 15px;
+    border: 1px solid #c4b5fd;
+    border-radius: 12px;
+    background: #f5f3ff;
+}
+
+.ca-member-scope-card strong {
+    color: #5b21b6;
+}
+
+.ca-member-scope-card p {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+@media (max-width: 760px) {
+    .ca-analysis-scope-heading {
+        flex-direction: column;
+    }
+
+    .ca-analysis-scope-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ca-analysis-scope-badge {
+        align-self: flex-start;
+    }
+}

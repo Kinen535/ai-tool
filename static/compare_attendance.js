@@ -1322,3 +1322,245 @@
         initialiseAttendanceConfigurationForm
     );
 })();
+
+
+/* A15.4.30-A4-B1 多范围驾驶舱选择器 */
+(function () {
+    "use strict";
+
+    function parseScopeOptions() {
+        const source = document.getElementById(
+            "compare-scope-options"
+        );
+
+        if (!source) {
+            return {
+                group: [],
+                member: []
+            };
+        }
+
+        try {
+            const parsed = JSON.parse(
+                source.textContent || "{}"
+            );
+
+            return {
+                group: Array.isArray(
+                    parsed.group
+                )
+                    ? parsed.group
+                    : [],
+                member: Array.isArray(
+                    parsed.member
+                )
+                    ? parsed.member
+                    : []
+            };
+        } catch (error) {
+            console.error(
+                "分析范围选项解析失败",
+                error
+            );
+
+            return {
+                group: [],
+                member: []
+            };
+        }
+    }
+
+    function addOption(
+        select,
+        value,
+        label,
+        selectedValue
+    ) {
+        const option = document.createElement(
+            "option"
+        );
+
+        option.value = String(value);
+        option.textContent = String(label);
+
+        if (
+            String(value)
+            === String(selectedValue)
+        ) {
+            option.selected = true;
+        }
+
+        select.appendChild(option);
+    }
+
+    function initialiseCompareScopeSelector() {
+        const typeSelect =
+            document.getElementById(
+                "analysis-scope-type"
+            );
+
+        const valueSelect =
+            document.getElementById(
+                "analysis-scope-value"
+            );
+
+        const valueLabel =
+            document.getElementById(
+                "analysis-scope-value-label"
+            );
+
+        if (
+            !typeSelect
+            || !valueSelect
+            || !valueLabel
+        ) {
+            return;
+        }
+
+        const options = parseScopeOptions();
+
+        function renderValueOptions(
+            preserveCurrentValue
+        ) {
+            const scopeType =
+                typeSelect.value
+                || "alliance";
+
+            const currentValue =
+                preserveCurrentValue
+                    ? (
+                        valueSelect.dataset
+                            .currentValue
+                        || valueSelect.value
+                        || ""
+                    )
+                    : "";
+
+            valueSelect.innerHTML = "";
+            valueSelect.setCustomValidity("");
+
+            if (scopeType === "alliance") {
+                valueLabel.textContent =
+                    "范围对象";
+
+                valueSelect.disabled = true;
+                valueSelect.required = false;
+
+                addOption(
+                    valueSelect,
+                    "",
+                    "全同盟，无需选择",
+                    ""
+                );
+
+                return;
+            }
+
+            valueSelect.disabled = false;
+            valueSelect.required = true;
+
+            const values =
+                scopeType === "group"
+                    ? options.group
+                    : options.member;
+
+            valueLabel.textContent =
+                scopeType === "group"
+                    ? "选择分组"
+                    : "选择成员";
+
+            if (!values.length) {
+                addOption(
+                    valueSelect,
+                    "",
+                    scopeType === "group"
+                        ? "暂无可选分组"
+                        : "暂无可选成员",
+                    ""
+                );
+
+                valueSelect.setCustomValidity(
+                    scopeType === "group"
+                        ? "当前结束快照没有可选分组。"
+                        : "当前结束快照没有可选成员。"
+                );
+
+                return;
+            }
+
+            addOption(
+                valueSelect,
+                "",
+                scopeType === "group"
+                    ? "请选择分组"
+                    : "请选择成员",
+                currentValue
+            );
+
+            values.forEach(
+                function (value) {
+                    addOption(
+                        valueSelect,
+                        value,
+                        value,
+                        currentValue
+                    );
+                }
+            );
+        }
+
+        typeSelect.addEventListener(
+            "change",
+            function () {
+                valueSelect.dataset.currentValue =
+                    "";
+
+                renderValueOptions(false);
+            }
+        );
+
+        valueSelect.addEventListener(
+            "change",
+            function () {
+                valueSelect.dataset.currentValue =
+                    valueSelect.value;
+
+                valueSelect.setCustomValidity("");
+            }
+        );
+
+        const form = typeSelect.closest(
+            "form"
+        );
+
+        if (form) {
+            form.addEventListener(
+                "submit",
+                function (event) {
+                    if (
+                        typeSelect.value
+                        !== "alliance"
+                        && !valueSelect.value
+                    ) {
+                        valueSelect.setCustomValidity(
+                            typeSelect.value
+                            === "group"
+                                ? "请选择一个分组。"
+                                : "请选择一个成员。"
+                        );
+
+                        valueSelect.reportValidity();
+                        event.preventDefault();
+                    }
+                }
+            );
+        }
+
+        renderValueOptions(true);
+    }
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initialiseCompareScopeSelector
+    );
+})();

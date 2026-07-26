@@ -109,6 +109,35 @@
     <div class="ca-dashboard-head">
         <div>
             <h2 class="ca-dashboard-title">
+                <div class="ca-current-scope-caption" data-ca-current-scope>
+                    <span>当前统计范围</span>
+                    <strong>{{
+                        analysis_scope.scope_label
+                        | default("全同盟", true)
+                    }}</strong>
+                </div>
+
+                {% if
+                    analysis_scope_type
+                    | default("alliance", true)
+                    == "member"
+                %}
+                <section class="ca-member-scope-card">
+                    <strong>
+                        个人分析卡：{{
+                            analysis_scope_value
+                            | default("未选择成员", true)
+                        }}
+                    </strong>
+                    <p>
+                        当前达标率按1名成员计算；
+                        100%表示该成员达标，
+                        0%表示该成员未达标，
+                        不代表同盟整体比例。
+                    </p>
+                </section>
+                {% endif %}
+
                 同盟考勤总览
             </h2>
 
@@ -534,6 +563,212 @@
 
 <!-- ===== 第一行：基础筛选 ===== -->
 <div class="two-col top-align">
+
+            <section
+                class="ca-analysis-scope-panel"
+                data-ca-analysis-scope
+            >
+                <div class="ca-analysis-scope-heading">
+                    <div>
+                        <h3>分析范围</h3>
+
+                        <p>
+                            先决定上方驾驶舱统计谁，
+                            再使用下方条件筛选成员明细。
+                        </p>
+                    </div>
+
+                    <span class="ca-analysis-scope-badge">
+                        驾驶舱统计口径
+                    </span>
+                </div>
+
+                <div class="ca-analysis-scope-grid">
+                    <label class="ca-analysis-scope-field">
+                        <span>范围类型</span>
+
+                        <select
+                            id="analysis-scope-type"
+                            name="analysis_scope_type"
+                        >
+                            <option
+                                value="alliance"
+                                {% if
+                                    analysis_scope_type
+                                    | default(
+                                        "alliance",
+                                        true
+                                    )
+                                    == "alliance"
+                                %}
+                                    selected
+                                {% endif %}
+                            >
+                                全同盟
+                            </option>
+
+                            <option
+                                value="group"
+                                {% if
+                                    analysis_scope_type
+                                    | default(
+                                        "alliance",
+                                        true
+                                    )
+                                    == "group"
+                                %}
+                                    selected
+                                {% endif %}
+                            >
+                                指定分组
+                            </option>
+
+                            <option
+                                value="member"
+                                {% if
+                                    analysis_scope_type
+                                    | default(
+                                        "alliance",
+                                        true
+                                    )
+                                    == "member"
+                                %}
+                                    selected
+                                {% endif %}
+                            >
+                                指定成员
+                            </option>
+                        </select>
+                    </label>
+
+                    <label class="ca-analysis-scope-field">
+                        <span id="analysis-scope-value-label">
+                            范围对象
+                        </span>
+
+                        <select
+                            id="analysis-scope-value"
+                            name="analysis_scope_value"
+                            data-current-value="{{
+                                analysis_scope_value
+                                | default("", true)
+                            }}"
+                            {% if
+                                analysis_scope_type
+                                | default(
+                                    "alliance",
+                                    true
+                                )
+                                == "alliance"
+                            %}
+                                disabled
+                            {% else %}
+                                required
+                            {% endif %}
+                        >
+                            {% set current_scope_type =
+                                analysis_scope_type
+                                | default(
+                                    "alliance",
+                                    true
+                                )
+                            %}
+
+                            {% set current_scope_value =
+                                analysis_scope_value
+                                | default("", true)
+                            %}
+
+                            {% if
+                                current_scope_type
+                                == "group"
+                            %}
+                                {% if
+                                    scope_group_options
+                                    | default([], true)
+                                %}
+                                    {% for option_value in
+                                        scope_group_options
+                                        | default([], true)
+                                    %}
+                                        <option
+                                            value="{{ option_value }}"
+                                            {% if
+                                                option_value
+                                                == current_scope_value
+                                            %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ option_value }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">
+                                        暂无可选分组
+                                    </option>
+                                {% endif %}
+
+                            {% elif
+                                current_scope_type
+                                == "member"
+                            %}
+                                {% if
+                                    scope_member_options
+                                    | default([], true)
+                                %}
+                                    {% for option_value in
+                                        scope_member_options
+                                        | default([], true)
+                                    %}
+                                        <option
+                                            value="{{ option_value }}"
+                                            {% if
+                                                option_value
+                                                == current_scope_value
+                                            %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ option_value }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">
+                                        暂无可选成员
+                                    </option>
+                                {% endif %}
+
+                            {% else %}
+                                <option value="">
+                                    全同盟，无需选择
+                                </option>
+                            {% endif %}
+                        </select>
+                    </label>
+                </div>
+
+                <script
+                    id="compare-scope-options"
+                    type="application/json"
+                >{{
+                    {
+                        "group":
+                            scope_group_options
+                            | default([], true),
+                        "member":
+                            scope_member_options
+                            | default([], true)
+                    }
+                    | tojson
+                }}</script>
+
+                <p class="ca-analysis-scope-detail-note">
+                    明细表二次筛选：
+                    仅过滤下方成员明细，
+                    不改变上方驾驶舱统计。
+                </p>
+            </section>
 
     <div>
         <label>团关键词筛选</label>

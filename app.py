@@ -4265,6 +4265,88 @@ def snapshots():
         battle=battle_row
     )
 
+
+def build_compare_scope_ui_options(
+    snapshot_time,
+    battle_id,
+):
+    if not snapshot_time or not battle_id:
+        return [], []
+
+    try:
+        frame = load_snapshot_df(
+            str(snapshot_time),
+            int(battle_id),
+        )
+    except Exception:
+        return [], []
+
+    records = frame.to_dict(
+        "records"
+    )
+
+    invalid_values = {
+        "0",
+        "nan",
+        "none",
+        "null",
+        "undefined",
+        "-",
+    }
+
+    group_names = set()
+    member_names = set()
+
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+
+        member_name = str(
+            row.get("成员")
+            or ""
+        ).strip()
+
+        if (
+            member_name
+            and member_name.lower()
+            not in invalid_values
+        ):
+            member_names.add(
+                member_name
+            )
+
+        raw_group = str(
+            row.get("分组")
+            or ""
+        ).strip()
+
+        group_name = (
+            raw_group
+            or "未分组"
+        )
+
+        if (
+            group_name.lower()
+            not in invalid_values
+        ):
+            group_names.add(
+                group_name
+            )
+
+    return (
+        sorted(
+            group_names,
+            key=lambda value:
+                value.casefold(),
+        ),
+        sorted(
+            member_names,
+            key=lambda value:
+                value.casefold(),
+        ),
+    )
+
+
 @app.route("/compare", methods=["GET", "POST"])
 def compare():
 
@@ -4521,15 +4603,34 @@ def compare():
                     "attendance_config"
                 ] = attendance_config
 
+                scope_group_options, scope_member_options = (
+                    build_compare_scope_ui_options(
+                        locals().get("selected_new") or "",
+                        locals().get("battle_id"),
+                    )
+                )
+
                 return render_template(
                     "compare.html",
-                    **cached_data
+                    **cached_data,
+                    analysis_scope_type=locals().get("analysis_scope_type", "alliance"),
+                    analysis_scope_value=locals().get("analysis_scope_value", ""),
+                    analysis_scope=(locals().get("analysis_scope") or normalize_compare_scope("alliance", "")),
+                    scope_group_options=scope_group_options,
+                    scope_member_options=scope_member_options,
                 )
 
         except Exception as e:
 
             print("❌ compare GET SQLite 读取失败:", str(e))
             traceback.print_exc()
+
+        scope_group_options, scope_member_options = (
+            build_compare_scope_ui_options(
+                locals().get("selected_new") or "",
+                locals().get("battle_id"),
+            )
+        )
 
         return render_template(
             "compare.html",
@@ -4571,6 +4672,11 @@ def compare():
             page=1,
 
             total_pages=1,
+            analysis_scope_type=locals().get("analysis_scope_type", "alliance"),
+            analysis_scope_value=locals().get("analysis_scope_value", ""),
+            analysis_scope=(locals().get("analysis_scope") or normalize_compare_scope("alliance", "")),
+            scope_group_options=scope_group_options,
+            scope_member_options=scope_member_options,
         )
 
     # ==================================================
@@ -5194,6 +5300,13 @@ def compare():
             "error"
         )
 
+    scope_group_options, scope_member_options = (
+        build_compare_scope_ui_options(
+            locals().get("selected_new") or "",
+            locals().get("battle_id"),
+        )
+    )
+
     return render_template(
         "compare.html",
 
@@ -5234,6 +5347,11 @@ def compare():
         page=1,
 
         total_pages=total_pages,
+        analysis_scope_type=locals().get("analysis_scope_type", "alliance"),
+        analysis_scope_value=locals().get("analysis_scope_value", ""),
+        analysis_scope=(locals().get("analysis_scope") or normalize_compare_scope("alliance", "")),
+        scope_group_options=scope_group_options,
+        scope_member_options=scope_member_options,
     )
 
 @app.route("/trends")
