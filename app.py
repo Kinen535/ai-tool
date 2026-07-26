@@ -4272,6 +4272,11 @@ def compare():
     import json
     import sqlite3
 
+    from services.engines.compare_scope_engine import (
+        normalize_compare_scope,
+        select_compare_scope_rows,
+    )
+
     # A15.4.29-E4 attendance route integration
     from services.attendance_config_store import (
         TABLE_NAME as ATTENDANCE_CONFIG_TABLE,
@@ -4417,6 +4422,14 @@ def compare():
     selected_new = ""
 
     compare_mode = "auto"
+
+    analysis_scope_type = "alliance"
+    analysis_scope_value = ""
+
+    analysis_scope = normalize_compare_scope(
+        analysis_scope_type,
+        analysis_scope_value,
+    )
 
     team_keyword = ""
     member_keyword = ""
@@ -4610,6 +4623,21 @@ def compare():
             "auto"
         )
 
+        analysis_scope_type = request.form.get(
+            "analysis_scope_type",
+            "alliance",
+        ).strip()
+
+        analysis_scope_value = request.form.get(
+            "analysis_scope_value",
+            "",
+        ).strip()
+
+        analysis_scope = normalize_compare_scope(
+            analysis_scope_type,
+            analysis_scope_value,
+        )
+
         # ==================================================
         # A模式 自动分析
         # ==================================================
@@ -4734,12 +4762,29 @@ def compare():
             battle_id
         )
 
+        scope_selection = select_compare_scope_rows(
+            df_old,
+            df_new,
+            analysis_scope["scope_type"],
+            analysis_scope["scope_value"],
+        )
+
+        scope_df_old = pd.DataFrame(
+            scope_selection["start_rows"],
+            columns=list(df_old.columns),
+        )
+
+        scope_df_new = pd.DataFrame(
+            scope_selection["end_rows"],
+            columns=list(df_new.columns),
+        )
+
         # ==================================================
         # 核心分析
         # ==================================================
         result, groups, advice = compare_snapshots(
-            df_old,
-            df_new
+            scope_df_old,
+            scope_df_new
         )
 
         # ==================================================
@@ -4912,8 +4957,8 @@ def compare():
 
         attendance_bundle = (
             build_compare_attendance_cache_payload(
-                df_old,
-                df_new,
+                scope_df_old,
+                scope_df_new,
                 thresholds=attendance_thresholds,
                 weights=attendance_weights,
                 enabled_metrics=(
@@ -4932,6 +4977,25 @@ def compare():
         attendance = attendance_bundle[
             "attendance"
         ]
+
+        attendance["分析范围"] = dict(
+            scope_selection["scope"]
+        )
+
+        attendance["范围"] = dict(
+            attendance.get("范围")
+            or {}
+        )
+
+        attendance["范围"]["分析范围"] = dict(
+            scope_selection["scope"]
+        )
+
+        attendance["范围"]["范围人数"] = (
+            scope_selection["counts"][
+                "selected_member_count"
+            ]
+        )
 
         attendance["统计周期"] = {
             "开始": selected_old,
@@ -5043,6 +5107,26 @@ def compare():
             "total_pages": total_pages,
         }
 
+        cache_payload[
+            "analysis_scope_type"
+        ] = analysis_scope["scope_type"]
+
+        cache_payload[
+            "analysis_scope_value"
+        ] = analysis_scope["scope_value"]
+
+        cache_payload[
+            "analysis_scope"
+        ] = dict(
+            scope_selection["scope"]
+        )
+
+        cache_payload[
+            "analysis_scope_counts"
+        ] = dict(
+            scope_selection["counts"]
+        )
+
         cache_json = json.dumps(
             cache_payload,
             ensure_ascii=False
@@ -5056,8 +5140,15 @@ def compare():
         # =========================
         # 使用时间组合做趋势ID
         # =========================
+        scope_cache_fragment = (
+            scope_selection["scope"][
+                "cache_fragment"
+            ]
+        )
+
         cache_time = (
             f"{selected_old}__{selected_new}"
+            f"__{scope_cache_fragment}"
         )
 
         conn = sqlite3.connect(DB_FILE)
