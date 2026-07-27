@@ -6617,34 +6617,455 @@ def identity_log_detail(log_id):
         analysis.append('成员已进入核心成员序列')
     return render_template('identity_log_detail.html', row=row, analysis=analysis)
 
-@app.route('/identity/edit/<member_name>', methods=['GET', 'POST'])
+@app.route(
+    "/identity/edit/<member_name>",
+    methods=["GET", "POST"],
+)
 def identity_edit(member_name):
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    current_role = str(
+        current_user.get("role")
+        or ""
+    )
+
+    if not role_allows(
+        current_role,
+        "manager",
+    ):
+        abort(403)
+
+    if (
+        request.method == "POST"
+        and not validate_csrf_token(
+            session,
+            request.form.get(
+                "csrf_token",
+                "",
+            ),
+        )
+    ):
+        abort(400)
+
+    try:
+        actor_user_id = int(
+            current_user.get("id")
+        )
+
+        if actor_user_id <= 0:
+            actor_user_id = None
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        actor_user_id = None
+
+    actor_username = str(
+        current_user.get("username")
+        or ""
+    )[:64]
+
+    audit_common = {
+        "request_method": request.method,
+        "request_path": request.path,
+        "request_id": request.headers.get(
+            "X-Request-ID",
+            "",
+        )[:64],
+        "ip_address": _v158_request_ip(),
+        "user_agent": request.headers.get(
+            "User-Agent",
+            "",
+        )[:1000],
+    }
+
     conn = get_conn()
-    if request.method == 'POST':
-        old_row = conn.execute('\n                SELECT\n                    role_tag,\n                    identity_score,\n                    is_protected,\n                    exempt_stall\n\n                FROM member_battle_profiles\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
-        conn.execute('\n                UPDATE member_battle_profiles\n                SET\n                    role_tag=?,\n                    role_desc=?,\n                    role_rule=?,\n                    role_weight=?,\n                    is_protected=?,\n                    exempt_stall=?\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (request.form.get('role_tag'), request.form.get('role_desc'), request.form.get('role_rule'), float(request.form.get('role_weight', 1)), 1 if request.form.get('is_protected') else 0, 1 if request.form.get('exempt_stall') else 0, member_name))
+    battle_id = None
+    latest_time = None
+
+    try:
+        battle_row = conn.execute(
+            """
+            SELECT id
+            FROM battles
+            WHERE is_current=1
+            LIMIT 1
+            """
+        ).fetchone()
+
+        if not battle_row:
+            flash(
+                "当前没有可用战场。",
+                "warning",
+            )
+
+            return redirect("/identity")
+
+        battle_id = int(
+            battle_row["id"]
+        )
+
+        if request.method == "GET":
+            row = conn.execute(
+                """
+                SELECT *
+                FROM member_battle_profiles
+                WHERE battle_id=?
+                  AND member_name=?
+                LIMIT 1
+                """,
+                (
+                    battle_id,
+                    member_name,
+                ),
+            ).fetchone()
+
+            if not row:
+                flash(
+                    "当前战场不存在该成员。",
+                    "warning",
+                )
+
+                return redirect("/identity")
+
+            return render_template(
+                "identity_edit.html",
+                row=row,
+            )
+
+        role_tag = str(
+            request.form.get("role_tag")
+            or ""
+        ).strip()
+
+        if role_tag not in {
+            "member",
+            "admin",
+            "warehouse",
+            "core",
+        }:
+            abort(400)
+
+        role_desc = str(
+            request.form.get("role_desc")
+            or ""
+        ).strip()[:500]
+
+        role_rule = str(
+            request.form.get("role_rule")
+            or "normal"
+        ).strip()[:100]
+
+        try:
+            role_weight = float(
+                request.form.get(
+                    "role_weight",
+                    1,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            abort(400)
+
+        if not 0 <= role_weight <= 100:
+            abort(400)
+
+        is_protected = (
+            1
+            if request.form.get(
+                "is_protected"
+            )
+            else 0
+        )
+
+        exempt_stall = (
+            1
+            if request.form.get(
+                "exempt_stall"
+            )
+            else 0
+        )
+
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
+
+        old_row = conn.execute(
+            """
+            SELECT
+                role_tag,
+                role_desc,
+                role_rule,
+                role_weight,
+                identity_score,
+                is_protected,
+                exempt_stall
+            FROM member_battle_profiles
+            WHERE battle_id=?
+              AND member_name=?
+            LIMIT 1
+            """,
+            (
+                battle_id,
+                member_name,
+            ),
+        ).fetchone()
+
+        if not old_row:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=(
+                    actor_username
+                ),
+                role_snapshot=current_role,
+                battle_id=battle_id,
+                action_key="identity_edit",
+                action_label="编辑成员身份",
+                target_type="member",
+                target_id=member_name,
+                target_label=member_name,
+                result_status="blocked",
+                reason="member_not_found",
+                **audit_common,
+            )
+
+            conn.commit()
+
+            flash(
+                "当前战场不存在该成员。",
+                "warning",
+            )
+
+            return redirect("/identity")
+
+        before_data = dict(old_row)
+
+        conn.execute(
+            """
+            UPDATE member_battle_profiles
+            SET
+                role_tag=?,
+                role_desc=?,
+                role_rule=?,
+                role_weight=?,
+                is_protected=?,
+                exempt_stall=?
+            WHERE battle_id=?
+              AND member_name=?
+            """,
+            (
+                role_tag,
+                role_desc,
+                role_rule,
+                role_weight,
+                is_protected,
+                exempt_stall,
+                battle_id,
+                member_name,
+            ),
+        )
+
+        new_row = conn.execute(
+            """
+            SELECT
+                role_tag,
+                role_desc,
+                role_rule,
+                role_weight,
+                identity_score,
+                is_protected,
+                exempt_stall
+            FROM member_battle_profiles
+            WHERE battle_id=?
+              AND member_name=?
+            LIMIT 1
+            """,
+            (
+                battle_id,
+                member_name,
+            ),
+        ).fetchone()
+
+        conn.execute(
+            """
+            INSERT INTO identity_logs (
+                battle_id,
+                member_name,
+                old_role,
+                new_role,
+                old_score,
+                new_score,
+                old_protect,
+                new_protect,
+                old_exempt,
+                new_exempt,
+                operator,
+                created_at
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                datetime('now')
+            )
+            """,
+            (
+                battle_id,
+                member_name,
+                old_row["role_tag"],
+                new_row["role_tag"],
+                old_row["identity_score"],
+                new_row["identity_score"],
+                old_row["is_protected"],
+                new_row["is_protected"],
+                old_row["exempt_stall"],
+                new_row["exempt_stall"],
+                actor_username or "system",
+            ),
+        )
+
+        player_cursor = conn.execute(
+            """
+            UPDATE player_records
+            SET
+                role_tag=?,
+                role_desc=?,
+                role_rule=?,
+                role_weight=?,
+                is_protected=?,
+                exempt_stall=?
+            WHERE battle_id=?
+              AND member=?
+            """,
+            (
+                role_tag,
+                role_desc,
+                role_rule,
+                role_weight,
+                is_protected,
+                exempt_stall,
+                battle_id,
+                member_name,
+            ),
+        )
+
+        latest_snapshot = conn.execute(
+            """
+            SELECT snapshot_time
+            FROM snapshots
+            WHERE is_deleted=0
+              AND battle_id=?
+            ORDER BY snapshot_time DESC
+            LIMIT 1
+            """,
+            (
+                battle_id,
+            ),
+        ).fetchone()
+
+        after_data = dict(new_row)
+        after_data[
+            "player_records_updated"
+        ] = max(
+            int(
+                player_cursor.rowcount
+                or 0
+            ),
+            0,
+        )
+
+        record_action_log(
+            conn,
+            user_id=actor_user_id,
+            username_snapshot=(
+                actor_username
+            ),
+            role_snapshot=current_role,
+            battle_id=battle_id,
+            action_key="identity_edit",
+            action_label="编辑成员身份",
+            target_type="member",
+            target_id=member_name,
+            target_label=member_name,
+            result_status="success",
+            before_data=before_data,
+            after_data=after_data,
+            reason="profile_updated",
+            **audit_common,
+        )
+
         conn.commit()
-        new_row = conn.execute('\n                SELECT\n                    role_tag,\n                    identity_score,\n                    is_protected,\n                    exempt_stall\n\n                FROM member_battle_profiles\n\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
-        conn.execute("\n                INSERT INTO identity_logs (\n                    battle_id,\n                    member_name,\n                    old_role,\n                    new_role,\n                    old_score,\n                    new_score,\n                    old_protect,\n                    new_protect,\n                    old_exempt,\n                    new_exempt,\n                    operator,\n                    created_at\n                )\n                VALUES (\n                    (\n                        SELECT id\n                        FROM battles\n                        WHERE is_current=1\n                        LIMIT 1\n                    ),\n                    ?,?,?,?,?,?,?,?,?,?,\n                    datetime('now')\n                )\n                ", (member_name, old_row['role_tag'], new_row['role_tag'], old_row['identity_score'], new_row['identity_score'], old_row['is_protected'], new_row['is_protected'], old_row['exempt_stall'], new_row['exempt_stall'], 'admin'))
-        conn.commit()
-        conn.execute('\n                UPDATE player_records\n\n                SET\n                    role_tag=(\n                        SELECT role_tag\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_desc=(\n                        SELECT role_desc\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_rule=(\n                        SELECT role_rule\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    role_weight=(\n                        SELECT role_weight\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    is_protected=(\n                        SELECT is_protected\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    ),\n\n                    exempt_stall=(\n                        SELECT exempt_stall\n                        FROM member_battle_profiles\n                        WHERE member_name=?\n                          AND battle_id=\n                              player_records.battle_id\n                    )\n\n                WHERE member=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name, member_name, member_name, member_name, member_name, member_name, member_name))
-        conn.commit()
-        battle_row = conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n            ').fetchone()
-        battle_id = battle_row['id'] if battle_row else 1
-        latest_snapshot = conn.execute('\n            SELECT snapshot_time\n            FROM snapshots\n            WHERE is_deleted = 0\n            AND battle_id = ?\n            ORDER BY snapshot_time DESC\n            LIMIT 1\n            ', (battle_id,)).fetchone()
-        latest_time = latest_snapshot['snapshot_time'] if latest_snapshot else None
+
+        latest_time = (
+            latest_snapshot[
+                "snapshot_time"
+            ]
+            if latest_snapshot
+            else None
+        )
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+    finally:
         conn.close()
-        if latest_time:
-            calculate_stall(battle_id, latest_time)
-            calculate_stall_penalty(battle_id, latest_time)
-            calculate_risk(battle_id, latest_time)
-            sync_member_profiles(battle_id, latest_time)
-            calculate_identity_score(battle_id, latest_time)
-            sync_identity(battle_id, latest_time)
-        return redirect('/identity')
-    row = conn.execute('\n                SELECT *\n                FROM member_battle_profiles\n                WHERE member_name=?\n                  AND battle_id=(\n                      SELECT id\n                      FROM battles\n                      WHERE is_current=1\n                      LIMIT 1\n                  )\n                ', (member_name,)).fetchone()
-    conn.close()
-    return render_template('identity_edit.html', row=row)
+
+    if latest_time:
+        try:
+            calculate_stall(
+                battle_id,
+                latest_time,
+            )
+            calculate_stall_penalty(
+                battle_id,
+                latest_time,
+            )
+            calculate_risk(
+                battle_id,
+                latest_time,
+            )
+            sync_member_profiles(
+                battle_id,
+                latest_time,
+            )
+            calculate_identity_score(
+                battle_id,
+                latest_time,
+            )
+            sync_identity(
+                battle_id,
+                latest_time,
+            )
+
+        except Exception as error:
+            flash(
+                "身份已保存，但指标重算失败："
+                f"{type(error).__name__}",
+                "warning",
+            )
+
+            return redirect("/identity")
+
+    flash(
+        "成员身份设置已保存。",
+        "success",
+    )
+
+    return redirect("/identity")
 
 @app.route("/identity/view")
 def identity_view_legacy():
