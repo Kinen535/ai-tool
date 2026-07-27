@@ -40,6 +40,7 @@ from services.v158_auth_service import (
     validate_csrf_token,
 )
 from services.v158_auth_store import (
+    record_action_log,
     record_login_event,
 )
 
@@ -7393,96 +7394,285 @@ def snapshot_view(snapshot_id):
 
 @app.route(
     "/snapshot/delete/<int:snapshot_id>",
-    methods=["POST"]
+    methods=["POST"],
 )
-
 def snapshot_delete(snapshot_id):
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    current_role = str(
+        current_user.get("role")
+        or ""
+    )
+
+    if not role_allows(
+        current_role,
+        "super_admin",
+    ):
+        abort(403)
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    try:
+        actor_user_id = int(
+            current_user.get("id")
+        )
+
+        if actor_user_id <= 0:
+            actor_user_id = None
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        actor_user_id = None
+
+    actor_username = str(
+        current_user.get("username")
+        or ""
+    )[:64]
 
     conn = get_conn()
 
-    snapshot = conn.execute(
-        """
-        SELECT
-            id,
-            snapshot_time,
-            battle_id
-        FROM snapshots
-        WHERE id = ?
-        """,
-        (snapshot_id,)
-    ).fetchone()
+    try:
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
 
-    if not snapshot:
+        snapshot = conn.execute(
+            """
+            SELECT
+                id,
+                snapshot_time,
+                battle_id,
+                COALESCE(is_deleted, 0)
+                    AS is_deleted
+            FROM snapshots
+            WHERE id=?
+            """,
+            (
+                snapshot_id,
+            ),
+        ).fetchone()
 
+        if not snapshot:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=(
+                    actor_username
+                ),
+                role_snapshot=current_role,
+                battle_id=None,
+                action_key=(
+                    "snapshot_delete"
+                ),
+                action_label=(
+                    "删除数据快照"
+                ),
+                target_type="snapshot",
+                target_id=str(snapshot_id),
+                target_label=(
+                    f"快照 #{snapshot_id}"
+                ),
+                result_status="blocked",
+                reason="snapshot_not_found",
+                request_method=(
+                    request.method
+                ),
+                request_path=(
+                    request.path
+                ),
+                request_id=(
+                    request.headers.get(
+                        "X-Request-ID",
+                        "",
+                    )[:64]
+                ),
+                ip_address=(
+                    _v158_request_ip()
+                ),
+                user_agent=(
+                    request.headers.get(
+                        "User-Agent",
+                        "",
+                    )[:1000]
+                ),
+            )
+
+            conn.commit()
+
+            flash(
+                "快照不存在",
+                "error",
+            )
+
+            return redirect(
+                url_for("snapshots")
+            )
+
+        snapshot_time = str(
+            snapshot["snapshot_time"]
+            or ""
+        )
+
+        battle_id = int(
+            snapshot["battle_id"]
+        )
+
+        before_data = {
+            "snapshot_id": int(
+                snapshot["id"]
+            ),
+            "snapshot_time": (
+                snapshot_time
+            ),
+            "battle_id": battle_id,
+            "is_deleted": int(
+                snapshot["is_deleted"]
+                or 0
+            ),
+        }
+
+        player_cursor = conn.execute(
+            """
+            UPDATE player_records
+            SET is_deleted=1
+            WHERE snapshot_time=?
+              AND battle_id=?
+            """,
+            (
+                snapshot_time,
+                battle_id,
+            ),
+        )
+
+        snapshot_cursor = conn.execute(
+            """
+            UPDATE snapshots
+            SET is_deleted=1
+            WHERE id=?
+            """,
+            (
+                snapshot_id,
+            ),
+        )
+
+        cache_cursor = conn.execute(
+            """
+            DELETE FROM compare_cache
+            WHERE battle_id=?
+            """,
+            (
+                battle_id,
+            ),
+        )
+
+        after_data = {
+            "snapshot_id": snapshot_id,
+            "snapshot_is_deleted": 1,
+            "player_records_updated": (
+                max(
+                    int(
+                        player_cursor.rowcount
+                        or 0
+                    ),
+                    0,
+                )
+            ),
+            "snapshots_updated": (
+                max(
+                    int(
+                        snapshot_cursor.rowcount
+                        or 0
+                    ),
+                    0,
+                )
+            ),
+            "compare_cache_deleted": (
+                max(
+                    int(
+                        cache_cursor.rowcount
+                        or 0
+                    ),
+                    0,
+                )
+            ),
+        }
+
+        record_action_log(
+            conn,
+            user_id=actor_user_id,
+            username_snapshot=(
+                actor_username
+            ),
+            role_snapshot=current_role,
+            battle_id=battle_id,
+            action_key="snapshot_delete",
+            action_label="删除数据快照",
+            target_type="snapshot",
+            target_id=str(snapshot_id),
+            target_label=snapshot_time,
+            result_status="success",
+            before_data=before_data,
+            after_data=after_data,
+            reason="soft_delete",
+            request_method=(
+                request.method
+            ),
+            request_path=(
+                request.path
+            ),
+            request_id=(
+                request.headers.get(
+                    "X-Request-ID",
+                    "",
+                )[:64]
+            ),
+            ip_address=(
+                _v158_request_ip()
+            ),
+            user_agent=(
+                request.headers.get(
+                    "User-Agent",
+                    "",
+                )[:1000]
+            ),
+        )
+
+        conn.commit()
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+    finally:
         conn.close()
-
-        flash(
-            "快照不存在",
-            "error"
-        )
-
-        return redirect("/snapshots")
-
-    snapshot_time = snapshot["snapshot_time"]
-
-    battle_id = snapshot["battle_id"]
-
-    # =========================
-    # 删除玩家记录
-    # =========================
-
-    conn.execute(
-        """
-        UPDATE player_records
-        SET is_deleted = 1
-        WHERE snapshot_time = ?
-        AND battle_id = ?
-        """,
-        (
-            snapshot_time,
-            battle_id
-        )
-    )
-
-    # =========================
-    # 删除快照
-    # =========================
-
-    conn.execute(
-        """
-        UPDATE snapshots
-        SET is_deleted = 1
-        WHERE id = ?
-        """,
-        (
-            snapshot_id,
-        )
-    )
-
-    # =========================
-    # 清理 compare 缓存
-    # =========================
-
-    conn.execute(
-        """
-        DELETE FROM compare_cache
-        WHERE battle_id = ?
-        """,
-        (
-            battle_id,
-        )
-    )
-
-    conn.commit()
-
-    conn.close()
 
     flash(
         f"快照已删除：{snapshot_time}",
-        "success"
+        "success",
     )
 
-    return redirect("/snapshots")  
+    return redirect(
+        url_for("snapshots")
+    )
+
 
 # =========================
 # V9.2 战场档案库入口
