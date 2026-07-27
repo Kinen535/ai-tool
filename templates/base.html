@@ -2243,5 +2243,81 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 </script>
 
+<!-- V15.8 global POST CSRF bridge -->
+<script>
+(function () {
+    "use strict";
+
+    function installCsrfFields() {
+        var csrfToken =
+            {{ session.get("v158_csrf_token", "") | tojson }};
+
+        if (!csrfToken) {
+            return;
+        }
+
+        document
+            .querySelectorAll("form[method]")
+            .forEach(function (form) {
+                var method = (
+                    form.getAttribute("method") || ""
+                ).toLowerCase();
+
+                if (method !== "post") {
+                    return;
+                }
+
+                if (
+                    form.querySelector(
+                        'input[name="csrf_token"]'
+                    )
+                ) {
+                    return;
+                }
+
+                var action = (
+                    form.getAttribute("action") ||
+                    window.location.href
+                );
+
+                var actionUrl;
+
+                try {
+                    actionUrl = new URL(
+                        action,
+                        window.location.href
+                    );
+                } catch (error) {
+                    return;
+                }
+
+                if (
+                    actionUrl.origin !==
+                    window.location.origin
+                ) {
+                    return;
+                }
+
+                var hidden =
+                    document.createElement("input");
+
+                hidden.type = "hidden";
+                hidden.name = "csrf_token";
+                hidden.value = csrfToken;
+
+                form.appendChild(hidden);
+            });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            installCsrfFields
+        );
+    } else {
+        installCsrfFields();
+    }
+})();
+</script>
 </body>
 </html>
