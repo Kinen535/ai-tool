@@ -1,19 +1,1108 @@
-{% extends "base.html" %}{% block content %}
-<h1 class="page-title">趋势分析</h1>
-<div class="card"><div class="card-title">按成员或按团查看历史趋势</div>
-<form method="get">
-<div class="two-col top-align">
-<div><label>成员关键词</label><input class="input" type="text" name="member_keyword" value="{{ member_keyword }}" placeholder="输入成员名，查看这个成员的历史"></div>
-<div><label>团关键词</label><input class="input" type="text" name="team_keyword" value="{{ team_keyword }}" placeholder="输入团名，查看这个团的历史"></div>
-</div><button class="btn primary" type="submit">查看趋势</button></form></div>
+{% extends "base.html" %}
 
-<div class="card"><div class="card-title">趋势结果</div><table class="table"><thead>
-{% if member_keyword %}<tr><th>时间点</th><th>成员</th><th>团</th><th>战功总量</th><th>助攻总量</th><th>势力值</th></tr>
-{% elif team_keyword %}<tr><th>时间点</th><th>团</th><th>团总战功</th><th>团总助攻</th><th>团总势力</th><th>团人数</th></tr>
-{% else %}<tr><th>说明</th></tr>{% endif %}
-</thead><tbody>
-{% if member_keyword %}{% for row in trend_rows %}<tr><td>{{ row["snapshot_time"] }}</td><td>{{ row["member"] }}</td><td>{{ row["team_name"] }}</td><td>{{ row["battle_total"] }}</td><td>{{ row["assist_total"] }}</td><td>{{ row["power_value"] }}</td></tr>{% endfor %}
-{% elif team_keyword %}{% for row in trend_rows %}<tr><td>{{ row["snapshot_time"] }}</td><td>{{ row["team_name"] }}</td><td>{{ row["battle_total_sum"] }}</td><td>{{ row["assist_total_sum"] }}</td><td>{{ row["power_value_sum"] }}</td><td>{{ row["members_count"] }}</td></tr>{% endfor %}
-{% else %}<tr><td class="muted">输入成员关键词或团关键词后查看趋势</td></tr>{% endif %}
-{% if (member_keyword or team_keyword) and not trend_rows %}<tr><td colspan="6" class="muted">没有匹配到历史数据</td></tr>{% endif %}
-</tbody></table></div>{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- =======================================================
+         Page Hero
+    ======================================================== -->
+    <div class="page-hero panel-card">
+
+        <div class="page-hero-content">
+
+            <div class="page-hero-top">
+
+                <div class="page-hero-icon">
+                    <i data-lucide="chart-column"></i>
+                </div>
+
+                <div>
+                    <div class="page-hero-title">
+                        趋势分析
+                    </div>
+
+                    <div class="page-hero-subtitle">
+                        AI Growth Analytics Center
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="page-hero-desc">
+                按成员维度查看历史快照变化趋势，辅助分析战功、助攻、势力值的长期增长表现。
+                后续将扩展 AI 异常识别、趋势评分、活跃画像、风险波动预测与 GPT 自动分析能力。
+            </div>
+
+            <div class="page-hero-badges">
+
+                <div class="hero-badge">
+                    <i data-lucide="database"></i>
+                    <span>历史快照追踪</span>
+                </div>
+
+                <div class="hero-badge">
+                    <i data-lucide="activity"></i>
+                    <span>增长趋势分析</span>
+                </div>
+
+                <div class="hero-badge">
+                    <i data-lucide="brain-circuit"></i>
+                    <span>AI 风险识别</span>
+                </div>
+
+                <div class="hero-badge">
+                    <i data-lucide="shield-alert"></i>
+                    <span>异常行为预警</span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =======================================================
+         AI Command Center
+    ======================================================== -->
+    <section class="ai-command-center panel-card">
+
+        <div class="ai-command-left">
+
+            <div class="ai-command-badge">
+                <i data-lucide="brain-circuit"></i>
+                AI 指挥中心
+            </div>
+
+            <h2 class="ai-command-title">
+                当前整体风险等级：
+                <span class="risk-text warning">
+                    AI分析待开放
+                </span>
+            </h2>
+
+            <p class="ai-command-desc">
+                AI 已完成最近历史快照分析。当前系统会根据成员战功、助攻、势力值变化生成风险评分。
+                后续可扩展为异常成员识别、团级活跃度监控与 GPT 自动分析报告。
+            </p>
+
+            <div class="ai-command-tags">
+                <span>风险评分</span>
+                <span>趋势分析</span>
+                <span>活跃判断</span>
+                <span>AI 建议观察</span>
+            </div>
+
+        </div>
+
+        <div class="ai-command-right">
+
+            <div class="dashboard-mini-card">
+                <div class="mini-label">
+                    风险指数
+                </div>
+
+                <div class="mini-value danger">
+                    88
+                </div>
+            </div>
+
+            <div class="dashboard-mini-card">
+                <div class="mini-label">
+                    活跃指数
+                </div>
+
+                <div class="mini-value primary">
+                    88
+                </div>
+            </div>
+
+            <div class="dashboard-mini-card">
+                <div class="mini-label">
+                    稳定指数
+                </div>
+
+                <div class="mini-value success">
+                    61
+                </div>
+            </div>
+
+            <div class="dashboard-mini-card">
+                <div class="mini-label">
+                    AI评分
+                </div>
+
+                <div class="mini-value warning">
+                    B+
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =======================================================
+         AI Insight
+    ======================================================== -->
+    {% if member_keyword %}
+
+    <div class="insight-box insight-info panel-card">
+
+        <div class="insight-icon">
+            <i data-lucide="sparkles"></i>
+        </div>
+
+        <div class="insight-content">
+
+            <div class="insight-label">
+                AI 趋势洞察
+            </div>
+
+            <div class="insight-title">
+                已完成历史趋势分析
+            </div>
+
+            <div class="insight-desc">
+                系统已根据历史快照数据完成趋势提取。后续版本可扩展 AI 异常识别、
+                成员增长评分、团活跃度变化分析与风险成员预警。
+            </div>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <div class="insight-box insight-success panel-card">
+
+        <div class="insight-icon">
+            <i data-lucide="radar"></i>
+        </div>
+
+        <div class="insight-content">
+
+            <div class="insight-label">
+                AI 系统状态
+            </div>
+
+            <div class="insight-title">
+                趋势分析模块已启动
+            </div>
+
+            <div class="insight-desc">
+                输入成员关键词后，系统会自动从历史快照中提取长期变化数据，
+                用于后续 AI 趋势判断与异常增长分析。
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+    <!-- =======================================================
+         Search Panel
+    ======================================================== -->
+    <div class="panel-card">
+
+        <div class="panel-title">
+            趋势查询
+        </div>
+
+        <p class="panel-subtitle">
+            当前阶段建议优先使用成员关键词查询。团级趋势属于后续聚合分析模块，会单独升级。
+        </p>
+
+        <form method="get">
+
+            <div class="two-col top-align">
+
+                <div>
+                    <label>成员关键词</label>
+
+                    <input class="input"
+                           type="text"
+                           name="member_keyword"
+                           value="{{ member_keyword }}"
+                           placeholder="输入成员名，例如：地火风雷">
+                </div>
+
+                <div>
+                    <label>团关键词</label>
+
+                    <input class="input"
+                           type="text"
+                           name="group_keyword"
+                           value="{{ group_keyword|default('') }}"
+                           placeholder="后续版本接入团级聚合分析">
+                </div>
+
+            </div>
+
+            <div class="row-gap">
+
+                <button class="btn-primary"
+                        type="submit">
+                    <i data-lucide="search"></i>
+                    查看趋势
+                </button>
+
+                <a class="btn-secondary"
+                   href="{{ url_for('trends') }}">
+                    <i data-lucide="rotate-ccw"></i>
+                    重置条件
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- =======================================================
+         Overview
+    ======================================================== -->
+    {% if member_keyword %}
+
+    <div class="panel-card">
+
+        <div class="panel-title">
+            趋势概览
+        </div>
+
+        {% if trend_rows %}
+
+        <div class="grid-4">
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    查询对象
+                </div>
+
+                <div class="stat-value">
+                    成员
+                </div>
+
+                <div class="muted">
+                    当前分析维度
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    匹配记录
+                </div>
+
+                <div class="stat-value">
+                    {{ trend_rows|length }}
+                </div>
+
+                <div class="muted">
+                    历史快照记录数
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    分析状态
+                </div>
+
+                <div class="stat-value">
+                    正常
+                </div>
+
+                <div class="muted">
+                    已完成基础趋势查询
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    AI 扩展
+                </div>
+
+                <div class="stat-value">
+                    预留
+                </div>
+
+                <div class="muted">
+                    后续接入异常识别
+                </div>
+            </div>
+
+        </div>
+
+        {% else %}
+
+        <div class="muted">
+            当前关键词没有匹配到历史数据。
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+    <!-- =======================================================
+         AI Risk Alert
+    ======================================================== -->
+    {% if member_keyword and trend_rows %}
+
+    <div class="risk-alert panel-card">
+
+        <div class="risk-icon">
+            <i data-lucide="triangle-alert"></i>
+        </div>
+
+        <div class="risk-content">
+
+            <div class="risk-label">
+                AI 风险检测
+            </div>
+
+            <div class="risk-title">
+                AI分析模块升级中
+            </div>
+
+            <div class="risk-desc">
+                系统已根据该成员最近历史快照的战功、助攻、势力值变化进行基础风险评分。
+                若出现短时间高增长、助攻异常偏低或势力值异常波动，建议重点观察。
+            </div>
+
+            <div class="risk-badges">
+
+                <div class="risk-badge high">
+                    <i data-lucide="alert-circle"></i>
+                    <span>风险评分</span>
+                </div>
+
+                <div class="risk-badge warning">
+                    <i data-lucide="activity"></i>
+                    <span>建议观察</span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+    <!-- =======================================================
+         Charts
+    ======================================================== -->
+    {% if member_keyword and trend_rows %}
+
+    <div class="chart-grid">
+
+        <div class="panel-card chart-card">
+
+            <div class="chart-header">
+
+                <div>
+                    <div class="card-title" id="battleChartTitle">
+                        战功实时增长趋势
+                    </div>
+
+                    <div class="chart-desc">
+                        最近历史快照中的战功变化趋势，用于观察成员长期增长表现。
+                    </div>
+                    
+                    <div class="trend-mode-switch">
+
+                        <button class="trend-mode-btn active"
+                                onclick="switchTrendMode('growth', event)">
+                            实时增长
+                        </button>
+                    
+                        <button class="trend-mode-btn"
+                                onclick="switchTrendMode('season', event)">
+                            赛季累计
+                        </button>
+                    
+                    </div>
+                </div>
+
+                <div class="chart-badge danger">
+                    <i data-lucide="trending-up"></i>
+                    <span>动态数据</span>
+                </div>
+
+            </div>
+
+            <div id="battleChart"
+                 class="chart-box"></div>
+
+        </div>
+
+        <div class="panel-card chart-card">
+
+            <div class="chart-header">
+
+                <div>
+                    <div class="card-title" id="powerChartTitle">
+                        势力实时变化
+                    </div>
+
+                    <div class="chart-desc">
+                        根据历史快照分析成员势力值长期波动情况。
+                    </div>
+                </div>
+
+                <div class="chart-badge">
+                    <i data-lucide="activity"></i>
+                    <span>趋势监控</span>
+                </div>
+
+            </div>
+
+            <div id="powerChart"
+                 class="chart-box"></div>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+    <!-- =======================================================
+         Result Table
+    ======================================================== -->
+    <div class="panel-card">
+
+        <div class="panel-title">
+            趋势结果
+        </div>
+
+        {% if not member_keyword %}
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                <i data-lucide="search"></i>
+            </div>
+
+            <div class="empty-title">
+                请输入查询条件
+            </div>
+
+            <div class="empty-desc">
+                输入成员关键词后，系统会从历史快照中提取对应趋势数据。
+            </div>
+
+        </div>
+
+        {% elif trend_rows %}
+
+        <div class="table-wrapper trend-scroll-area">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>时间点</th>
+                        <th>成员</th>
+                        <th>所属团</th>
+                        <th>战功总量</th>
+                        <th>助攻总量</th>
+                        <th>势力值</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in trend_rows %}
+
+                    {% set battle_total = row.get("battle_total") or 0 %}
+                    {% set assist_total = row.get("assist_total") or 0 %}
+                    {% set power_value = row.get("power_value") or row.get("power_total") or 0 %}
+                    {% set growth = row.get("battle_growth", row.get("battle_delta", 0)) %}
+                    {% set status = row.get("battle_status", "稳定") %}
+                    {% set css = row.get("battle_class", "status-normal") %}
+
+                    <tr class="
+                    {% if row.battle_class == '高速增长' %}
+                    trend-high-growth
+                    {% elif row.battle_class == '稳定增长' %}
+                    trend-stable
+                    {% else %}
+                    trend-low
+                    {% endif %}
+                    ">
+
+                        <td>
+                            {{ row.get("snapshot_time") or row.get("time") or "-" }}
+                        </td>
+
+                        <td>
+                            {{ row.get("member") or "-" }}
+                        </td>
+
+                        <td>
+                            {{ row.get("team_name") or row.get("group") or "-" }}
+                        </td>
+
+                        <td>
+                            <div class="battle-cell">
+
+                                <div class="battle-value">
+                                    {{ "{:,}".format(battle_total) }}
+                                </div>
+
+                                <div class="battle-status {{ css }}">
+
+                                    {% if growth > 0 %}
+
+                                        ↑ {{ status }}
+
+                                    {% elif growth < 0 %}
+
+                                        ↓ {{ status }}
+
+                                    {% else %}
+
+                                        → {{ status }}
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+                        </td>
+
+                        <td>
+                            {{ "{:,}".format(assist_total) }}
+                        </td>
+
+                        <td>
+                            {{ "{:,}".format(power_value) }}
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                <i data-lucide="circle-alert"></i>
+            </div>
+
+            <div class="empty-title">
+                没有匹配到历史数据
+            </div>
+
+            <div class="empty-desc">
+                请检查成员名是否输入准确，也可以尝试输入更短的关键词。
+            </div>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const trendRows = {{ history_data | tojson | safe }};
+
+    if (!trendRows || trendRows.length === 0) {
+        return;
+    }
+
+    const growthData = [];
+
+    trendRows.forEach(item => {
+
+        growthData.push({
+
+            ...item,
+
+            battle_growth:
+                item.battle_growth === undefined ||
+                item.battle_growth === null
+                    ? 0
+                    : Number(item.battle_growth),
+
+            assist_growth:
+                item.assist_growth === undefined ||
+                item.assist_growth === null
+                    ? 0
+                    : Number(item.assist_growth),
+
+            power_growth:
+                item.power_growth === undefined ||
+                item.power_growth === null
+                    ? 0
+                    : Number(item.power_growth),
+
+            battle_total:
+                item.battle_total !== undefined &&
+                item.battle_total !== null
+                    ? Number(item.battle_total)
+                    : 0,
+
+            assist_total:
+                item.assist_total !== undefined &&
+                item.assist_total !== null
+                    ? Number(item.assist_total)
+                    : 0,
+
+            power_total:
+                item.power_total !== undefined &&
+                item.power_total !== null
+                    ? Number(item.power_total)
+                    : (
+                        item.power_value !== undefined &&
+                        item.power_value !== null
+                            ? Number(item.power_value)
+                            : 0
+                    )
+        });
+    });
+
+    const seasonData = [...growthData].sort((a, b) => {
+
+        return new Date(
+            a.full_time ||
+            a.snapshot_time ||
+            a.time
+        ) - new Date(
+            b.full_time ||
+            b.snapshot_time ||
+            b.time
+        );
+    });
+
+    const battleChartElement =
+        document.querySelector("#battleChart");
+
+    const powerChartElement =
+        document.querySelector("#powerChart");
+
+    if (
+        !battleChartElement ||
+        !powerChartElement ||
+        typeof ApexCharts === "undefined"
+    ) {
+        return;
+    }
+
+    let currentTrendMode = "growth";
+
+    let battleChart = null;
+    let powerChart = null;
+
+    function getSourceData() {
+
+        return currentTrendMode === "season"
+            ? seasonData
+            : growthData;
+    }
+
+    function getChartCategories() {
+
+        return getSourceData().map(item => {
+
+            const t =
+                item.full_time ||
+                item.snapshot_time ||
+                item.time ||
+                "";
+
+            return t
+                ? t.substring(5, 16)
+                : "";
+        });
+    }
+
+    function getBattleSeries() {
+
+        if (currentTrendMode === "season") {
+
+            return [{
+                data: getSourceData().map(item => {
+
+                    return {
+
+                        x: Date.parse(
+                            item.full_time ||
+                            item.snapshot_time ||
+                            item.time ||
+                            ""
+                        ),
+
+                        y: Number(
+                            item.battle_total || 0
+                        )
+                    };
+                })
+            }];
+        }
+
+        return [{
+            name: "战功增长",
+
+            data: getSourceData().map(item => {
+
+                return {
+
+                    x: Date.parse(
+                        item.full_time ||
+                        item.snapshot_time ||
+                        item.time ||
+                        ""
+                    ),
+
+                    y: Number(
+                        item.battle_growth || 0
+                    )
+                };
+            })
+        }];
+    }
+
+    function getPowerSeries() {
+
+        if (currentTrendMode === "season") {
+
+            return [{
+                data: getSourceData().map(item => {
+
+                    return {
+
+                        x: Date.parse(
+                            item.full_time ||
+                            item.snapshot_time ||
+                            item.time ||
+                            ""
+                        ),
+
+                        y:
+                            Number(
+                                item.power_total ??
+                                item.power_value ??
+                                0
+                            )
+                    };
+                })
+            }];
+        }
+
+        return [{
+            name: "势力增长",
+
+            data: getSourceData().map(item => {
+
+                return {
+
+                    x: Date.parse(
+                        item.full_time ||
+                        item.snapshot_time ||
+                        item.time ||
+                        ""
+                    ),
+
+                    y: Number(
+                        item.power_growth || 0
+                    )
+                };
+            })
+        }];
+    }
+
+    function formatNumber(value) {
+
+        value = Number(value || 0);
+
+        if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + "M";
+        }
+
+        if (value >= 1000) {
+            return (value / 1000).toFixed(1) + "K";
+        }
+
+        return value.toLocaleString();
+    }
+
+    function getCommonOptions() {
+
+        return {
+
+            chart: {
+
+                height: 390,
+
+                toolbar: {
+                    show: false
+                },
+
+                zoom: {
+                    enabled: false
+                },
+
+                animations: {
+
+                    enabled: true,
+                    easing: "easeinout",
+                    speed: 500
+                }
+            },
+
+            dataLabels: {
+                enabled: false
+            },
+
+            plotOptions: {
+
+                bar: {
+                    borderRadius: 6,
+                    columnWidth: "68%"
+                }
+            },
+
+            grid: {
+
+                borderColor: "rgba(148,163,184,0.08)",
+                strokeDashArray: 4
+            },
+
+            xaxis: {
+
+                type: "datetime",
+
+                tickAmount: 6,
+
+                labels: {
+                    show: false
+                },
+
+                axisBorder: {
+                    show: false
+                },
+
+                axisTicks: {
+                    show: false
+                }
+            },
+
+            yaxis: {
+
+                tickAmount: 6,
+
+                labels: {
+
+                    formatter: function(value) {
+                        return formatNumber(value);
+                    }
+                }
+            },
+
+            tooltip: {
+
+                theme: "dark",
+
+                x: {
+
+                    formatter: function(value, opts) {
+
+                        const sourceData =
+                            getSourceData();
+
+                        const index =
+                            opts.dataPointIndex;
+
+                        if (
+                            sourceData[index] &&
+                            sourceData[index].full_time
+                        ) {
+
+                            return sourceData[index].full_time;
+                        }
+
+                        return value;
+                    }
+                },
+
+                y: {
+
+                    formatter: function(value) {
+                        return formatNumber(value);
+                    }
+                }
+            },
+
+            legend: {
+                show: false
+            }
+        };
+    }
+
+    function createBattleOptions() {
+
+        const isSeason =
+            currentTrendMode === "season";
+
+        return {
+
+            ...getCommonOptions(),
+
+            chart: {
+                ...getCommonOptions().chart,
+                type: isSeason ? "area" : "bar"
+            },
+
+            series: getBattleSeries(),
+
+            colors: ["#5b8cff"],
+
+            stroke: {
+                curve: "smooth",
+                width: isSeason ? 3 : 0
+            },
+
+            fill: isSeason
+                ? {
+                    type: "gradient",
+
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.28,
+                        opacityTo: 0.03,
+                        stops: [0, 100]
+                    }
+                }
+                : {
+                    opacity: 0.82
+                }
+        };
+    }
+
+    function createPowerOptions() {
+
+        const isSeason =
+            currentTrendMode === "season";
+
+        return {
+
+            ...getCommonOptions(),
+
+            chart: {
+                ...getCommonOptions().chart,
+                type: isSeason ? "area" : "bar"
+            },
+
+            series: getPowerSeries(),
+
+            colors: ["#8b5cf6"],
+
+            stroke: {
+                curve: "smooth",
+                width: isSeason ? 3 : 0
+            },
+
+            fill: isSeason
+                ? {
+                    type: "gradient",
+
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.24,
+                        opacityTo: 0.02,
+                        stops: [0, 100]
+                    }
+                }
+                : {
+                    opacity: 0.78
+                }
+        };
+    }
+
+    battleChart = new ApexCharts(
+        battleChartElement,
+        createBattleOptions()
+    );
+
+    powerChart = new ApexCharts(
+        powerChartElement,
+        createPowerOptions()
+    );
+
+    battleChart.render();
+
+    powerChart.render();
+
+    window.switchTrendMode = function(mode, event) {
+
+        currentTrendMode = mode;
+
+        const battleTitle =
+            document.getElementById("battleChartTitle");
+
+        const powerTitle =
+            document.getElementById("powerChartTitle");
+
+        if (mode === "season") {
+
+            battleTitle.innerText =
+                "赛季累计战功趋势";
+
+            powerTitle.innerText =
+                "赛季累计势力趋势";
+
+        } else {
+
+            battleTitle.innerText =
+                "战功实时增长趋势";
+
+            powerTitle.innerText =
+                "势力实时变化";
+        }
+
+        document
+            .querySelectorAll(".trend-mode-btn")
+            .forEach(btn => {
+                btn.classList.remove("active");
+            });
+
+        if (event && event.target) {
+            event.target.classList.add("active");
+        }
+
+        battleChart.updateOptions(
+            createBattleOptions(),
+            true,
+            true
+        );
+
+        powerChart.updateOptions(
+            createPowerOptions(),
+            true,
+            true
+        );
+    };
+
+});
+
+</script>
+
+{% endblock %}

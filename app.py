@@ -5371,12 +5371,22 @@ def trends():
         LIMIT 1
     """).fetchone()
 
-    battle_id = (
-       battle_row["id"]
-       if battle_row
-       else 1
-    )
+    if not battle_row:
+        conn.close()
+        return render_template(
+            "trends.html",
+            history_data=[],
+            trend_rows=[],
+            member_keyword=member_keyword,
+            group_keyword=group_keyword,
+            ai_result={
+                "level": "暂无当前战场",
+                "score": 0,
+                "summary": "当前未选择战场，无法生成趋势分析",
+            },
+        )
 
+    battle_id = battle_row["id"]
     print("🔥 当前趋势战场ID =", battle_id)
 
     # =========================
@@ -5396,6 +5406,35 @@ def trends():
                 "summary": "请输入成员名称或分组后，再查看趋势分析"
             }
         )
+
+
+    latest_roster_df = pd.read_sql_query(
+        """
+        SELECT DISTINCT member
+        FROM player_records
+        WHERE battle_id = ?
+          AND snapshot_time = (
+              SELECT MAX(snapshot_time)
+              FROM player_records
+              WHERE battle_id = ?
+                AND is_deleted = 0
+          )
+          AND is_deleted = 0
+        ORDER BY member
+        """,
+        conn,
+        params=[
+            battle_id,
+            battle_id,
+        ],
+    )
+
+    latest_member_names = set(
+        latest_roster_df["member"]
+        .dropna()
+        .astype(str)
+        .tolist()
+    )
 
     base_query = """
         SELECT
@@ -5430,25 +5469,22 @@ def trends():
             f"{len(exact_df)}"
         )
 
-        if not exact_df.empty:
+        if (
+            not exact_df.empty
+            and member_keyword in latest_member_names
+        ):
             df = exact_df
 
         else:
-            candidate_df = pd.read_sql_query(
-                """
-                SELECT DISTINCT member
-                FROM player_records
-                WHERE battle_id = ?
-                  AND is_deleted = 0
-                  AND member LIKE ?
-                ORDER BY member
-                """,
-                conn,
-                params=[
-                    battle_id,
-                    f"%{member_keyword}%",
-                ],
-            )
+            candidate_df = latest_roster_df[
+                latest_roster_df["member"]
+                .fillna("")
+                .astype(str)
+                .str.contains(
+                    member_keyword,
+                    regex=False,
+                )
+            ]
 
             candidates = (
                 candidate_df["member"]
@@ -5619,15 +5655,9 @@ def trends():
 
         if last_battle_total is not None:
 
-            if (
-                battle_total < last_battle_total * 0.35
-                or assist_total < last_assist_total * 0.35
-            ):
-
-                session_id += 1
-                is_reset = True
-
-        # =========================
+            # 累计值下降保留为有符号增量，不再依据35%阈值切断会话。
+            is_reset = False
+# =========================
         # 插入断层
         # =========================
 
@@ -5688,19 +5718,19 @@ def trends():
 
         else:
 
-            battle_growth = max(
-                0,
-                battle_total - last_battle_total
+            battle_growth = (
+                battle_total
+                - last_battle_total
             )
 
-            assist_growth = max(
-                0,
-                assist_total - last_assist_total
+            assist_growth = (
+                assist_total
+                - last_assist_total
             )
 
-            power_growth = max(
-                0,
-                power_total - last_power_total
+            power_growth = (
+                power_total
+                - last_power_total
             )
 
         # =========================
