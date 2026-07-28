@@ -7557,11 +7557,13 @@ def battle_delete(battle_id):
         or {}
     )
 
+    current_role = str(
+        current_user.get("role")
+        or ""
+    )
+
     if not role_allows(
-        str(
-            current_user.get("role")
-            or ""
-        ),
+        current_role,
         "super_admin",
     ):
         abort(403)
@@ -7575,9 +7577,58 @@ def battle_delete(battle_id):
     ):
         abort(400)
 
+    try:
+        actor_user_id = int(
+            current_user.get("id")
+        )
+
+        if actor_user_id <= 0:
+            actor_user_id = None
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        actor_user_id = None
+
+    actor_username = str(
+        current_user.get("username")
+        or ""
+    )[:64]
+
+    audit_common = {
+        "request_method": request.method,
+        "request_path": request.path,
+        "request_id": request.headers.get(
+            "X-Request-ID",
+            "",
+        )[:64],
+        "ip_address": _v158_request_ip(),
+        "user_agent": request.headers.get(
+            "User-Agent",
+            "",
+        )[:1000],
+    }
+
+    business_tables = (
+        "ai_reports",
+        "attendance_battle_configs",
+        "compare_cache",
+        "identity_history",
+        "identity_logs",
+        "member_battle_profiles",
+        "player_records",
+        "risk_records",
+        "snapshots",
+    )
+
     conn = get_conn()
 
     try:
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
+
         battle = conn.execute(
             """
             SELECT
@@ -7593,18 +7644,26 @@ def battle_delete(battle_id):
         ).fetchone()
 
         if not battle:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=actor_username,
+                role_snapshot=current_role,
+                battle_id=None,
+                action_key="battle_delete",
+                action_label="删除战场",
+                target_type="battle",
+                target_id=str(battle_id),
+                target_label=f"战场 #{battle_id}",
+                result_status="blocked",
+                reason="battle_not_found",
+                **audit_common,
+            )
+
+            conn.commit()
+
             flash(
                 "目标战场不存在。",
-                "warning",
-            )
-
-            return redirect(
-                url_for("battles")
-            )
-
-        if battle["is_current"]:
-            flash(
-                "当前使用中的战场不能删除。",
                 "warning",
             )
 
@@ -7617,38 +7676,116 @@ def battle_delete(battle_id):
             or f"#{battle_id}"
         )
 
-        conn.execute(
-            "BEGIN IMMEDIATE"
-        )
+        if battle["is_current"]:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=actor_username,
+                role_snapshot=current_role,
+                battle_id=battle_id,
+                action_key="battle_delete",
+                action_label="删除战场",
+                target_type="battle",
+                target_id=str(battle_id),
+                target_label=battle_name,
+                result_status="blocked",
+                before_data={
+                    "battle": {
+                        "id": battle_id,
+                        "battle_name": battle_name,
+                        "is_current": 1,
+                    },
+                },
+                reason="current_battle_protected",
+                **audit_common,
+            )
 
-        conn.execute(
-            """
-            DELETE FROM snapshots
-            WHERE battle_id=?
-            """,
-            (
-                battle_id,
-            ),
-        )
+            conn.commit()
 
-        conn.execute(
-            """
-            DELETE FROM player_records
-            WHERE battle_id=?
-            """,
-            (
-                battle_id,
-            ),
-        )
+            flash(
+                "当前使用中的战场不能删除。",
+                "warning",
+            )
 
-        conn.execute(
+            return redirect(
+                url_for("battles")
+            )
+
+        deleted_counts = {}
+
+        for table_name in business_tables:
+            row = conn.execute(
+                f"""
+                SELECT COUNT(*) AS total
+                FROM {table_name}
+                WHERE battle_id=?
+                """,
+                (
+                    battle_id,
+                ),
+            ).fetchone()
+
+            deleted_counts[table_name] = int(
+                row["total"]
+                if row
+                else 0
+            )
+
+        before_data = {
+            "battle": {
+                "id": battle_id,
+                "battle_name": battle_name,
+                "is_current": 0,
+            },
+            "row_counts": deleted_counts,
+        }
+
+        for table_name in business_tables:
+            conn.execute(
+                f"""
+                DELETE FROM {table_name}
+                WHERE battle_id=?
+                """,
+                (
+                    battle_id,
+                ),
+            )
+
+        cursor = conn.execute(
             """
             DELETE FROM battles
             WHERE id=?
+              AND is_current=0
             """,
             (
                 battle_id,
             ),
+        )
+
+        if cursor.rowcount != 1:
+            raise RuntimeError(
+                "战场删除条件在事务内发生变化。"
+            )
+
+        record_action_log(
+            conn,
+            user_id=actor_user_id,
+            username_snapshot=actor_username,
+            role_snapshot=current_role,
+            battle_id=battle_id,
+            action_key="battle_delete",
+            action_label="删除战场",
+            target_type="battle",
+            target_id=str(battle_id),
+            target_label=battle_name,
+            result_status="success",
+            before_data=before_data,
+            after_data={
+                "deleted": True,
+                "deleted_counts": deleted_counts,
+            },
+            reason="battle_deleted",
+            **audit_common,
         )
 
         conn.commit()
@@ -7671,6 +7808,7 @@ def battle_delete(battle_id):
         url_for("battles")
     )
 
+
 @app.route(
     "/battle/select/<int:battle_id>",
     methods=["POST"],
@@ -7685,11 +7823,13 @@ def battle_select(battle_id):
         or {}
     )
 
+    current_role = str(
+        current_user.get("role")
+        or ""
+    )
+
     if not role_allows(
-        str(
-            current_user.get("role")
-            or ""
-        ),
+        current_role,
         "manager",
     ):
         abort(403)
@@ -7703,9 +7843,46 @@ def battle_select(battle_id):
     ):
         abort(400)
 
+    try:
+        actor_user_id = int(
+            current_user.get("id")
+        )
+
+        if actor_user_id <= 0:
+            actor_user_id = None
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        actor_user_id = None
+
+    actor_username = str(
+        current_user.get("username")
+        or ""
+    )[:64]
+
+    audit_common = {
+        "request_method": request.method,
+        "request_path": request.path,
+        "request_id": request.headers.get(
+            "X-Request-ID",
+            "",
+        )[:64],
+        "ip_address": _v158_request_ip(),
+        "user_agent": request.headers.get(
+            "User-Agent",
+            "",
+        )[:1000],
+    }
+
     conn = get_conn()
 
     try:
+        conn.execute(
+            "BEGIN IMMEDIATE"
+        )
+
         target = conn.execute(
             """
             SELECT
@@ -7721,19 +7898,27 @@ def battle_select(battle_id):
         ).fetchone()
 
         if not target:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=actor_username,
+                role_snapshot=current_role,
+                battle_id=None,
+                action_key="battle_select",
+                action_label="切换当前战场",
+                target_type="battle",
+                target_id=str(battle_id),
+                target_label=f"战场 #{battle_id}",
+                result_status="blocked",
+                reason="battle_not_found",
+                **audit_common,
+            )
+
+            conn.commit()
+
             flash(
                 "目标战场不存在，未执行切换。",
                 "warning",
-            )
-
-            return redirect(
-                url_for("battles")
-            )
-
-        if target["is_current"]:
-            flash(
-                "该战场已经是当前战场。",
-                "info",
             )
 
             return redirect(
@@ -7745,9 +7930,65 @@ def battle_select(battle_id):
             or f"#{battle_id}"
         )
 
-        conn.execute(
-            "BEGIN IMMEDIATE"
-        )
+        if target["is_current"]:
+            record_action_log(
+                conn,
+                user_id=actor_user_id,
+                username_snapshot=actor_username,
+                role_snapshot=current_role,
+                battle_id=battle_id,
+                action_key="battle_select",
+                action_label="切换当前战场",
+                target_type="battle",
+                target_id=str(battle_id),
+                target_label=battle_name,
+                result_status="blocked",
+                before_data={
+                    "current_battle_id": battle_id,
+                    "battle_name": battle_name,
+                },
+                reason="already_current",
+                **audit_common,
+            )
+
+            conn.commit()
+
+            flash(
+                "该战场已经是当前战场。",
+                "info",
+            )
+
+            return redirect(
+                url_for("battles")
+            )
+
+        current_rows = conn.execute(
+            """
+            SELECT
+                id,
+                battle_name
+            FROM battles
+            WHERE is_current != 0
+            ORDER BY id
+            """
+        ).fetchall()
+
+        before_data = {
+            "current_battles": [
+                {
+                    "id": int(row["id"]),
+                    "battle_name": str(
+                        row["battle_name"]
+                        or f"#{row['id']}"
+                    ),
+                }
+                for row in current_rows
+            ],
+            "target": {
+                "id": battle_id,
+                "battle_name": battle_name,
+            },
+        }
 
         conn.execute(
             """
@@ -7757,15 +7998,42 @@ def battle_select(battle_id):
             """
         )
 
-        conn.execute(
+        cursor = conn.execute(
             """
             UPDATE battles
             SET is_current=1
             WHERE id=?
+              AND is_current=0
             """,
             (
                 battle_id,
             ),
+        )
+
+        if cursor.rowcount != 1:
+            raise RuntimeError(
+                "战场切换条件在事务内发生变化。"
+            )
+
+        record_action_log(
+            conn,
+            user_id=actor_user_id,
+            username_snapshot=actor_username,
+            role_snapshot=current_role,
+            battle_id=battle_id,
+            action_key="battle_select",
+            action_label="切换当前战场",
+            target_type="battle",
+            target_id=str(battle_id),
+            target_label=battle_name,
+            result_status="success",
+            before_data=before_data,
+            after_data={
+                "current_battle_id": battle_id,
+                "battle_name": battle_name,
+            },
+            reason="battle_selected",
+            **audit_common,
         )
 
         conn.commit()
@@ -7787,6 +8055,8 @@ def battle_select(battle_id):
     return redirect(
         url_for("battles")
     )
+
+
 
 @app.route("/snapshot/view/<int:snapshot_id>")
 def snapshot_view(snapshot_id):
