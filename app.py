@@ -11948,54 +11948,65 @@ def _v155_build_nginx_sync_report():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_security_ip_blocklist (
-            ip TEXT PRIMARY KEY,
-            reason TEXT,
-            source TEXT,
-            is_active INTEGER DEFAULT 1,
-            created_at TEXT,
-            updated_at TEXT
-        )
-        """
+    blocklist_table_exists = conn.execute(
+        '''
+        SELECT 1
+        FROM sqlite_schema
+        WHERE type='table' AND name=?
+        ''',
+        ('v155_security_ip_blocklist',),
+    ).fetchone() is not None
+
+    whitelist_table_exists = conn.execute(
+        '''
+        SELECT 1
+        FROM sqlite_schema
+        WHERE type='table' AND name=?
+        ''',
+        ('v155_security_ip_whitelist',),
+    ).fetchone() is not None
+
+
+    # Read-only report: schema bootstrap must not run inside GET request handling.
+
+
+    active_blocks = (
+        conn.execute(
+                """
+                SELECT ip, reason, source, updated_at
+                FROM v155_security_ip_blocklist
+                WHERE is_active=1
+                ORDER BY updated_at DESC
+                LIMIT 80
+                """
+            ).fetchall()
+        if blocklist_table_exists
+        else []
     )
 
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_security_ip_whitelist (
-            ip TEXT PRIMARY KEY,
-            note TEXT,
-            created_at TEXT
-        )
-        """
+    all_active_blocks = (
+        conn.execute(
+                """
+                SELECT ip, reason, source, updated_at
+                FROM v155_security_ip_blocklist
+                WHERE is_active=1
+                ORDER BY updated_at DESC
+                """
+            ).fetchall()
+        if blocklist_table_exists
+        else []
     )
 
-    active_blocks = conn.execute(
-        """
-        SELECT ip, reason, source, updated_at
-        FROM v155_security_ip_blocklist
-        WHERE is_active=1
-        ORDER BY updated_at DESC
-        LIMIT 80
-        """
-    ).fetchall()
-
-    all_active_blocks = conn.execute(
-        """
-        SELECT ip, reason, source, updated_at
-        FROM v155_security_ip_blocklist
-        WHERE is_active=1
-        ORDER BY updated_at DESC
-        """
-    ).fetchall()
-
-    whitelist = {
-        row["ip"]
-        for row in conn.execute(
-            "SELECT ip FROM v155_security_ip_whitelist"
-        ).fetchall()
-    }
+    whitelist = (
+        {
+                row["ip"]
+                for row in conn.execute(
+                    "SELECT ip FROM v155_security_ip_whitelist"
+                ).fetchall()
+            }
+        if whitelist_table_exists
+        else set()
+    )
 
     conn.close()
 

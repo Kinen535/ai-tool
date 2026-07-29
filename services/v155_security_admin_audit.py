@@ -84,11 +84,34 @@ def list_admin_actions(
     page: int = 1,
     per_page: int = 30,
 ) -> dict[str, Any]:
-    ensure_admin_audit_table(conn)
+    # Read-only query: schema bootstrap is handled outside GET request paths.
 
     page = max(int(page or 1), 1)
     per_page = max(min(int(per_page or 30), 100), 10)
     offset = (page - 1) * per_page
+
+    audit_table_exists = conn.execute(
+        '''
+        SELECT 1
+        FROM sqlite_schema
+        WHERE type='table' AND name=?
+        ''',
+        ('v155_security_admin_audit_logs',),
+    ).fetchone() is not None
+
+    if not audit_table_exists:
+        return {
+            'rows': [],
+            'total': 0,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': 1,
+            'has_prev': False,
+            'has_next': False,
+            'prev_page': 1,
+            'next_page': 1,
+        }
+
 
     total = conn.execute(
         """
