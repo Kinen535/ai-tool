@@ -1,4 +1,8 @@
 from __future__ import annotations
+from services.import_provenance import (
+    count_source_members,
+    validate_and_record_snapshot_counts,
+)
 from services.ai_engine import (
     classify_player,
     calculate_ai_risk
@@ -473,6 +477,7 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
 
     try:
 
+        source_member_count = count_source_members(df)
         payload_json = json.dumps(
             df.to_dict(orient="records"),
             ensure_ascii=False
@@ -577,6 +582,12 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
                 )
             )
 
+            validate_and_record_snapshot_counts(
+                        conn,
+                        battle_id=battle_id,
+                        snapshot_time=snapshot_time,
+                        source_member_count=source_member_count,
+                    )
             conn.commit()
 
             print(
@@ -731,6 +742,12 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
                     e
                 )
 
+        validate_and_record_snapshot_counts(
+            conn,
+            battle_id=battle_id,
+            snapshot_time=snapshot_time,
+            source_member_count=source_member_count,
+        )
         conn.commit()
 
         # =========================

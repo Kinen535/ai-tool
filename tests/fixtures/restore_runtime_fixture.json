@@ -1,0 +1,12 @@
+{
+  "fixture_mode": "CONVERT_EXISTING_METADATA_TO_DELETED_IN_ISOLATED_COPY",
+  "source_group_resolved": true,
+  "synthetic_fixture": true,
+  "contains_production_derived_rows": false,
+  "selected_group": {
+    "snapshot_time": "2099-01-01 00:00:00",
+    "battle_id": 5,
+    "source_filename": "synthetic_restore_fixture.csv",
+    "row_count": 300
+  }
+}
