@@ -7356,7 +7356,7 @@ def identity_view(member_name):
     member_strategy = {'talent': '普通成员', 'actions': []}
     conn = get_conn()
     try:
-        report = build_staff_report(conn)
+        report = build_staff_report(conn, battle_id=battle_id)
         for item in report.get('decision_list', []):
             if item['member'] == member_name:
                 ai_decision = item
@@ -8658,187 +8658,55 @@ def archive_events():
 
 @app.route("/ai/daily")
 def ai_daily():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-
-    members = conn.execute(
-        """
-        SELECT
-            pr.member AS member_name,
-            pr.av,
-            pr.bs,
-            pr.trend,
-            pr.risk_level,
-            pr.risk_reason,
-            pr.role_tag,
-            pr.identity_score,
-            pr.is_protected,
-            pr.exempt_stall
-        FROM player_records AS pr
-        JOIN battles AS b
-          ON b.id = pr.battle_id
-         AND b.is_current = 1
-        WHERE pr.is_deleted = 0
-          AND pr.snapshot_time = (
-              SELECT MAX(p2.snapshot_time)
-              FROM player_records AS p2
-              WHERE p2.battle_id = b.id
-                AND p2.is_deleted = 0
-                AND TRIM(
-                    COALESCE(p2.snapshot_time, '')
-                ) <> ''
-          )
-        ORDER BY pr.member
-        """
-    ).fetchall()
-
+    members = conn.execute("\n        SELECT\n            pr.member AS member_name,\n            pr.av,\n            pr.bs,\n            pr.trend,\n            pr.risk_level,\n            pr.risk_reason,\n            pr.role_tag,\n            pr.identity_score,\n            pr.is_protected,\n            pr.exempt_stall\n        FROM player_records AS pr\n        WHERE pr.battle_id = ?\n          AND pr.is_deleted = 0\n          AND pr.snapshot_time = (\n              SELECT MAX(p2.snapshot_time)\n              FROM player_records AS p2\n              WHERE p2.battle_id = pr.battle_id\n                AND p2.is_deleted = 0\n                AND TRIM(\n                    COALESCE(p2.snapshot_time, '')\n                ) <> ''\n          )\n        ORDER BY pr.member\n        ", (battle_id,)).fetchall()
     conn.close()
-
     train_members = []
     watch_members = []
     clean_members = []
-
     for member in members:
-        av = member["av"] or 0
-        bs = member["bs"] or 0
-        score = member["identity_score"] or 0
-        risk = member["risk_level"] or "safe"
-        role = member["role_tag"] or "member"
-        protected = member["is_protected"] or 0
-
-        if (
-            score >= 65
-            and av >= 50
-            and bs >= 60
-        ):
+        av = member['av'] or 0
+        bs = member['bs'] or 0
+        score = member['identity_score'] or 0
+        risk = member['risk_level'] or 'safe'
+        role = member['role_tag'] or 'member'
+        protected = member['is_protected'] or 0
+        if score >= 65 and av >= 50 and (bs >= 60):
             train_members.append(member)
-
-        # A15.4.24-J：
-        # 风险等级与管理名单语义统一。
-        #
-        # warning、danger只进入观察核查；
-        # 只有clear才进入清理复核名单。
-        if (
-            risk in (
-                "danger",
-                "warning",
-            )
-            and protected == 0
-        ):
+        if risk in ('danger', 'warning') and protected == 0:
             watch_members.append(member)
-
-        if (
-            risk == "clear"
-            and protected == 0
-            and role not in (
-                "leader",
-                "admin",
-            )
-        ):
+        if risk == 'clear' and protected == 0 and (role not in ('leader', 'admin')):
             clean_members.append(member)
-
-    train_members.sort(
-        key=lambda item: (
-            item["identity_score"] or 0,
-            item["av"] or 0,
-            item["bs"] or 0,
-        ),
-        reverse=True,
-    )
-
-    watch_members.sort(
-        key=lambda item: (
-            (item["av"] or 0) + (item["bs"] or 0),
-            item["member_name"] or "",
-        )
-    )
-
-    clean_members.sort(
-        key=lambda item: (
-            (item["av"] or 0) + (item["bs"] or 0),
-            item["member_name"] or "",
-        )
-    )
-
-    top_train = "、".join(
-        item["member_name"]
-        for item in train_members[:3]
-    )
-
-    top_clean = "\n".join(
-        f"{item['member_name']}（{item['risk_reason'] or '风险等级较高'}）"
-        for item in clean_members[:3]
-    )
-
-    risk_stats = {
-        "活跃不足": 0,
-        "连续停滞": 0,
-        "长期低贡献": 0,
-        "综合健康分过低": 0,
-    }
-
+    train_members.sort(key=lambda item: (item['identity_score'] or 0, item['av'] or 0, item['bs'] or 0), reverse=True)
+    watch_members.sort(key=lambda item: ((item['av'] or 0) + (item['bs'] or 0), item['member_name'] or ''))
+    clean_members.sort(key=lambda item: ((item['av'] or 0) + (item['bs'] or 0), item['member_name'] or ''))
+    top_train = '、'.join((item['member_name'] for item in train_members[:3]))
+    top_clean = '\n'.join((f"{item['member_name']}（{item['risk_reason'] or '风险等级较高'}）" for item in clean_members[:3]))
+    risk_stats = {'活跃不足': 0, '连续停滞': 0, '长期低贡献': 0, '综合健康分过低': 0}
     for member in watch_members:
-        reason = str(member["risk_reason"] or "")
-
-        if "活跃不足" in reason:
-            risk_stats["活跃不足"] += 1
-
-        if "连续停滞" in reason:
-            risk_stats["连续停滞"] += 1
-
-        if "长期低贡献" in reason:
-            risk_stats["长期低贡献"] += 1
-
-        if "综合健康分" in reason:
-            risk_stats["综合健康分过低"] += 1
-
-    risk_report = f"""
-    活跃不足：{risk_stats['活跃不足']}人
-    连续停滞：{risk_stats['连续停滞']}人
-    长期低贡献：{risk_stats['长期低贡献']}人
-    综合健康分过低：{risk_stats['综合健康分过低']}人
-    """
-
-    summary = f"""
-    📊 联盟状态日报
-
-    联盟当前共有 {len(members)} 名成员。
-
-    🌱 重点培养成员
-    共发现 {len(train_members)} 人。
-
-    代表成员：
-    {top_train or '暂无'}
-
-    👀 重点观察成员
-    共发现 {len(watch_members)} 人。
-
-    风险结构分析：
-    {risk_report}
-
-    🚨 清理复核成员
-    共发现 {len(clean_members)} 人。
-
-    建议优先核查：
-    {top_clean or '暂无'}。
-
-    📌 综合评估
-
-    当前日报仅统计当前战场最新快照成员，
-    建议结合实际在线状态和管理记录复核名单。
-    """
-
-    return render_template(
-        "ai_daily.html",
-        member_count=len(members),
-        train_count=len(train_members),
-        watch_count=len(watch_members),
-        clean_count=len(clean_members),
-        train_members=train_members[:10],
-        watch_members=watch_members[:10],
-        clean_members=clean_members[:10],
-        summary=summary,
-    )
+        reason = str(member['risk_reason'] or '')
+        if '活跃不足' in reason:
+            risk_stats['活跃不足'] += 1
+        if '连续停滞' in reason:
+            risk_stats['连续停滞'] += 1
+        if '长期低贡献' in reason:
+            risk_stats['长期低贡献'] += 1
+        if '综合健康分' in reason:
+            risk_stats['综合健康分过低'] += 1
+    risk_report = f"\n    活跃不足：{risk_stats['活跃不足']}人\n    连续停滞：{risk_stats['连续停滞']}人\n    长期低贡献：{risk_stats['长期低贡献']}人\n    综合健康分过低：{risk_stats['综合健康分过低']}人\n    "
+    summary = f"\n    📊 联盟状态日报\n\n    联盟当前共有 {len(members)} 名成员。\n\n    🌱 重点培养成员\n    共发现 {len(train_members)} 人。\n\n    代表成员：\n    {top_train or '暂无'}\n\n    👀 重点观察成员\n    共发现 {len(watch_members)} 人。\n\n    风险结构分析：\n    {risk_report}\n\n    🚨 清理复核成员\n    共发现 {len(clean_members)} 人。\n\n    建议优先核查：\n    {top_clean or '暂无'}。\n\n    📌 综合评估\n\n    当前日报仅统计当前战场最新快照成员，\n    建议结合实际在线状态和管理记录复核名单。\n    "
+    return render_template('ai_daily.html', member_count=len(members), train_count=len(train_members), watch_count=len(watch_members), clean_count=len(clean_members), train_members=train_members[:10], watch_members=watch_members[:10], clean_members=clean_members[:10], summary=summary)
 
 @app.route("/ai/weekly")
 def ai_weekly():
@@ -8981,85 +8849,91 @@ def export_members():
 
 @app.route("/staff")
 def staff_center():
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "staff_center.html",
-        report=report
-    )
+    return render_template('staff_center.html', report=report)
 
 
 @app.route("/strategic")
 def strategic_center():
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "strategic_center.html",
-        report=report,
-        title="AI战略推演中心"
-    )
+    return render_template('strategic_center.html', report=report, title='AI战略推演中心')
 
 
 
 
 @app.route("/leaders/mapping/save", methods=["POST"])
 def save_leader_mapping():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request, redirect
-    from services.v14_leader_mapping_store import (
-        upsert_leader_mapping
-    )
-
-    group_name = request.form.get("group_name", "").strip()
-    leader_name = request.form.get("leader_name", "").strip()
-    leader_role = request.form.get("leader_role", "组长").strip()
-    note = request.form.get("note", "").strip()
-    next_url = request.form.get("next", "/leaders").strip()
-
-    if not next_url.startswith("/leaders"):
-        next_url = "/leaders"
-
-    conn = sqlite3.connect("data/snapshots.db")
-
-    upsert_leader_mapping(
-        conn,
-        group_name=group_name,
-        leader_name=leader_name,
-        leader_role=leader_role,
-        note=note
-    )
-
+    from services.v14_leader_mapping_store import upsert_leader_mapping
+    group_name = request.form.get('group_name', '').strip()
+    leader_name = request.form.get('leader_name', '').strip()
+    leader_role = request.form.get('leader_role', '组长').strip()
+    note = request.form.get('note', '').strip()
+    next_url = request.form.get('next', '/leaders').strip()
+    if not next_url.startswith('/leaders'):
+        next_url = '/leaders'
+    conn = sqlite3.connect('data/snapshots.db')
+    upsert_leader_mapping(conn, group_name=group_name, leader_name=leader_name, leader_role=leader_role, note=note, battle_id=battle_id)
     conn.close()
-
     return redirect(next_url)
 
 
 
 @app.route("/leaders/mapping/delete", methods=["POST"])
 def delete_leader_mapping():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request, redirect
-    from services.v14_leader_mapping_store import (
-        deactivate_leader_mapping
-    )
-
-    group_name = request.form.get("group_name", "").strip()
-    next_url = request.form.get("next", "/leaders").strip()
-
-    if not next_url.startswith("/leaders"):
-        next_url = "/leaders"
-
-    conn = sqlite3.connect("data/snapshots.db")
-
-    deactivate_leader_mapping(
-        conn,
-        group_name=group_name
-    )
-
+    from services.v14_leader_mapping_store import deactivate_leader_mapping
+    group_name = request.form.get('group_name', '').strip()
+    next_url = request.form.get('next', '/leaders').strip()
+    if not next_url.startswith('/leaders'):
+        next_url = '/leaders'
+    conn = sqlite3.connect('data/snapshots.db')
+    deactivate_leader_mapping(conn, group_name=group_name, battle_id=battle_id)
     conn.close()
-
     return redirect(next_url)
 
 
@@ -9108,94 +8982,33 @@ def leader_group_risk_detail(group_name):
 
 @app.route("/leaders/owner/<path:owner_name>")
 def leader_owner_detail(owner_name):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from urllib.parse import unquote
-
-    from services.engines.leader_center_engine import (
-        build_leader_center_report,
-    )
-    from services.engines.leader_owner_detail_engine import (
-        build_leader_owner_detail_report,
-    )
-    from services.engines.risk_drilldown_engine import (
-        attach_risk_members_to_groups,
-        build_risk_drilldown_report,
-    )
-
-    decoded_owner_name = unquote(
-        owner_name
-    )
-
-    conn = sqlite3.connect(
-        "data/snapshots.db"
-    )
-
-    report = build_staff_report(
-        conn
-    )
-
-    report["v14_leader_center"] = (
-        build_leader_center_report(
-            conn,
-            report,
-        )
-    )
-
-    report["v15_risk_drilldown"] = (
-        build_risk_drilldown_report(
-            conn
-        )
-    )
-
-    attach_risk_members_to_groups(
-        report[
-            "v14_leader_center"
-        ].get(
-            "group_cards",
-            [],
-        ),
-        report[
-            "v15_risk_drilldown"
-        ],
-        limit_per_group=5,
-    )
-
-    report[
-        "v14_leader_owner_detail"
-    ] = (
-        build_leader_owner_detail_report(
-            report[
-                "v14_leader_center"
-            ],
-            decoded_owner_name,
-        )
-    )
-
+    from services.engines.leader_center_engine import build_leader_center_report
+    from services.engines.leader_owner_detail_engine import build_leader_owner_detail_report
+    from services.engines.risk_drilldown_engine import attach_risk_members_to_groups, build_risk_drilldown_report
+    decoded_owner_name = unquote(owner_name)
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    attach_risk_members_to_groups(report['v14_leader_center'].get('group_cards', []), report['v15_risk_drilldown'], limit_per_group=5)
+    report['v14_leader_owner_detail'] = build_leader_owner_detail_report(report['v14_leader_center'], decoded_owner_name)
     conn.close()
-
-    # v15_leader_owner_return_url
-    return_url = request.args.get(
-        "next",
-        "/leaders",
-    ).strip()
-
-    if (
-        not return_url.startswith("/")
-        or return_url.startswith("//")
-        or return_url.startswith(
-            "/logout"
-        )
-    ):
-        return_url = "/leaders"
-
-    report["v15_return_url"] = (
-        return_url
-    )
-
-    return render_template(
-        "leader_owner_detail.html",
-        report=report,
-        title="负责人详情",
-    )
+    return_url = request.args.get('next', '/leaders').strip()
+    if not return_url.startswith('/') or return_url.startswith('//') or return_url.startswith('/logout'):
+        return_url = '/leaders'
+    report['v15_return_url'] = return_url
+    return render_template('leader_owner_detail.html', report=report, title='负责人详情')
 
 
 
@@ -9204,230 +9017,119 @@ def leader_owner_detail(owner_name):
 
 @app.route("/command/action/log", methods=["POST"])
 def command_action_log():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request, redirect
-    from services.v15_command_store import (
-        save_command_action_log
-    )
-
-    action_key = request.form.get("action_key", "").strip()
-    action_label = request.form.get("action_label", "").strip()
-    status = request.form.get("status", "").strip()
-    note = request.form.get("note", "").strip()
-    next_url = request.form.get("next", "/command").strip()
-
-    if (
-        next_url != "/command"
-        and not next_url.startswith("/command/action/")
-    ):
-        next_url = "/command"
-
-    conn = sqlite3.connect("data/snapshots.db")
-
-    save_command_action_log(
-        conn,
-        action_key=action_key,
-        action_label=action_label,
-        status=status,
-        note=note
-    )
-
+    from services.v15_command_store import save_command_action_log
+    action_key = request.form.get('action_key', '').strip()
+    action_label = request.form.get('action_label', '').strip()
+    status = request.form.get('status', '').strip()
+    note = request.form.get('note', '').strip()
+    next_url = request.form.get('next', '/command').strip()
+    if next_url != '/command' and (not next_url.startswith('/command/action/')):
+        next_url = '/command'
+    conn = sqlite3.connect('data/snapshots.db')
+    save_command_action_log(conn, action_key=action_key, action_label=action_label, status=status, note=note, battle_id=battle_id)
     conn.close()
-
     return redirect(next_url)
 
 
 @app.route("/command/action/<path:action_key>")
 def command_action_detail(action_key):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from urllib.parse import unquote
-    from services.engines.leader_center_engine import (
-        build_leader_center_report
-    )
-    from services.engines.command_center_engine import (
-        build_command_center_report
-    )
-    from services.v15_command_store import (
-        load_command_action_logs
-    )
-    from services.engines.command_action_engine import (
-        build_command_action_report
-    )
-    from services.v15_command_store import (
-        load_command_action_logs_by_key
-    )
-
+    from services.engines.leader_center_engine import build_leader_center_report
+    from services.engines.command_center_engine import build_command_center_report
+    from services.v15_command_store import load_command_action_logs
+    from services.engines.command_action_engine import build_command_action_report
+    from services.v15_command_store import load_command_action_logs_by_key
     decoded_action_key = unquote(action_key)
-
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
-
-    report["v14_leader_center"] = (
-        build_leader_center_report(
-            conn,
-            report
-        )
-    )
-
-    report["v15_command_center"] = (
-        build_command_center_report(
-            report,
-            report["v14_leader_center"]
-        )
-    )
-
-    report["v15_command_action"] = (
-        build_command_action_report(
-            report["v15_command_center"],
-            decoded_action_key
-        )
-    )
-
-    report["v15_command_action_logs"] = load_command_action_logs_by_key(
-        conn,
-        decoded_action_key,
-        limit=20
-    )
-
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
+    report['v15_command_center'] = build_command_center_report(report, report['v14_leader_center'])
+    report['v15_command_action'] = build_command_action_report(report['v15_command_center'], decoded_action_key)
+    report['v15_command_action_logs'] = load_command_action_logs_by_key(conn, decoded_action_key, limit=20, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "command_action_detail.html",
-        report=report,
-        title="指挥动作详情"
-    )
+    return render_template('command_action_detail.html', report=report, title='指挥动作详情')
 
 
 @app.route("/command")
 def command_center():
-    from services.engines.leader_center_engine import (
-        build_leader_center_report
-    )
-    from services.engines.command_center_engine import (
-        build_command_center_report
-    )
-    from services.v15_command_store import (
-        load_command_action_logs
-    )
-    from services.engines.risk_drilldown_engine import (
-        build_risk_drilldown_report,
-        attach_risk_members_to_groups
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
-
-    report["v14_leader_center"] = (
-        build_leader_center_report(
-            conn,
-            report
-        )
-    )
-
-    report["v15_command_center"] = (
-        build_command_center_report(
-            report,
-            report["v14_leader_center"]
-        )
-    )
-
-    report["v15_risk_drilldown"] = build_risk_drilldown_report(conn)
-
-    attach_risk_members_to_groups(
-        report["v15_command_center"].get("high_pressure_groups", []),
-        report["v15_risk_drilldown"],
-        limit_per_group=5
-    )
-
-
-    report["v15_command_logs"] = load_command_action_logs(
-        conn,
-        limit=12
-    )
-
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    from services.engines.leader_center_engine import build_leader_center_report
+    from services.engines.command_center_engine import build_command_center_report
+    from services.v15_command_store import load_command_action_logs
+    from services.engines.risk_drilldown_engine import build_risk_drilldown_report, attach_risk_members_to_groups
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
+    report['v15_command_center'] = build_command_center_report(report, report['v14_leader_center'])
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    attach_risk_members_to_groups(report['v15_command_center'].get('high_pressure_groups', []), report['v15_risk_drilldown'], limit_per_group=5)
+    report['v15_command_logs'] = load_command_action_logs(conn, limit=12, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "command_center.html",
-        report=report,
-        title="盟务指挥中枢"
-    )
+    return render_template('command_center.html', report=report, title='盟务指挥中枢')
 
 
 @app.route("/leaders")
 def leader_center():
-    from services.engines.risk_drilldown_engine import (
-        build_risk_drilldown_report,
-        attach_risk_members_to_groups
-    )
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    from services.engines.risk_drilldown_engine import build_risk_drilldown_report, attach_risk_members_to_groups
     from flask import request
-    from services.engines.leader_center_engine import (
-        build_leader_center_report
-    )
-    from services.engines.leader_filter_engine import (
-        build_leader_filter_report
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
-
-    report["v14_leader_center"] = (
-        build_leader_center_report(
-            conn,
-            report
-        )
-    )
-
-    report["v15_risk_drilldown"] = build_risk_drilldown_report(conn)
-
-    attach_risk_members_to_groups(
-        report["v14_leader_center"].get("high_pressure_groups", []),
-        report["v15_risk_drilldown"],
-        limit_per_group=5
-    )
-
-
-    leader_filters = {
-        "pressure": request.args.get("pressure", "all"),
-        "responsibility": request.args.get("responsibility", "all"),
-        "sort": request.args.get("sort", "pressure_desc"),
-        "keyword": request.args.get("keyword", ""),
-    }
-
-    report["v14_leader_filter"] = (
-        build_leader_filter_report(
-            report["v14_leader_center"],
-            leader_filters
-        )
-    )
-
-
-    # v15_leader_filter_cards_sync
-    # 统一筛选统计与卡片明细使用的数据源，避免“筛选显示有结果，但卡片为空”
-    _leader_filter = report.get("v14_leader_filter", {}) or {}
-    _leader_center = report.get("v14_leader_center", {}) or {}
-
-    _filter_cards = (
-        _leader_filter.get("filtered_groups")
-        or _leader_filter.get("groups")
-        or _leader_filter.get("items")
-        or _leader_center.get("filtered_groups")
-        or _leader_center.get("groups")
-        or []
-    )
-
-    if "v14_leader_center" in report:
-        report["v14_leader_center"]["filter_cards"] = _filter_cards
-        report["v14_leader_center"]["filtered_groups"] = _filter_cards
-
-
-
-    # v15_leader_filter_cards_sync_v2
-    # 统一筛选统计与卡片明细数据源：
-    # leader_center_engine 当前真实分组卡片来源是 group_cards，
-    # 不是 filtered_groups / groups。
+    from services.engines.leader_center_engine import build_leader_center_report
+    from services.engines.leader_filter_engine import build_leader_filter_report
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    attach_risk_members_to_groups(report['v14_leader_center'].get('high_pressure_groups', []), report['v15_risk_drilldown'], limit_per_group=5)
+    leader_filters = {'pressure': request.args.get('pressure', 'all'), 'responsibility': request.args.get('responsibility', 'all'), 'sort': request.args.get('sort', 'pressure_desc'), 'keyword': request.args.get('keyword', '')}
+    report['v14_leader_filter'] = build_leader_filter_report(report['v14_leader_center'], leader_filters)
+    _leader_filter = report.get('v14_leader_filter', {}) or {}
+    _leader_center = report.get('v14_leader_center', {}) or {}
+    _filter_cards = _leader_filter.get('filtered_groups') or _leader_filter.get('groups') or _leader_filter.get('items') or _leader_center.get('filtered_groups') or _leader_center.get('groups') or []
+    if 'v14_leader_center' in report:
+        report['v14_leader_center']['filter_cards'] = _filter_cards
+        report['v14_leader_center']['filtered_groups'] = _filter_cards
     from flask import request as _v15_request
-
-    _leader_center = report.get("v14_leader_center", {}) or {}
-    _leader_filter = report.get("v14_leader_filter", {}) or {}
+    _leader_center = report.get('v14_leader_center', {}) or {}
+    _leader_filter = report.get('v14_leader_filter', {}) or {}
 
     def _is_group_card_list(value):
         if not isinstance(value, list):
@@ -9435,311 +9137,187 @@ def leader_center():
         if not value:
             return True
         first = value[0]
-        return isinstance(first, dict) and (
-            "group_name" in first
-            or "leader_display" in first
-            or "pressure_score" in first
-        )
-
+        return isinstance(first, dict) and ('group_name' in first or 'leader_display' in first or 'pressure_score' in first)
     _cards = []
-
-    # 优先使用筛选引擎已经算好的结果
-    for _key in [
-        "filtered_groups",
-        "filtered_cards",
-        "filter_cards",
-        "matched_groups",
-        "result_groups",
-        "group_cards",
-        "cards",
-        "results",
-        "items",
-        "groups",
-    ]:
+    for _key in ['filtered_groups', 'filtered_cards', 'filter_cards', 'matched_groups', 'result_groups', 'group_cards', 'cards', 'results', 'items', 'groups']:
         _value = _leader_filter.get(_key)
         if _is_group_card_list(_value):
             _cards = list(_value)
             break
-
-    # 如果筛选引擎没有返回卡片，就使用组长中心真实卡片源
     if not _cards:
-        _cards = list(
-            _leader_center.get("group_cards")
-            or _leader_center.get("filtered_groups")
-            or _leader_center.get("groups")
-            or []
-        )
-
-    # 兜底手动筛选，确保页面卡片与筛选条件一致
-    _pressure = (
-        _v15_request.args.get("pressure")
-        or _v15_request.args.get("pressure_status")
-        or _v15_request.args.get("pressure_level")
-        or "all"
-    )
-
-    _responsibility = (
-        _v15_request.args.get("responsibility")
-        or _v15_request.args.get("leader_status")
-        or _v15_request.args.get("owner_status")
-        or "all"
-    )
-
-    _sort = (
-        _v15_request.args.get("sort")
-        or _v15_request.args.get("sort_by")
-        or "pressure_desc"
-    )
-
-    _q = (
-        _v15_request.args.get("q")
-        or _v15_request.args.get("keyword")
-        or _v15_request.args.get("search")
-        or ""
-    ).strip()
+        _cards = list(_leader_center.get('group_cards') or _leader_center.get('filtered_groups') or _leader_center.get('groups') or [])
+    _pressure = _v15_request.args.get('pressure') or _v15_request.args.get('pressure_status') or _v15_request.args.get('pressure_level') or 'all'
+    _responsibility = _v15_request.args.get('responsibility') or _v15_request.args.get('leader_status') or _v15_request.args.get('owner_status') or 'all'
+    _sort = _v15_request.args.get('sort') or _v15_request.args.get('sort_by') or 'pressure_desc'
+    _q = (_v15_request.args.get('q') or _v15_request.args.get('keyword') or _v15_request.args.get('search') or '').strip()
 
     def _text(value):
-        return str(value or "").strip()
+        return str(value or '').strip()
 
     def _is_unassigned(card):
-        leader = _text(
-            card.get("leader_display")
-            or card.get("leader_name")
-            or card.get("owner")
-        )
-        return leader in ("", "-", "待指定", "待指定组长")
+        leader = _text(card.get('leader_display') or card.get('leader_name') or card.get('owner'))
+        return leader in ('', '-', '待指定', '待指定组长')
 
     def _is_manual(card):
-        source = _text(card.get("leader_source") or card.get("source"))
-        note = _text(card.get("leader_note") or card.get("note"))
-        return "手动" in source or "手动" in note or bool(card.get("leader_name"))
+        source = _text(card.get('leader_source') or card.get('source'))
+        note = _text(card.get('leader_note') or card.get('note'))
+        return '手动' in source or '手动' in note or bool(card.get('leader_name'))
 
     def _is_auto(card):
-        source = _text(card.get("leader_source") or card.get("source"))
-        return "自动" in source or "识别" in source
+        source = _text(card.get('leader_source') or card.get('source'))
+        return '自动' in source or '识别' in source
 
     def _is_manager_proxy(card):
-        role = _text(card.get("leader_role") or card.get("role"))
-        return "代管" in role or "管理" in role
+        role = _text(card.get('leader_role') or card.get('role'))
+        return '代管' in role or '管理' in role
 
     def _pressure_label(card):
-        return _text(card.get("pressure_label") or card.get("pressure_status"))
+        return _text(card.get('pressure_label') or card.get('pressure_status'))
 
     def _pressure_score(card):
         try:
-            return float(card.get("pressure_score") or card.get("pressure") or 0)
+            return float(card.get('pressure_score') or card.get('pressure') or 0)
         except Exception:
             return 0.0
 
     def _danger_count(card):
         try:
-            return int(card.get("danger_count") or card.get("danger_members") or 0)
+            return int(card.get('danger_count') or card.get('danger_members') or 0)
         except Exception:
             return 0
 
     def _pending_count(card):
         try:
-            return int(card.get("pending_count") or card.get("pending_task_count") or 0)
+            return int(card.get('pending_count') or card.get('pending_task_count') or 0)
         except Exception:
             return 0
-
-    if _pressure not in ("all", "全部", ""):
-        if _pressure in ("high", "high_pressure", "高压"):
-            _cards = [c for c in _cards if _pressure_label(c) == "高压"]
-        elif _pressure in ("normal", "正常"):
-            _cards = [c for c in _cards if _pressure_label(c) == "正常"]
-        elif _pressure in ("watch", "attention", "关注"):
-            _cards = [c for c in _cards if _pressure_label(c) == "关注"]
-
-    if _responsibility not in ("all", "全部", ""):
-        if _responsibility in ("unassigned", "pending", "待指定", "待指定组长"):
+    if _pressure not in ('all', '全部', ''):
+        if _pressure in ('high', 'high_pressure', '高压'):
+            _cards = [c for c in _cards if _pressure_label(c) == '高压']
+        elif _pressure in ('normal', '正常'):
+            _cards = [c for c in _cards if _pressure_label(c) == '正常']
+        elif _pressure in ('watch', 'attention', '关注'):
+            _cards = [c for c in _cards if _pressure_label(c) == '关注']
+    if _responsibility not in ('all', '全部', ''):
+        if _responsibility in ('unassigned', 'pending', '待指定', '待指定组长'):
             _cards = [c for c in _cards if _is_unassigned(c)]
-        elif _responsibility in ("manual", "manual_assigned", "手动指定"):
+        elif _responsibility in ('manual', 'manual_assigned', '手动指定'):
             _cards = [c for c in _cards if _is_manual(c)]
-        elif _responsibility in ("auto", "auto_detected", "自动识别"):
+        elif _responsibility in ('auto', 'auto_detected', '自动识别'):
             _cards = [c for c in _cards if _is_auto(c)]
-        elif _responsibility in ("manager_proxy", "manager", "管理代管"):
+        elif _responsibility in ('manager_proxy', 'manager', '管理代管'):
             _cards = [c for c in _cards if _is_manager_proxy(c)]
-
     if _q:
-        _cards = [
-            c for c in _cards
-            if _q in _text(c.get("group_name"))
-            or _q in _text(c.get("leader_display"))
-            or _q in _text(c.get("leader_name"))
-        ]
-
-    if _sort in ("pressure_desc", "压力从高到低", "pressure_high"):
+        _cards = [c for c in _cards if _q in _text(c.get('group_name')) or _q in _text(c.get('leader_display')) or _q in _text(c.get('leader_name'))]
+    if _sort in ('pressure_desc', '压力从高到低', 'pressure_high'):
         _cards = sorted(_cards, key=_pressure_score, reverse=True)
-    elif _sort in ("pressure_asc", "压力从低到高", "pressure_low"):
+    elif _sort in ('pressure_asc', '压力从低到高', 'pressure_low'):
         _cards = sorted(_cards, key=_pressure_score)
-    elif _sort in ("danger_desc", "危险最多"):
+    elif _sort in ('danger_desc', '危险最多'):
         _cards = sorted(_cards, key=_danger_count, reverse=True)
-    elif _sort in ("pending_desc", "待反馈最多"):
+    elif _sort in ('pending_desc', '待反馈最多'):
         _cards = sorted(_cards, key=_pending_count, reverse=True)
-
-    _leader_center["filter_cards"] = _cards
-    _leader_center["filtered_groups"] = _cards
-
+    _leader_center['filter_cards'] = _cards
+    _leader_center['filtered_groups'] = _cards
     if isinstance(_leader_filter, dict):
-        _leader_filter["filter_cards"] = _cards
-        _leader_filter["filtered_groups"] = _cards
-        _leader_filter["matched_count"] = len(_cards)
-        _leader_filter["matched_groups"] = len(_cards)
-        _leader_filter["total_matched"] = len(_cards)
-
-    report["v14_leader_center"] = _leader_center
-    report["v14_leader_filter"] = _leader_filter
-
-
+        _leader_filter['filter_cards'] = _cards
+        _leader_filter['filtered_groups'] = _cards
+        _leader_filter['matched_count'] = len(_cards)
+        _leader_filter['matched_groups'] = len(_cards)
+        _leader_filter['total_matched'] = len(_cards)
+    report['v14_leader_center'] = _leader_center
+    report['v14_leader_filter'] = _leader_filter
     conn.close()
-
-    return render_template(
-        "leader_center.html",
-        report=report,
-        title="组长协同驾驶舱"
-    )
+    return render_template('leader_center.html', report=report, title='组长协同驾驶舱')
 
 
 @app.route("/tasks/detail/<path:task_key>")
 def task_detail(task_key):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request
     from urllib.parse import unquote
-    from services.v12_feedback_store import (
-        load_feedback_logs_by_task_key
-    )
-    from services.engines.task_detail_engine import (
-        build_task_detail_report
-    )
-
+    from services.v12_feedback_store import load_feedback_logs_by_task_key
+    from services.engines.task_detail_engine import build_task_detail_report
     decoded_task_key = unquote(task_key)
-
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
-
-    logs = load_feedback_logs_by_task_key(
-        conn,
-        decoded_task_key
-    )
-
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    logs = load_feedback_logs_by_task_key(conn, decoded_task_key, battle_id=battle_id)
     conn.close()
-
-    report["v13_task_detail"] = (
-        build_task_detail_report(
-            report,
-            decoded_task_key,
-            logs
-        )
-    )
-
-    return_url = request.args.get("next", "/tasks").strip()
-
-    if (
-        return_url != "/tasks"
-        and not return_url.startswith("/tasks?")
-        and not return_url.startswith("/tasks#")
-    ):
-        return_url = "/tasks"
-
-    report["v13_task_return_url"] = return_url
-
-    return render_template(
-        "task_detail.html",
-        report=report,
-        title="任务详情"
-    )
+    report['v13_task_detail'] = build_task_detail_report(report, decoded_task_key, logs)
+    return_url = request.args.get('next', '/tasks').strip()
+    if return_url != '/tasks' and (not return_url.startswith('/tasks?')) and (not return_url.startswith('/tasks#')):
+        return_url = '/tasks'
+    report['v13_task_return_url'] = return_url
+    return render_template('task_detail.html', report=report, title='任务详情')
 
 
 @app.route("/tasks")
 def task_center():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request
-    from services.engines.task_filter_engine import (
-        build_task_filter_report
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
-    report = build_staff_report(conn)
+    from services.engines.task_filter_engine import build_task_filter_report
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
     conn.close()
-
-    task_filters = {
-        "priority": request.args.get("priority", "all"),
-        "status": request.args.get("status", "all"),
-        "phase": request.args.get("phase", "all"),
-        "owner": request.args.get("owner", "all"),
-        "preset": request.args.get("preset", "all"),
-        "sort": request.args.get("sort", "smart"),
-    }
-
-    report["v13_task_filter"] = (
-        build_task_filter_report(
-            report,
-            task_filters
-        )
-    )
-
-    return render_template(
-        "task_center.html",
-        report=report,
-        title="战场任务协同中心"
-    )
+    task_filters = {'priority': request.args.get('priority', 'all'), 'status': request.args.get('status', 'all'), 'phase': request.args.get('phase', 'all'), 'owner': request.args.get('owner', 'all'), 'preset': request.args.get('preset', 'all'), 'sort': request.args.get('sort', 'smart')}
+    report['v13_task_filter'] = build_task_filter_report(report, task_filters)
+    return render_template('task_center.html', report=report, title='战场任务协同中心')
 
 
 @app.route("/strategic/feedback", methods=["POST"])
 def strategic_feedback():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
     from flask import request, redirect
     from services.v12_feedback_store import save_execution_feedback
-
-    allowed_status = {
-        "pending",
-        "confirmed",
-        "completed",
-        "protected",
-        "ignored",
-        "failed",
-    }
-
-    task_key = request.form.get("task_key", "").strip()
-    status = request.form.get("status", "").strip()
-    feedback_note = request.form.get("feedback_note", "").strip()
-    next_url = request.form.get("next", "/strategic").strip()
-
-    if (
-        next_url not in ("/strategic", "/tasks")
-        and not next_url.startswith("/tasks?")
-        and not next_url.startswith("/tasks#")
-        and not next_url.startswith("/tasks/detail/")
-    ):
-        next_url = "/strategic"
-
+    allowed_status = {'pending', 'confirmed', 'completed', 'protected', 'ignored', 'failed'}
+    task_key = request.form.get('task_key', '').strip()
+    status = request.form.get('status', '').strip()
+    feedback_note = request.form.get('feedback_note', '').strip()
+    next_url = request.form.get('next', '/strategic').strip()
+    if next_url not in ('/strategic', '/tasks') and (not next_url.startswith('/tasks?')) and (not next_url.startswith('/tasks#')) and (not next_url.startswith('/tasks/detail/')):
+        next_url = '/strategic'
     if status not in allowed_status:
         return redirect(next_url)
-
-    conn = sqlite3.connect("data/snapshots.db")
-
-    report = build_staff_report(conn)
-
-    snapshot_key = report.get("current_v11_snapshot_key")
-    fb = report.get("v12_execution_feedback", {}) or {}
-    tasks = fb.get("tasks", []) or []
-
+    conn = sqlite3.connect('data/snapshots.db')
+    report = build_staff_report(conn, battle_id=battle_id)
+    snapshot_key = report.get('current_v11_snapshot_key')
+    fb = report.get('v12_execution_feedback', {}) or {}
+    tasks = fb.get('tasks', []) or []
     target_task = None
-
     for task in tasks:
-        if task.get("task_key") == task_key:
+        if task.get('task_key') == task_key:
             target_task = task
             break
-
     if snapshot_key and target_task:
-        save_execution_feedback(
-            conn,
-            snapshot_key,
-            target_task,
-            status,
-            feedback_note
-        )
-
+        save_execution_feedback(conn, snapshot_key, target_task, status, feedback_note, battle_id=battle_id)
     conn.close()
-
     return redirect(next_url)
     
 @app.errorhandler(500)

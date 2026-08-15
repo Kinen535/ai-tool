@@ -65,258 +65,55 @@ from services.engines.execution_feedback_audit_engine import (
     build_execution_feedback_audit_report
 )
 
-def build_staff_report(conn):
-
+def build_staff_report(conn, *, battle_id: int):
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     report = {}
-
     members = load_members(conn)
-
-    report["members"] = members
-
-    report["conn"] = conn
-
-    # =====================
-    # 战争阶段
-    # =====================
-
-    report["war_stage"] = (
-        detect_war_stage_by_date(
-            get_current_battle_start_date(conn)
-        )
-    )
-
-    # =====================
-    # 基础名单
-    # =====================
-
-    report["management_tasks"] = (
-        build_task_pool(members)
-    )
-
-    report["today_actions"] = (
-        get_today_actions(members)
-    )
-
-    report["growth_targets"] = (
-        get_growth_targets(members)
-    )
-
-    report["protect_targets"] = (
-        get_protect_targets(members)
-    )
-
-    report["future_risks"] = (
-        get_future_risks(members)
-    )
-
-    report["group_warnings"] = (
-        get_group_warnings(members)
-    )
-
-    # =====================
-    # 联盟基础分析
-    # =====================
-
-    #report["decision_list"] = (
-    #    build_decision_list(report)
-    #)
-
-    #report["summary"] = (
-     #   build_summary(report)
-   # )
-    report = (
-        build_alliance_engine(report)
-    )
-
-    #report["ai_decisions"] = (
-     #   build_ai_decisions(report)
-   # )
-
-    report["alliance_status"] = (
-        build_alliance_status(report)
-    )
-
-    report["alliance_conclusion"] = (
-        build_alliance_conclusion(
-            report["alliance_status"]
-        )
-    )
-
-    report["alliance_decision"] = (
-        build_alliance_decision(
-            report["alliance_status"]
-        )
-    )
-
-    # =====================
-    # 分组分析
-    # =====================
-
-    group_analysis = (
-        build_group_analysis(
-            members
-        )
-    )
-
-    report["group_analysis"] = (
-        group_analysis
-    )
-
-    report["group_war_scores"] = (
-        build_group_war_scores(
-            members
-        )
-    )
-
-    report["group_summary"] = (
-        build_group_summary(
-            group_analysis
-        )
-    )
-
-    report["alliance_strategy"] = (
-        build_alliance_strategy(
-            report["alliance_status"],
-            report["group_analysis"]
-        )
-    )
-
-    # =====================
-    # 指挥中心
-    # command_center 必须在 group_diagnosis / battle_order 前生成
-    # =====================
-
-    report = (
-        build_command_engine(report)
-    )
-
-    report["group_diagnosis"] = (
-        build_group_diagnosis(report)
-    )
-
-    # =====================
-    # 目标名单
-    # =====================
-    report = (
-        build_member_engine(report)
-    )
-
-    # =====================
-    # 军令系统
-    # =====================
-
-    # =====================
-    # 战争分析
-    # =====================
-
-    report["war_contribution_analysis"] = (
-        build_war_contribution_analysis(report)
-    )
-   
-    # =====================
-    # 决策系统
-    # 顺序必须是：影响评估 → 可信度 → 最终决策 → 执行计划
-    # =====================
-
-    report = (
-        build_strategy_engine(report)
-    )
-
-    report = (
-        build_decision_engine(report)
-    )
-
-    # =====================
-    # V11 推理系统
-    # staff_engine 只负责调度，推理逻辑由 reasoning_engine 完成
-    # =====================
-
-    report["reasoning_report"] = (
-        build_reasoning_report(report)
-    )
-
-    report["v11_simulation_report"] = (
-        build_simulation_report(report)
-    )
-
-    report["v11_execution_plan"] = (
-        build_execution_plan_report(report)
-    )
-
-    # =====================
-    # V11 复盘系统
-    # staff_engine 只负责调度与数据 I/O
-    # reflection_engine 只负责复盘推理
-    # =====================
-
-    current_v11_snapshot_key = (
-        build_current_v11_snapshot_key(report)
-    )
-
-    report["current_v11_snapshot_key"] = (
-        current_v11_snapshot_key
-    )
-
-    report["v12_feedback_records"] = (
-        load_execution_feedback_records(
-            conn,
-            current_v11_snapshot_key
-        )
-    )
-
-    report["v12_execution_feedback"] = (
-        build_execution_feedback_report(report)
-    )
-
-    report["v12_feedback_logs"] = (
-        load_execution_feedback_logs(
-            conn,
-            current_v11_snapshot_key,
-            limit=50
-        )
-    )
-
-    report["v12_feedback_audit"] = (
-        build_execution_feedback_audit_report(report)
-    )
-
-    report["previous_v11_snapshot"] = (
-        load_previous_v11_strategy_snapshot(
-            conn,
-            current_v11_snapshot_key
-        )
-    )
-
-    report["v11_reflection_report"] = (
-        build_reflection_report(report)
-    )
-
-    save_v11_reflection_record(
-        conn,
-        current_v11_snapshot_key,
-        report
-    )
-
-    report["v11_reflection_history"] = (
-        load_v11_reflection_history(
-            conn,
-            limit=20
-        )
-    )
-
-    report["v11_learning_report"] = (
-        build_learning_report(report)
-    )
-
-    report["v11_llm_report"] = (
-        build_llm_explanation_report(report)
-    )
-
-    save_v11_strategy_snapshot(
-        conn,
-        report
-    )
-
+    report['members'] = members
+    report['conn'] = conn
+    report['war_stage'] = detect_war_stage_by_date(get_current_battle_start_date(conn))
+    report['management_tasks'] = build_task_pool(members)
+    report['today_actions'] = get_today_actions(members)
+    report['growth_targets'] = get_growth_targets(members)
+    report['protect_targets'] = get_protect_targets(members)
+    report['future_risks'] = get_future_risks(members)
+    report['group_warnings'] = get_group_warnings(members)
+    report = build_alliance_engine(report)
+    report['alliance_status'] = build_alliance_status(report)
+    report['alliance_conclusion'] = build_alliance_conclusion(report['alliance_status'])
+    report['alliance_decision'] = build_alliance_decision(report['alliance_status'])
+    group_analysis = build_group_analysis(members)
+    report['group_analysis'] = group_analysis
+    report['group_war_scores'] = build_group_war_scores(members)
+    report['group_summary'] = build_group_summary(group_analysis)
+    report['alliance_strategy'] = build_alliance_strategy(report['alliance_status'], report['group_analysis'])
+    report = build_command_engine(report)
+    report['group_diagnosis'] = build_group_diagnosis(report)
+    report = build_member_engine(report)
+    report['war_contribution_analysis'] = build_war_contribution_analysis(report)
+    report = build_strategy_engine(report)
+    report = build_decision_engine(report)
+    report['reasoning_report'] = build_reasoning_report(report)
+    report['v11_simulation_report'] = build_simulation_report(report)
+    report['v11_execution_plan'] = build_execution_plan_report(report)
+    current_v11_snapshot_key = build_current_v11_snapshot_key(report)
+    report['current_v11_snapshot_key'] = current_v11_snapshot_key
+    report['v12_feedback_records'] = load_execution_feedback_records(conn, current_v11_snapshot_key, battle_id=battle_id)
+    report['v12_execution_feedback'] = build_execution_feedback_report(report)
+    report['v12_feedback_logs'] = load_execution_feedback_logs(conn, current_v11_snapshot_key, limit=50, battle_id=battle_id)
+    report['v12_feedback_audit'] = build_execution_feedback_audit_report(report)
+    report['previous_v11_snapshot'] = load_previous_v11_strategy_snapshot(conn, current_v11_snapshot_key, battle_id=battle_id)
+    report['v11_reflection_report'] = build_reflection_report(report)
+    save_v11_reflection_record(conn, current_v11_snapshot_key, report, battle_id=battle_id)
+    report['v11_reflection_history'] = load_v11_reflection_history(conn, limit=20, battle_id=battle_id)
+    report['v11_learning_report'] = build_learning_report(report)
+    report['v11_llm_report'] = build_llm_explanation_report(report)
+    save_v11_strategy_snapshot(conn, report, battle_id=battle_id)
     return report
 
 

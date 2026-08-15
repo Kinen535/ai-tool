@@ -8,7 +8,7 @@ from services.v14_leader_mapping_store import (
 )
 
 
-def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, Any]:
+def build_leader_center_report(conn, staff_report: Dict[str, Any], *, battle_id: int) -> Dict[str, Any]:
     """
     V14 组长协同驾驶舱 / 分组责任中心
 
@@ -17,71 +17,27 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any]) -> Dict[str, 
     - 不改 V12 反馈逻辑
     - 从最新成员快照 + V12 执行反馈任务中聚合分组压力
     """
-
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     members = _fetch_latest_members(conn)
     member_map = _build_member_map(members)
-
-    task_report = staff_report.get("v12_execution_feedback", {}) or {}
-    tasks = task_report.get("tasks", []) or []
-
-    manual_mappings = load_leader_mappings(conn)
-    mapping_logs = load_leader_mapping_logs(conn, limit=20)
-
+    task_report = staff_report.get('v12_execution_feedback', {}) or {}
+    tasks = task_report.get('tasks', []) or []
+    manual_mappings = load_leader_mappings(conn, battle_id=battle_id)
+    mapping_logs = load_leader_mapping_logs(conn, limit=20, battle_id=battle_id)
     group_stats = _build_group_member_stats(members)
     _merge_task_stats(group_stats, tasks, member_map)
-
-    group_cards = _finalize_group_cards(
-        group_stats,
-        manual_mappings
-    )
+    group_cards = _finalize_group_cards(group_stats, manual_mappings)
     leader_pressure = _build_leader_pressure(group_cards)
     owner_pressure = _build_owner_pressure(tasks)
-    high_pressure_groups = [
-        item for item in group_cards
-        if item.get("pressure_level") in ("high", "medium")
-    ][:10]
-
-    stats = {
-        "group_count": len(group_cards),
-        "member_count": len(members),
-        "task_count": len(tasks),
-        "high_pressure_group_count": len([
-            item for item in group_cards
-            if item.get("pressure_level") == "high"
-        ]),
-        "medium_pressure_group_count": len([
-            item for item in group_cards
-            if item.get("pressure_level") == "medium"
-        ]),
-        "pending_task_count": sum(item.get("pending_tasks", 0) for item in group_cards),
-        "abnormal_task_count": sum(item.get("abnormal_tasks", 0) for item in group_cards),
-        "unassigned_group_count": len([
-            item for item in group_cards
-            if item.get("responsibility_status") == "unassigned"
-        ]),
-        "manual_mapping_count": len([
-            item for item in group_cards
-            if item.get("responsibility_status") == "manual"
-        ]),
-        "leader_pressure_count": len(leader_pressure),
-    }
-
+    high_pressure_groups = [item for item in group_cards if item.get('pressure_level') in ('high', 'medium')][:10]
+    stats = {'group_count': len(group_cards), 'member_count': len(members), 'task_count': len(tasks), 'high_pressure_group_count': len([item for item in group_cards if item.get('pressure_level') == 'high']), 'medium_pressure_group_count': len([item for item in group_cards if item.get('pressure_level') == 'medium']), 'pending_task_count': sum((item.get('pending_tasks', 0) for item in group_cards)), 'abnormal_task_count': sum((item.get('abnormal_tasks', 0) for item in group_cards)), 'unassigned_group_count': len([item for item in group_cards if item.get('responsibility_status') == 'unassigned']), 'manual_mapping_count': len([item for item in group_cards if item.get('responsibility_status') == 'manual']), 'leader_pressure_count': len(leader_pressure)}
     decision = _build_decision(stats, high_pressure_groups)
-
-    return {
-        "summary": _build_summary(stats, decision),
-        "stats": stats,
-        "decision": decision,
-        "group_cards": group_cards,
-        "high_pressure_groups": high_pressure_groups,
-        "leader_pressure": leader_pressure,
-        "owner_pressure": owner_pressure,
-        "mapping_logs": mapping_logs,
-        "explain": (
-            "V14 Phase A 按最新成员快照与 V12 任务反馈结果进行分组聚合。"
-            "当前版本先按分组识别责任压力，后续再接入真实组长责任关系。"
-        ),
-    }
+    return {'summary': _build_summary(stats, decision), 'stats': stats, 'decision': decision, 'group_cards': group_cards, 'high_pressure_groups': high_pressure_groups, 'leader_pressure': leader_pressure, 'owner_pressure': owner_pressure, 'mapping_logs': mapping_logs, 'explain': 'V14 Phase A 按最新成员快照与 V12 任务反馈结果进行分组聚合。当前版本先按分组识别责任压力，后续再接入真实组长责任关系。'}
 
 
 def _fetch_latest_members(

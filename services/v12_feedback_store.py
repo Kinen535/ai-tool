@@ -16,28 +16,10 @@ from typing import Any, Dict, List, Optional
 
 
 def ensure_v12_execution_feedback_table(conn) -> None:
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS v12_execution_feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-        snapshot_key TEXT,
-        task_key TEXT,
-
-        phase TEXT,
-        priority TEXT,
-        task_title TEXT,
-        target TEXT,
-        owner TEXT,
-
-        status TEXT DEFAULT 'pending',
-        feedback_note TEXT DEFAULT '',
-
-        created_at TEXT,
-        updated_at TEXT,
-
-        UNIQUE(snapshot_key, task_key)
-    )
-    """)
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v12_execution_feedback (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            snapshot_key TEXT,\n            task_key TEXT,\n            phase TEXT,\n            priority TEXT,\n            task_title TEXT,\n            target TEXT,\n            owner TEXT,\n            status TEXT DEFAULT 'pending',\n            feedback_note TEXT DEFAULT '',\n            created_at TEXT,\n            updated_at TEXT,\n            battle_id INTEGER,\n            FOREIGN KEY (battle_id)\n                REFERENCES battles(id)\n                ON UPDATE RESTRICT\n                ON DELETE RESTRICT\n        )\n    ")
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_p0s04_v12_execution_feedback_battle_lookup\n        ON v12_execution_feedback (\n            battle_id,\n            snapshot_key,\n            task_key\n        )\n    ')
+    conn.execute('\n        CREATE UNIQUE INDEX IF NOT EXISTS\n        uq_p0s04_v12_execution_feedback_scoped\n        ON v12_execution_feedback (\n            battle_id,\n            snapshot_key,\n            task_key\n        )\n        WHERE battle_id IS NOT NULL\n    ')
+    conn.execute('\n        CREATE UNIQUE INDEX IF NOT EXISTS\n        uq_p0s04_v12_execution_feedback_legacy_null\n        ON v12_execution_feedback (\n            snapshot_key,\n            task_key\n        )\n        WHERE battle_id IS NULL\n    ')
     conn.commit()
 
 
@@ -57,26 +39,18 @@ def build_task_key(task: Dict[str, Any]) -> str:
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
 
 
-def load_execution_feedback_records(
-    conn,
-    snapshot_key: str,
-) -> List[Dict[str, Any]]:
+def load_execution_feedback_records(conn, snapshot_key: str, *, battle_id: int) -> List[Dict[str, Any]]:
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     ensure_v12_execution_feedback_table(conn)
-
-    cursor = conn.execute("""
-        SELECT *
-        FROM v12_execution_feedback
-        WHERE snapshot_key = ?
-        ORDER BY id ASC
-    """, (snapshot_key,))
-
+    cursor = conn.execute('\n        SELECT *\n        FROM v12_execution_feedback\n        WHERE battle_id = ? AND snapshot_key = ?\n        ORDER BY id ASC\n    ', (battle_id, snapshot_key))
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
-
-    return [
-        _row_to_dict(row, columns)
-        for row in rows
-    ]
+    return [_row_to_dict(row, columns) for row in rows]
 
 
 def get_feedback_map(
@@ -89,133 +63,31 @@ def get_feedback_map(
     }
 
 
-def save_execution_feedback(
-    conn,
-    snapshot_key: str,
-    task: Dict[str, Any],
-    status: str,
-    feedback_note: str = "",
-) -> str:
+def save_execution_feedback(conn, snapshot_key: str, task: Dict[str, Any], status: str, feedback_note: str='', *, battle_id: int) -> str:
     """
     保存单条任务反馈。
 
     V12 Phase F：
     每次状态变化都会写入 v12_feedback_logs，形成审计轨迹。
     """
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     ensure_v12_execution_feedback_table(conn)
     ensure_v12_feedback_logs_table(conn)
-
     task_key = build_task_key(task)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    new_status = status or "pending"
-
-    old_row = conn.execute("""
-        SELECT status
-        FROM v12_execution_feedback
-        WHERE snapshot_key = ?
-          AND task_key = ?
-        LIMIT 1
-    """, (snapshot_key, task_key)).fetchone()
-
-    old_status = _first_value(old_row) or "pending"
-
-    params = {
-        "snapshot_key": snapshot_key,
-        "task_key": task_key,
-
-        "phase": task.get("phase"),
-        "priority": task.get("priority"),
-        "task_title": task.get("title"),
-        "target": task.get("target"),
-        "owner": task.get("owner"),
-
-        "status": new_status,
-        "feedback_note": feedback_note or "",
-
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    conn.execute("""
-        INSERT INTO v12_execution_feedback (
-            snapshot_key,
-            task_key,
-            phase,
-            priority,
-            task_title,
-            target,
-            owner,
-            status,
-            feedback_note,
-            created_at,
-            updated_at
-        )
-        VALUES (
-            :snapshot_key,
-            :task_key,
-            :phase,
-            :priority,
-            :task_title,
-            :target,
-            :owner,
-            :status,
-            :feedback_note,
-            :created_at,
-            :updated_at
-        )
-        ON CONFLICT(snapshot_key, task_key)
-        DO UPDATE SET
-            status = excluded.status,
-            feedback_note = excluded.feedback_note,
-            updated_at = excluded.updated_at
-    """, params)
-
-    # 只有状态变化或备注不为空时才写日志，避免重复点击制造噪音。
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    new_status = status or 'pending'
+    old_row = conn.execute('\n        SELECT status\n        FROM v12_execution_feedback\n        WHERE battle_id = ? AND snapshot_key = ?\n          AND task_key = ?\n        LIMIT 1\n    ', (battle_id, snapshot_key, task_key)).fetchone()
+    old_status = _first_value(old_row) or 'pending'
+    params = {'battle_id': battle_id, 'snapshot_key': snapshot_key, 'task_key': task_key, 'phase': task.get('phase'), 'priority': task.get('priority'), 'task_title': task.get('title'), 'target': task.get('target'), 'owner': task.get('owner'), 'status': new_status, 'feedback_note': feedback_note or '', 'created_at': now, 'updated_at': now}
+    conn.execute('\n        INSERT INTO v12_execution_feedback (\n            battle_id,\n            snapshot_key,\n            task_key,\n            phase,\n            priority,\n            task_title,\n            target,\n            owner,\n            status,\n            feedback_note,\n            created_at,\n            updated_at\n        )\n        VALUES (\n            :battle_id,\n            :snapshot_key,\n            :task_key,\n            :phase,\n            :priority,\n            :task_title,\n            :target,\n            :owner,\n            :status,\n            :feedback_note,\n            :created_at,\n            :updated_at\n        )\n        ON CONFLICT(battle_id, snapshot_key, task_key) WHERE battle_id IS NOT NULL\n        DO UPDATE SET\n            status = excluded.status,\n            feedback_note = excluded.feedback_note,\n            updated_at = excluded.updated_at\n    ', params)
     if old_status != new_status or feedback_note:
-        conn.execute("""
-            INSERT INTO v12_feedback_logs (
-                snapshot_key,
-                task_key,
-                phase,
-                priority,
-                task_title,
-                target,
-                owner,
-                old_status,
-                new_status,
-                feedback_note,
-                created_at
-            )
-            VALUES (
-                :snapshot_key,
-                :task_key,
-                :phase,
-                :priority,
-                :task_title,
-                :target,
-                :owner,
-                :old_status,
-                :new_status,
-                :feedback_note,
-                :created_at
-            )
-        """, {
-            "snapshot_key": snapshot_key,
-            "task_key": task_key,
-            "phase": task.get("phase"),
-            "priority": task.get("priority"),
-            "task_title": task.get("title"),
-            "target": task.get("target"),
-            "owner": task.get("owner"),
-            "old_status": old_status,
-            "new_status": new_status,
-            "feedback_note": feedback_note or "",
-            "created_at": now,
-        })
-
+        conn.execute('\n            INSERT INTO v12_feedback_logs (\n            battle_id,\n                snapshot_key,\n                task_key,\n                phase,\n                priority,\n                task_title,\n                target,\n                owner,\n                old_status,\n                new_status,\n                feedback_note,\n                created_at\n            )\n            VALUES (\n            :battle_id,\n                :snapshot_key,\n                :task_key,\n                :phase,\n                :priority,\n                :task_title,\n                :target,\n                :owner,\n                :old_status,\n                :new_status,\n                :feedback_note,\n                :created_at\n            )\n        ', {'battle_id': battle_id, 'snapshot_key': snapshot_key, 'task_key': task_key, 'phase': task.get('phase'), 'priority': task.get('priority'), 'task_title': task.get('title'), 'target': task.get('target'), 'owner': task.get('owner'), 'old_status': old_status, 'new_status': new_status, 'feedback_note': feedback_note or '', 'created_at': now})
     conn.commit()
-
     return task_key
 
 
@@ -240,51 +112,23 @@ def _row_to_dict(
 
 
 def ensure_v12_feedback_logs_table(conn) -> None:
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS v12_feedback_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-        snapshot_key TEXT,
-        task_key TEXT,
-
-        phase TEXT,
-        priority TEXT,
-        task_title TEXT,
-        target TEXT,
-        owner TEXT,
-
-        old_status TEXT,
-        new_status TEXT,
-        feedback_note TEXT DEFAULT '',
-
-        created_at TEXT
-    )
-    """)
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v12_feedback_logs (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            snapshot_key TEXT,\n            task_key TEXT,\n            phase TEXT,\n            priority TEXT,\n            task_title TEXT,\n            target TEXT,\n            owner TEXT,\n            old_status TEXT,\n            new_status TEXT,\n            feedback_note TEXT DEFAULT '',\n            created_at TEXT,\n            battle_id INTEGER,\n            FOREIGN KEY (battle_id)\n                REFERENCES battles(id)\n                ON UPDATE RESTRICT\n                ON DELETE RESTRICT\n        )\n    ")
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_p0s04_v12_feedback_logs_battle_lookup\n        ON v12_feedback_logs (\n            battle_id,\n            snapshot_key,\n            task_key,\n            id\n        )\n    ')
     conn.commit()
 
 
-def load_execution_feedback_logs(
-    conn,
-    snapshot_key: str,
-    limit: int = 50,
-) -> List[Dict[str, Any]]:
+def load_execution_feedback_logs(conn, snapshot_key: str, limit: int=50, *, battle_id: int) -> List[Dict[str, Any]]:
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     ensure_v12_feedback_logs_table(conn)
-
-    cursor = conn.execute("""
-        SELECT *
-        FROM v12_feedback_logs
-        WHERE snapshot_key = ?
-        ORDER BY id DESC
-        LIMIT ?
-    """, (snapshot_key, limit))
-
+    cursor = conn.execute('\n        SELECT *\n        FROM v12_feedback_logs\n        WHERE battle_id = ? AND snapshot_key = ?\n        ORDER BY id DESC\n        LIMIT ?\n    ', (battle_id, snapshot_key, limit))
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
-
-    return [
-        _row_to_dict(row, columns)
-        for row in rows
-    ]
+    return [_row_to_dict(row, columns) for row in rows]
 
 
 def _first_value(row: Any) -> Any:
@@ -303,7 +147,7 @@ def _first_value(row: Any) -> Any:
         return None
 
 
-def load_feedback_logs_by_task_key(conn, task_key, limit=50):
+def load_feedback_logs_by_task_key(conn, task_key, limit=50, *, battle_id: int):
     """
     V13 Task Detail 使用：
     按 task_key 读取单个任务的反馈变更日志。
@@ -314,44 +158,25 @@ def load_feedback_logs_by_task_key(conn, task_key, limit=50):
     3. 不修改反馈状态。
     4. 兼容 app.py 未设置 row_factory 的 sqlite 连接。
     """
-
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        raise ValueError('battle_id is required')
+    if battle_id <= 0:
+        raise ValueError('battle_id is required')
     if not task_key:
         return []
-
     try:
         cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT *
-            FROM v12_feedback_logs
-            WHERE task_key = ?
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (
-                task_key,
-                limit,
-            )
-        )
-
+        cursor.execute('\n            SELECT *\n            FROM v12_feedback_logs\n            WHERE battle_id = ? AND task_key = ?\n            ORDER BY id DESC\n            LIMIT ?\n            ', (battle_id, task_key, limit))
         rows = cursor.fetchall()
-        columns = [
-            item[0]
-            for item in cursor.description
-        ]
-
+        columns = [item[0] for item in cursor.description]
         result = []
-
         for row in rows:
             item = {}
-
-            for index, column in enumerate(columns):
+            for (index, column) in enumerate(columns):
                 item[column] = row[index]
-
             result.append(item)
-
         return result
-
     except Exception:
         return []
