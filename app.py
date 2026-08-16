@@ -12606,10 +12606,33 @@ def v156_reputation_subjects():
         create_reputation_subject,
     )
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        create_reputation_subject_scoped,
+    )
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
     if request.method == "POST":
+        try:
+            _v155_boundary = resolve_workspace_data_boundary(
+                getattr(g, "v155_access_context", None)
+            )
+        except WorkspaceDataBoundaryError:
+            abort(403)
+
+        try:
+            battle_id = int(
+                _v155_boundary.current_battle_id
+            )
+        except (AttributeError, TypeError, ValueError):
+            abort(403)
+
+        if battle_id <= 0:
+            abort(403)
+
         data = {
             "subject_type": request.form.get("subject_type", "player"),
             "display_name": request.form.get("display_name", ""),
@@ -12622,7 +12645,7 @@ def v156_reputation_subjects():
             "note": request.form.get("note", ""),
         }
 
-        create_reputation_subject(conn, data)
+        create_reputation_subject_scoped(conn, data, battle_id=battle_id)
 
         conn.close()
         return redirect("/reputation/subjects")
@@ -12757,10 +12780,33 @@ def v156_reputation_subject_delete(subject_id):
     from flask import redirect
     from services.v156_reputation_store import delete_reputation_subject_safely
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        delete_reputation_subject_safely_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    result = delete_reputation_subject_safely(conn, subject_id)
+    result = delete_reputation_subject_safely_scoped(conn, subject_id, battle_id=battle_id)
 
     conn.close()
 
@@ -12800,10 +12846,36 @@ def v156_reputation_event_edit(event_id):
         list_reputation_subjects,
     )
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        get_reputation_event_scoped,
+        list_reputation_event_relations_scoped,
+        list_reputation_subjects_scoped,
+        update_reputation_event_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    row = get_reputation_event(conn, event_id)
+    row = get_reputation_event_scoped(conn, event_id, battle_id=battle_id)
 
     if not row:
         conn.close()
@@ -12824,7 +12896,7 @@ def v156_reputation_event_edit(event_id):
             "evidence_note": request.form.get("evidence_note", ""),
         }
 
-        update_reputation_event(conn, event_id, data)
+        update_reputation_event_scoped(conn, event_id, data, battle_id=battle_id)
 
         conn.close()
         return redirect(
@@ -12832,8 +12904,8 @@ def v156_reputation_event_edit(event_id):
         )
 
     # V15.6-A5 event relation edit context
-    relations = list_reputation_event_relations(conn, event_id)
-    subjects = list_reputation_subjects(conn, q="", limit=200)
+    relations = list_reputation_event_relations_scoped(conn, event_id, battle_id=battle_id)
+    subjects = list_reputation_subjects_scoped(conn, q='', limit=200, battle_id=battle_id)
 
     conn.close()
 
@@ -12854,10 +12926,33 @@ def v156_reputation_event_delete(event_id):
     from flask import redirect
     from services.v156_reputation_store import delete_reputation_event_safely
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        delete_reputation_event_safely_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    result = delete_reputation_event_safely(conn, event_id)
+    result = delete_reputation_event_safely_scoped(conn, event_id, battle_id=battle_id)
 
     conn.close()
 
@@ -12895,6 +12990,29 @@ def v156_reputation_event_relation_save(event_id):
     from flask import request, redirect
     from services.v156_reputation_store import add_reputation_event_relation
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        add_reputation_event_relation_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
@@ -12907,13 +13025,7 @@ def v156_reputation_event_relation_save(event_id):
     except Exception:
         subject_id = 0
 
-    add_reputation_event_relation(
-        conn,
-        event_id=event_id,
-        subject_id=subject_id,
-        relation_role=relation_role,
-        note=note,
-    )
+    add_reputation_event_relation_scoped(conn, event_id=event_id, subject_id=subject_id, relation_role=relation_role, note=note, battle_id=battle_id)
 
     conn.close()
 
@@ -12938,10 +13050,33 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
     from flask import request, redirect
     from services.v156_reputation_store import delete_reputation_event_relation
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        delete_reputation_event_relation_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    delete_reputation_event_relation(conn, relation_id)
+    delete_reputation_event_relation_scoped(conn, relation_id, event_id=event_id, battle_id=battle_id)
 
     conn.close()
 
@@ -13569,6 +13704,29 @@ def v156_reputation_quick_link():
     from flask import request, redirect
     from services.v156_reputation_store import add_reputation_event_relation
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        add_reputation_event_relation_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     q = request.form.get("q", "").strip()
 
     try:
@@ -13587,13 +13745,7 @@ def v156_reputation_quick_link():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    add_reputation_event_relation(
-        conn,
-        event_id=event_id,
-        subject_id=subject_id,
-        relation_role=relation_role or "关联主体",
-        note=note or "检索页快速建立关联",
-    )
+    add_reputation_event_relation_scoped(conn, event_id=event_id, subject_id=subject_id, relation_role=relation_role or '关联主体', note=note or '检索页快速建立关联', battle_id=battle_id)
 
     conn.close()
 
@@ -13684,6 +13836,9 @@ def v156_reputation_events():
     from flask import request, render_template, redirect
     from services.v156_reputation_store import ensure_reputation_tables
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
@@ -13695,6 +13850,23 @@ def v156_reputation_events():
     }
 
     if request.method == "POST":
+        try:
+            _v155_boundary = resolve_workspace_data_boundary(
+                getattr(g, "v155_access_context", None)
+            )
+        except WorkspaceDataBoundaryError:
+            abort(403)
+
+        try:
+            battle_id = int(
+                _v155_boundary.current_battle_id
+            )
+        except (AttributeError, TypeError, ValueError):
+            abort(403)
+
+        if battle_id <= 0:
+            abort(403)
+
         data = {
             "title": (
                 request.form.get("title", "")
@@ -13719,6 +13891,10 @@ def v156_reputation_events():
 
         if data["title"]:
             insert_data = {}
+            if "battle_id" not in cols:
+                abort(503)
+
+            insert_data["battle_id"] = battle_id
 
             for key, value in data.items():
                 if key in cols:
@@ -13848,18 +14024,36 @@ def v156_reputation_event_status_quick(event_id):
     from flask import request, redirect
     from services.v156_reputation_store import update_reputation_event_status_quick
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        update_reputation_event_status_quick_scoped,
+    )
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(
+            _v155_boundary.current_battle_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     status = request.form.get("status", "").strip()
     note = request.form.get("note", "").strip()
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    result = update_reputation_event_status_quick(
-        conn,
-        event_id=event_id,
-        status=status,
-        note=note,
-    )
+    result = update_reputation_event_status_quick_scoped(conn, event_id=event_id, status=status, note=note, battle_id=battle_id)
 
     conn.close()
 
@@ -13896,7 +14090,30 @@ def v156_reputation_subject_new():
     from flask import request, redirect, render_template
     from services.v156_reputation_store import create_reputation_subject
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import (
+        create_reputation_subject_scoped,
+    )
+
     if request.method == "POST":
+        try:
+            _v155_boundary = resolve_workspace_data_boundary(
+                getattr(g, "v155_access_context", None)
+            )
+        except WorkspaceDataBoundaryError:
+            abort(403)
+
+        try:
+            battle_id = int(
+                _v155_boundary.current_battle_id
+            )
+        except (AttributeError, TypeError, ValueError):
+            abort(403)
+
+        if battle_id <= 0:
+            abort(403)
+
         conn = get_db_connection()
 
         data = {
@@ -13915,7 +14132,7 @@ def v156_reputation_subject_new():
             conn.close()
             return redirect("/reputation/subjects/new?error=missing")
 
-        create_reputation_subject(conn, data)
+        create_reputation_subject_scoped(conn, data, battle_id=battle_id)
         conn.commit()
         conn.close()
 
