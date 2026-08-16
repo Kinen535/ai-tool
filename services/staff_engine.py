@@ -73,10 +73,10 @@ def build_staff_report(conn, *, battle_id: int):
     if battle_id <= 0:
         raise ValueError('battle_id is required')
     report = {}
-    members = load_members(conn)
+    members = load_members(conn, battle_id=battle_id)
     report['members'] = members
     report['conn'] = conn
-    report['war_stage'] = detect_war_stage_by_date(get_current_battle_start_date(conn))
+    report['war_stage'] = detect_war_stage_by_date(get_current_battle_start_date(conn, battle_id=battle_id))
     report['management_tasks'] = build_task_pool(members)
     report['today_actions'] = get_today_actions(members)
     report['growth_targets'] = get_growth_targets(members)
@@ -93,7 +93,7 @@ def build_staff_report(conn, *, battle_id: int):
     report['group_summary'] = build_group_summary(group_analysis)
     report['alliance_strategy'] = build_alliance_strategy(report['alliance_status'], report['group_analysis'])
     report = build_command_engine(report)
-    report['group_diagnosis'] = build_group_diagnosis(report)
+    report['group_diagnosis'] = build_group_diagnosis(report, members)
     report = build_member_engine(report)
     report['war_contribution_analysis'] = build_war_contribution_analysis(report)
     report = build_strategy_engine(report)
@@ -244,22 +244,16 @@ def build_task_pool(members):
         + watch_tasks
     )
 
-def load_members(conn):
+def load_members(conn, *, battle_id: int):
     cursor = conn.cursor()
 
-    current_battle = cursor.execute(
-        """
-        SELECT id
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-        """
-    ).fetchone()
-
-    if not current_battle:
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
         return []
 
-    battle_id = current_battle[0]
+    if battle_id <= 0:
+        return []
 
     cursor.execute(
         """
@@ -570,15 +564,12 @@ def build_action_list(members):
     return actions[:10]
 
 
-def build_group_diagnosis(report):
+def build_group_diagnosis(report, members):
 
     mission = report["command_center"]["mission"]
 
     target_group = mission["target"]
 
-    members = load_members(
-        report["conn"]
-    )
 
     group_members = [
 
@@ -679,21 +670,21 @@ def build_group_diagnosis(report):
 
     }
 
-def get_current_battle_start_date(conn):
+def get_current_battle_start_date(conn, *, battle_id: int):
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        return None
+
+    if battle_id <= 0:
+        return None
 
     cur = conn.cursor()
 
-    row = cur.execute("""
-
-        select battle_start_date
-
-        from battles
-
-        where is_current = 1
-
-        limit 1
-
-    """).fetchone()
+    row = conn.execute(
+        "SELECT battle_start_date FROM battles WHERE id = ? LIMIT 1",
+        (battle_id,),
+    ).fetchone()
 
     if not row:
         return None

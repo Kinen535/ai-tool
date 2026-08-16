@@ -23,7 +23,7 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any], *, battle_id:
         raise ValueError('battle_id is required')
     if battle_id <= 0:
         raise ValueError('battle_id is required')
-    members = _fetch_latest_members(conn)
+    members = _fetch_latest_members(conn, battle_id=battle_id)
     member_map = _build_member_map(members)
     task_report = staff_report.get('v12_execution_feedback', {}) or {}
     tasks = task_report.get('tasks', []) or []
@@ -41,8 +41,16 @@ def build_leader_center_report(conn, staff_report: Dict[str, Any], *, battle_id:
 
 
 def _fetch_latest_members(
-    conn,
+    conn, *, battle_id: int,
 ) -> List[Dict[str, Any]]:
+    try:
+        battle_id = int(battle_id)
+    except (TypeError, ValueError):
+        return []
+
+    if battle_id <= 0:
+        return []
+
     columns = _get_columns(
         conn,
         "player_records",
@@ -81,14 +89,7 @@ def _fetch_latest_members(
     # player_records具备battle_id时，
     # 必须使用当前战场，禁止取全库最新时间。
     if "battle_id" in columns:
-        current_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
+        current_row = (battle_id,)
 
         if not current_row:
             return []

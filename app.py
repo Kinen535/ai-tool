@@ -8941,6 +8941,19 @@ def delete_leader_mapping():
 
 @app.route("/leaders/group/<path:group_name>")
 def leader_group_risk_detail(group_name):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (TypeError, ValueError, AttributeError):
+        abort(403)
+
+    if battle_id <= 0:
+        abort(403)
+
     from urllib.parse import unquote
     from services.engines.risk_drilldown_engine import (
         build_group_risk_detail_report
@@ -8951,10 +8964,7 @@ def leader_group_risk_detail(group_name):
     conn = sqlite3.connect("data/snapshots.db")
 
     report = {
-        "v15_group_risk_detail": build_group_risk_detail_report(
-            conn,
-            decoded_group_name
-        )
+        "v15_group_risk_detail": build_group_risk_detail_report(conn, decoded_group_name, battle_id=battle_id)
     }
 
     conn.close()
@@ -9000,7 +9010,7 @@ def leader_owner_detail(owner_name):
     conn = sqlite3.connect('data/snapshots.db')
     report = build_staff_report(conn, battle_id=battle_id)
     report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
-    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn, battle_id=battle_id)
     attach_risk_members_to_groups(report['v14_leader_center'].get('group_cards', []), report['v15_risk_drilldown'], limit_per_group=5)
     report['v14_leader_owner_detail'] = build_leader_owner_detail_report(report['v14_leader_center'], decoded_owner_name)
     conn.close()
@@ -9091,7 +9101,7 @@ def command_center():
     report = build_staff_report(conn, battle_id=battle_id)
     report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
     report['v15_command_center'] = build_command_center_report(report, report['v14_leader_center'])
-    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn, battle_id=battle_id)
     attach_risk_members_to_groups(report['v15_command_center'].get('high_pressure_groups', []), report['v15_risk_drilldown'], limit_per_group=5)
     report['v15_command_logs'] = load_command_action_logs(conn, limit=12, battle_id=battle_id)
     conn.close()
@@ -9117,7 +9127,7 @@ def leader_center():
     conn = sqlite3.connect('data/snapshots.db')
     report = build_staff_report(conn, battle_id=battle_id)
     report['v14_leader_center'] = build_leader_center_report(conn, report, battle_id=battle_id)
-    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn)
+    report['v15_risk_drilldown'] = build_risk_drilldown_report(conn, battle_id=battle_id)
     attach_risk_members_to_groups(report['v14_leader_center'].get('high_pressure_groups', []), report['v15_risk_drilldown'], limit_per_group=5)
     leader_filters = {'pressure': request.args.get('pressure', 'all'), 'responsibility': request.args.get('responsibility', 'all'), 'sort': request.args.get('sort', 'pressure_desc'), 'keyword': request.args.get('keyword', '')}
     report['v14_leader_filter'] = build_leader_filter_report(report['v14_leader_center'], leader_filters)

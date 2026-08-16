@@ -253,28 +253,24 @@ def _resolve_battle_id(
     conn,
     battle_id: Optional[int] = None,
 ) -> Optional[int]:
-    if battle_id is not None:
-        try:
-            return int(battle_id)
-        except (TypeError, ValueError):
-            return None
+    """
+    Resolve only an explicitly supplied battle_id.
 
-    row = conn.execute(
-        """
-        SELECT id
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-        """
-    ).fetchone()
-
-    if not row:
+    Workspace-scoped callers must thread the battle boundary
+    explicitly. No global-current or NULL fallback is allowed.
+    """
+    if battle_id is None:
         return None
 
     try:
-        return int(row[0])
+        resolved_battle_id = int(battle_id)
     except (TypeError, ValueError):
         return None
+
+    if resolved_battle_id <= 0:
+        return None
+
+    return resolved_battle_id
 
 
 def _load_latest_risk_members(
