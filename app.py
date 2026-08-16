@@ -12072,58 +12072,38 @@ def v157_reputation_task_create():
     import sqlite3
     from urllib.parse import urlencode
     from flask import request, redirect
-    from services.v156_reputation_store import (
-        create_reputation_task_from_workbench,
-    )
-
-    entity_type = (
-        request.form.get("entity_type", "")
-        or ""
-    ).strip()
-
+    from services.v156_reputation_store import create_reputation_task_from_workbench
     try:
-        entity_id = int(
-            request.form.get("entity_id", "")
-            or 0
-        )
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    entity_type = (request.form.get('entity_type', '') or '').strip()
+    try:
+        entity_id = int(request.form.get('entity_id', '') or 0)
     except Exception:
         entity_id = 0
-
-    conn = sqlite3.connect(
-        "data/snapshots.db"
-    )
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    result = create_reputation_task_from_workbench(
-        conn,
-        entity_type=entity_type,
-        entity_id=entity_id,
-    )
-
+    result = create_reputation_task_from_workbench(conn, entity_type=entity_type, entity_id=entity_id, battle_id=battle_id)
     conn.close()
-
-    if result.get("ok"):
-        task_result = "created"
-    elif result.get("duplicate"):
-        task_result = "duplicate"
-    elif result.get("not_found"):
-        task_result = "not_found"
+    if result.get('ok'):
+        task_result = 'created'
+    elif result.get('duplicate'):
+        task_result = 'duplicate'
+    elif result.get('not_found'):
+        task_result = 'not_found'
     else:
-        task_result = "invalid"
-
-    params = {
-        "task_result": task_result,
-    }
-
-    if result.get("task_id"):
-        params["task_id"] = int(
-            result["task_id"]
-        )
-
-    return redirect(
-        "/reputation/workbench?"
-        + urlencode(params)
-    )
+        task_result = 'invalid'
+    params = {'task_result': task_result}
+    if result.get('task_id'):
+        params['task_id'] = int(result['task_id'])
+    return redirect('/reputation/workbench?' + urlencode(params))
 
 
 # =========================
@@ -12138,102 +12118,46 @@ def v157_reputation_task_update(task_id):
     import sqlite3
     from urllib.parse import urlencode
     from flask import request, redirect
-    from services.v156_reputation_store import (
-        update_reputation_task,
-    )
-
-    priority = (
-        request.form.get("priority", "")
-        or ""
-    ).strip().upper()
-
-    status = (
-        request.form.get("status", "")
-        or ""
-    ).strip().lower()
-
-    owner = (
-        request.form.get("owner", "")
-        or ""
-    ).strip()
-
-    result_note = (
-        request.form.get("result_note", "")
-        or ""
-    ).strip()
-
-    return_status = (
-        request.form.get("return_status", "")
-        or ""
-    ).strip().lower()
-
-    return_priority = (
-        request.form.get("return_priority", "")
-        or ""
-    ).strip().upper()
-
-    return_q = (
-        request.form.get("return_q", "")
-        or ""
-    ).strip()
-
-    conn = sqlite3.connect(
-        "data/snapshots.db"
-    )
+    from services.v156_reputation_store import update_reputation_task_scoped
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    priority = (request.form.get('priority', '') or '').strip().upper()
+    status = (request.form.get('status', '') or '').strip().lower()
+    owner = (request.form.get('owner', '') or '').strip()
+    result_note = (request.form.get('result_note', '') or '').strip()
+    return_status = (request.form.get('return_status', '') or '').strip().lower()
+    return_priority = (request.form.get('return_priority', '') or '').strip().upper()
+    return_q = (request.form.get('return_q', '') or '').strip()
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    result = update_reputation_task(
-        conn,
-        task_id,
-        {
-            "priority": priority,
-            "status": status,
-            "owner": owner,
-            "result_note": result_note,
-        },
-    )
-
+    result = update_reputation_task_scoped(conn, task_id, {'priority': priority, 'status': status, 'owner': owner, 'result_note': result_note}, battle_id=battle_id)
     conn.close()
-
-    if result.get("ok"):
-        task_result = "updated"
-    elif result.get("not_found"):
-        task_result = "not_found"
-    elif result.get("duplicate"):
-        task_result = "duplicate"
-    elif result.get("result_required"):
-        task_result = "result_required"
+    if result.get('ok'):
+        task_result = 'updated'
+    elif result.get('not_found'):
+        task_result = 'not_found'
+    elif result.get('duplicate'):
+        task_result = 'duplicate'
+    elif result.get('result_required'):
+        task_result = 'result_required'
     else:
-        task_result = "invalid"
-
-    params = {
-        "task_result": task_result,
-        "task_id": int(task_id),
-    }
-
-    if return_status in {
-        "pending",
-        "processing",
-        "completed",
-        "ignored",
-    }:
-        params["status"] = return_status
-
-    if return_priority in {
-        "P1",
-        "P2",
-        "P3",
-    }:
-        params["priority"] = return_priority
-
+        task_result = 'invalid'
+    params = {'task_result': task_result, 'task_id': int(task_id)}
+    if return_status in {'pending', 'processing', 'completed', 'ignored'}:
+        params['status'] = return_status
+    if return_priority in {'P1', 'P2', 'P3'}:
+        params['priority'] = return_priority
     if return_q:
-        params["q"] = return_q
-
-    return redirect(
-        "/reputation/tasks?"
-        + urlencode(params)
-        + f"#task-{task_id}"
-    )
+        params['q'] = return_q
+    return redirect('/reputation/tasks?' + urlencode(params) + f'#task-{task_id}')
 
 
 # =========================
@@ -12601,176 +12525,77 @@ def _v156_reputation_impact_cn(value):
 def v156_reputation_subjects():
     import sqlite3
     from flask import request, render_template, redirect
-    from services.v156_reputation_store import (
-        list_reputation_subjects,
-        create_reputation_subject,
-    )
-
+    from services.v156_reputation_store import list_reputation_subjects_scoped, create_reputation_subject
     from flask import g, abort
     from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import (
-        create_reputation_subject_scoped,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import create_reputation_subject_scoped
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
 
-    if request.method == "POST":
-        try:
-            _v155_boundary = resolve_workspace_data_boundary(
-                getattr(g, "v155_access_context", None)
-            )
-        except WorkspaceDataBoundaryError:
-            abort(403)
-
-        try:
-            battle_id = int(
-                _v155_boundary.current_battle_id
-            )
-        except (AttributeError, TypeError, ValueError):
-            abort(403)
-
-        if battle_id <= 0:
-            abort(403)
-
-        data = {
-            "subject_type": request.form.get("subject_type", "player"),
-            "display_name": request.form.get("display_name", ""),
-            "game_id": request.form.get("game_id", ""),
-            "alias_names": request.form.get("alias_names", ""),
-            "trust_level": request.form.get("trust_level", "unknown"),
-            "risk_level": request.form.get("risk_level", "normal"),
-            "status": request.form.get("status", "active"),
-            "source_type": "manual",
-            "note": request.form.get("note", ""),
-        }
-
+    if request.method == 'POST':
+        data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': 'manual', 'note': request.form.get('note', '')}
         create_reputation_subject_scoped(conn, data, battle_id=battle_id)
-
         conn.close()
-        return redirect("/reputation/subjects")
-
-    q = request.args.get("q", "").strip()
-
-    # V15.6-A10 subject prefill
-    prefill_raw = request.args.get("prefill", "").strip()
-    prefill = {
-        "display_name": "",
-        "game_id": "",
-    }
-
+        return redirect('/reputation/subjects')
+    q = request.args.get('q', '').strip()
+    prefill_raw = request.args.get('prefill', '').strip()
+    prefill = {'display_name': '', 'game_id': ''}
     if prefill_raw:
         if prefill_raw.isdigit():
-            prefill["game_id"] = prefill_raw
+            prefill['game_id'] = prefill_raw
         else:
-            prefill["display_name"] = prefill_raw
-
-    rows = list_reputation_subjects(conn, q=q, limit=100)
-
-
-    # V15.6-A17 subject event relation stats
+            prefill['display_name'] = prefill_raw
+    rows = list_reputation_subjects_scoped(conn, q=q, limit=100, battle_id=battle_id)
     subject_event_stats = {}
-
-    subject_ids = [int(row["id"]) for row in rows]
-
+    subject_ids = [int(row['id']) for row in rows]
     if subject_ids:
-        placeholders = ",".join(["?"] * len(subject_ids))
-
-        stat_rows = conn.execute(
-            f"""
-            SELECT
-                r.subject_id,
-                COUNT(DISTINCT r.event_id) AS event_count,
-                GROUP_CONCAT(
-                    IFNULL(e.title, '未知事件') || '｜' ||
-                    CASE IFNULL(e.impact_level, '')
-                        WHEN 'low' THEN '低'
-                        WHEN 'normal' THEN '普通'
-                        WHEN 'medium' THEN '中'
-                        WHEN 'high' THEN '高'
-                        WHEN 'severe' THEN '严重'
-                        WHEN 'critical' THEN '极严重'
-                        ELSE IFNULL(e.impact_level, '-')
-                    END,
-                    '；'
-                ) AS events
-            FROM v156_reputation_event_relations r
-            LEFT JOIN v156_reputation_events e ON e.id = r.event_id
-            WHERE r.subject_id IN ({placeholders})
-            GROUP BY r.subject_id
-            """,
-            subject_ids,
-        ).fetchall()
-
+        placeholders = ','.join(['?'] * len(subject_ids))
+        stat_rows = conn.execute(f"\n            SELECT\n                r.subject_id,\n                COUNT(DISTINCT r.event_id) AS event_count,\n                GROUP_CONCAT(\n                    IFNULL(e.title, '未知事件') || '｜' ||\n                    CASE IFNULL(e.impact_level, '')\n                        WHEN 'low' THEN '低'\n                        WHEN 'normal' THEN '普通'\n                        WHEN 'medium' THEN '中'\n                        WHEN 'high' THEN '高'\n                        WHEN 'severe' THEN '严重'\n                        WHEN 'critical' THEN '极严重'\n                        ELSE IFNULL(e.impact_level, '-')\n                    END,\n                    '；'\n                ) AS events\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_events e ON e.id = r.event_id AND e.battle_id = r.battle_id\n            WHERE r.subject_id IN ({placeholders})\n            AND r.battle_id = ?\n            GROUP BY r.subject_id\n            ", list(subject_ids) + [battle_id]).fetchall()
         for item in stat_rows:
-            subject_event_stats[int(item["subject_id"])] = {
-                "count": int(item["event_count"] or 0),
-                "events": item["events"] or "",
-            }
-
-
+            subject_event_stats[int(item['subject_id'])] = {'count': int(item['event_count'] or 0), 'events': item['events'] or ''}
     conn.close()
-
-    return render_template(
-        "reputation_subjects.html",
-        rows=rows,
-        q=q,
-        prefill=prefill,
-        title="信誉主体",
-        subject_event_stats=subject_event_stats,
-    )
+    return render_template('reputation_subjects.html', rows=rows, q=q, prefill=prefill, title='信誉主体', subject_event_stats=subject_event_stats)
 
 
 @app.route("/reputation/subjects/<int:subject_id>/edit", methods=["GET", "POST"])
 def v156_reputation_subject_edit(subject_id):
     import sqlite3
     from flask import request, render_template, redirect, abort
-    from services.v156_reputation_store import (
-        get_reputation_subject,
-        update_reputation_subject,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import get_reputation_subject_scoped, update_reputation_subject_scoped
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    row = get_reputation_subject(conn, subject_id)
-
+    row = get_reputation_subject_scoped(conn, subject_id, battle_id=battle_id)
     if not row:
         conn.close()
         abort(404)
-
-    return_to = _v157_reputation_return_to(
-        request.values.get("return_to", "")
-    )
-
-    if request.method == "POST":
-        data = {
-            "subject_type": request.form.get("subject_type", "player"),
-            "display_name": request.form.get("display_name", ""),
-            "game_id": request.form.get("game_id", ""),
-            "alias_names": request.form.get("alias_names", ""),
-            "trust_level": request.form.get("trust_level", "unknown"),
-            "risk_level": request.form.get("risk_level", "normal"),
-            "status": request.form.get("status", "active"),
-            "source_type": "manual",
-            "note": request.form.get("note", ""),
-        }
-
-        update_reputation_subject(conn, subject_id, data)
-
+    return_to = _v157_reputation_return_to(request.values.get('return_to', ''))
+    if request.method == 'POST':
+        data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': 'manual', 'note': request.form.get('note', '')}
+        update_reputation_subject_scoped(conn, subject_id, data, battle_id=battle_id)
         conn.close()
-        return redirect(
-            return_to or "/reputation/subjects"
-        )
-
+        return redirect(return_to or '/reputation/subjects')
     conn.close()
-
-    return render_template(
-        "reputation_subject_edit.html",
-        row=row,
-        return_to=return_to,
-        title="编辑信誉主体",
-    )
+    return render_template('reputation_subject_edit.html', row=row, return_to=return_to, title='编辑信誉主体')
 
 
 @app.route("/reputation/subjects/<int:subject_id>/delete", methods=["POST"])
@@ -13763,43 +13588,33 @@ def v156_reputation_quick_link():
 def v156_reputation_duplicates():
     import sqlite3
     from flask import request, render_template
-    from services.v156_reputation_store import (
-        build_reputation_duplicate_report,
-        merge_reputation_subjects,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import build_reputation_duplicate_report_scoped, merge_reputation_subjects_scoped
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
     result = None
-
-    if request.method == "POST":
+    if request.method == 'POST':
         try:
-            keep_id = int(request.form.get("keep_id", "0") or 0)
+            keep_id = int(request.form.get('keep_id', '0') or 0)
         except Exception:
             keep_id = 0
-
         try:
-            merge_id = int(request.form.get("merge_id", "0") or 0)
+            merge_id = int(request.form.get('merge_id', '0') or 0)
         except Exception:
             merge_id = 0
-
-        result = merge_reputation_subjects(
-            conn,
-            keep_id=keep_id,
-            merge_id=merge_id,
-        )
-
-    report = build_reputation_duplicate_report(conn)
-
+        result = merge_reputation_subjects_scoped(conn, keep_id=keep_id, merge_id=merge_id, battle_id=battle_id)
+    report = build_reputation_duplicate_report_scoped(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "reputation_duplicates.html",
-        report=report,
-        result=result,
-        title="重复主体检测",
-    )
+    return render_template('reputation_duplicates.html', report=report, result=result, title='重复主体检测')
 
 
 # =========================
@@ -13834,183 +13649,55 @@ def v156_reputation_merge_logs():
 def v156_reputation_events():
     import sqlite3
     from flask import request, render_template, redirect
-    from services.v156_reputation_store import ensure_reputation_tables
-
+    from services.v156_reputation_store import ensure_reputation_tables, list_reputation_events_scoped, create_reputation_event_scoped
     from flask import g, abort
     from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
     ensure_reputation_tables(conn)
+    cols = {row[1] for row in conn.execute('PRAGMA table_info(v156_reputation_events)').fetchall()}
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
 
-    cols = {
-        row[1]
-        for row in conn.execute("PRAGMA table_info(v156_reputation_events)").fetchall()
-    }
-
-    if request.method == "POST":
-        try:
-            _v155_boundary = resolve_workspace_data_boundary(
-                getattr(g, "v155_access_context", None)
-            )
-        except WorkspaceDataBoundaryError:
-            abort(403)
-
-        try:
-            battle_id = int(
-                _v155_boundary.current_battle_id
-            )
-        except (AttributeError, TypeError, ValueError):
-            abort(403)
-
-        if battle_id <= 0:
-            abort(403)
-
-        data = {
-            "title": (
-                request.form.get("title", "")
-                or request.form.get("event_title", "")
-            ).strip(),
-            "event_type": request.form.get("event_type", "").strip(),
-            "impact_level": request.form.get("impact_level", "").strip(),
-            "status": request.form.get("status", "").strip(),
-            "event_time": request.form.get("event_time", "").strip(),
-            "summary": (
-                request.form.get("summary", "")
-                or request.form.get("event_summary", "")
-            ).strip(),
-            "evidence_note": (
-                request.form.get("evidence_note", "")
-                or request.form.get("evidence", "")
-                or request.form.get("note", "")
-            ).strip(),
-            "created_at": None,
-            "updated_at": None,
-        }
-
-        if data["title"]:
-            insert_data = {}
-            if "battle_id" not in cols:
-                abort(503)
-
-            insert_data["battle_id"] = battle_id
-
-            for key, value in data.items():
-                if key in cols:
-                    insert_data[key] = value
-
-            if "created_at" in cols:
-                insert_data["created_at"] = "datetime('now','localtime')"
-
-            if "updated_at" in cols:
-                insert_data["updated_at"] = "datetime('now','localtime')"
-
-            fields = []
-            placeholders = []
-            values = []
-
-            for key, value in insert_data.items():
-                fields.append(key)
-
-                if value == "datetime('now','localtime')":
-                    placeholders.append(value)
-                else:
-                    placeholders.append("?")
-                    values.append(value)
-
-            conn.execute(
-                f"""
-                INSERT INTO v156_reputation_events (
-                    {", ".join(fields)}
-                )
-                VALUES (
-                    {", ".join(placeholders)}
-                )
-                """,
-                values,
-            )
-
-            conn.commit()
-
+    if request.method == 'POST':
+        data = {'title': (request.form.get('title', '') or request.form.get('event_title', '')).strip(), 'event_type': request.form.get('event_type', '').strip(), 'impact_level': request.form.get('impact_level', '').strip(), 'status': request.form.get('status', '').strip(), 'event_time': request.form.get('event_time', '').strip(), 'summary': (request.form.get('summary', '') or request.form.get('event_summary', '')).strip(), 'evidence_note': (request.form.get('evidence_note', '') or request.form.get('evidence', '') or request.form.get('note', '')).strip(), 'created_at': None, 'updated_at': None}
+        if data['title']:
+            create_reputation_event_scoped(conn, data, battle_id=battle_id)
         conn.close()
-        return redirect("/reputation/events")
-
-    q = request.args.get("q", "").strip()
-
-    search_cols = [
-        c for c in ["title", "event_type", "summary", "evidence_note", "note"]
-        if c in cols
-    ]
-
-    where_sql = ""
+        return redirect('/reputation/events')
+    q = request.args.get('q', '').strip()
+    search_cols = [c for c in ['title', 'event_type', 'summary', 'evidence_note', 'note'] if c in cols]
+    where_sql = ''
     params = []
-
     if q and search_cols:
-        where_sql = "WHERE " + " OR ".join([f"IFNULL({c}, '') LIKE ?" for c in search_cols])
-        params = [f"%{q}%"] * len(search_cols)
-
-    if "updated_at" in cols:
-        order_sql = "ORDER BY updated_at DESC, id DESC"
-    elif "created_at" in cols:
-        order_sql = "ORDER BY created_at DESC, id DESC"
-    elif "event_time" in cols:
-        order_sql = "ORDER BY event_time DESC, id DESC"
+        where_sql = 'WHERE ' + ' OR '.join([f"IFNULL({c}, '') LIKE ?" for c in search_cols])
+        params = [f'%{q}%'] * len(search_cols)
+    if 'updated_at' in cols:
+        order_sql = 'ORDER BY updated_at DESC, id DESC'
+    elif 'created_at' in cols:
+        order_sql = 'ORDER BY created_at DESC, id DESC'
+    elif 'event_time' in cols:
+        order_sql = 'ORDER BY event_time DESC, id DESC'
     else:
-        order_sql = "ORDER BY id DESC"
-
-    rows = conn.execute(
-        f"""
-        SELECT *
-        FROM v156_reputation_events
-        {where_sql}
-        {order_sql}
-        LIMIT 100
-        """,
-        params,
-    ).fetchall()
-
-    # V15.6-A16 event relation stats
+        order_sql = 'ORDER BY id DESC'
+    rows = list_reputation_events_scoped(conn, q=q, limit=100, battle_id=battle_id)
     relation_stats = {}
-
-    event_ids = [int(row["id"]) for row in rows]
-
+    event_ids = [int(row['id']) for row in rows]
     if event_ids:
-        placeholders = ",".join(["?"] * len(event_ids))
-
-        relation_rows = conn.execute(
-            f"""
-            SELECT
-                r.event_id,
-                COUNT(r.id) AS relation_count,
-                GROUP_CONCAT(
-                    IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),
-                    '；'
-                ) AS subjects
-            FROM v156_reputation_event_relations r
-            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
-            WHERE r.event_id IN ({placeholders})
-            GROUP BY r.event_id
-            """,
-            event_ids,
-        ).fetchall()
-
+        placeholders = ','.join(['?'] * len(event_ids))
+        relation_rows = conn.execute(f"\n            SELECT\n                r.event_id,\n                COUNT(r.id) AS relation_count,\n                GROUP_CONCAT(\n                    IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),\n                    '；'\n                ) AS subjects\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id AND s.battle_id = r.battle_id\n            WHERE r.event_id IN ({placeholders})\n            AND r.battle_id = ?\n            GROUP BY r.event_id\n            ", list(event_ids) + [battle_id]).fetchall()
         for item in relation_rows:
-            relation_stats[int(item["event_id"])] = {
-                "count": int(item["relation_count"] or 0),
-                "subjects": item["subjects"] or "",
-            }
-
+            relation_stats[int(item['event_id'])] = {'count': int(item['relation_count'] or 0), 'subjects': item['subjects'] or ''}
     conn.close()
-
-    return render_template(
-        "reputation_events.html",
-        events=rows,
-        rows=rows,
-        relation_stats=relation_stats,
-        q=q,
-        title="信誉事件",
-    )
+    return render_template('reputation_events.html', events=rows, rows=rows, relation_stats=relation_stats, q=q, title='信誉事件')
 
 
 # =========================

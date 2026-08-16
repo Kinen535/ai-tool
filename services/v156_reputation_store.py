@@ -9,196 +9,24 @@ def ensure_reputation_tables(conn: sqlite3.Connection) -> None:
     V15.6 信誉档案库基础表。
     注意：这是独立于当前战场 battle_id 的私有信誉档案库。
     """
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v156_reputation_subjects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            battle_id INTEGER,
-            subject_type TEXT DEFAULT 'player',
-            display_name TEXT,
-            game_id TEXT,
-            alias_names TEXT DEFAULT '',
-            trust_level TEXT DEFAULT 'unknown',
-            risk_level TEXT DEFAULT 'normal',
-            status TEXT DEFAULT 'active',
-            source_type TEXT DEFAULT 'manual',
-            note TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now','localtime')),
-            updated_at TEXT DEFAULT (datetime('now','localtime'))
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v156_reputation_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            battle_id INTEGER,
-            title TEXT,
-            event_type TEXT DEFAULT 'general',
-            impact_level TEXT DEFAULT 'normal',
-            status TEXT DEFAULT 'recorded',
-            event_time TEXT DEFAULT '',
-            summary TEXT DEFAULT '',
-            evidence_note TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now','localtime')),
-            updated_at TEXT DEFAULT (datetime('now','localtime'))
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v156_reputation_event_relations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            battle_id INTEGER,
-            event_id INTEGER,
-            subject_id INTEGER,
-            relation_role TEXT DEFAULT '',
-            note TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now','localtime'))
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_v156_rep_subject_game_id
-        ON v156_reputation_subjects(game_id)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_v156_rep_subject_name
-        ON v156_reputation_subjects(display_name)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_v156_rep_event_rel_subject
-        ON v156_reputation_event_relations(subject_id)
-        """
-    )
-
-    # V15.7-A7-1 reputation task table
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v157_reputation_tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity_type TEXT NOT NULL DEFAULT 'subject',
-            entity_id INTEGER NOT NULL,
-            entity_name TEXT DEFAULT '',
-            entity_identifier TEXT DEFAULT '',
-            priority TEXT NOT NULL DEFAULT 'P3',
-            task_reason TEXT DEFAULT '',
-            recommended_action TEXT DEFAULT '',
-            owner TEXT DEFAULT '',
-            status TEXT NOT NULL DEFAULT 'pending',
-            result_note TEXT DEFAULT '',
-            source_type TEXT DEFAULT 'workbench',
-            created_at TEXT DEFAULT (
-                datetime('now','localtime')
-            ),
-            updated_at TEXT DEFAULT (
-                datetime('now','localtime')
-            ),
-            completed_at TEXT DEFAULT ''
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v157_rep_task_status
-        ON v157_reputation_tasks(status)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v157_rep_task_priority
-        ON v157_reputation_tasks(priority)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v157_rep_task_entity
-        ON v157_reputation_tasks(
-            entity_type,
-            entity_id
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE UNIQUE INDEX IF NOT EXISTS
-        idx_v157_rep_task_active_unique
-        ON v157_reputation_tasks(
-            entity_type,
-            entity_id
-        )
-        WHERE status IN (
-            'pending',
-            'processing'
-        )
-        """
-    )
-
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v156_reputation_subjects (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            battle_id INTEGER,\n            subject_type TEXT DEFAULT 'player',\n            display_name TEXT,\n            game_id TEXT,\n            alias_names TEXT DEFAULT '',\n            trust_level TEXT DEFAULT 'unknown',\n            risk_level TEXT DEFAULT 'normal',\n            status TEXT DEFAULT 'active',\n            source_type TEXT DEFAULT 'manual',\n            note TEXT DEFAULT '',\n            created_at TEXT DEFAULT (datetime('now','localtime')),\n            updated_at TEXT DEFAULT (datetime('now','localtime'))\n        )\n        ")
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v156_reputation_events (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            battle_id INTEGER,\n            title TEXT,\n            event_type TEXT DEFAULT 'general',\n            impact_level TEXT DEFAULT 'normal',\n            status TEXT DEFAULT 'recorded',\n            event_time TEXT DEFAULT '',\n            summary TEXT DEFAULT '',\n            evidence_note TEXT DEFAULT '',\n            created_at TEXT DEFAULT (datetime('now','localtime')),\n            updated_at TEXT DEFAULT (datetime('now','localtime'))\n        )\n        ")
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v156_reputation_event_relations (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            battle_id INTEGER,\n            event_id INTEGER,\n            subject_id INTEGER,\n            relation_role TEXT DEFAULT '',\n            note TEXT DEFAULT '',\n            created_at TEXT DEFAULT (datetime('now','localtime'))\n        )\n        ")
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS idx_v156_rep_subject_game_id\n        ON v156_reputation_subjects(game_id)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS idx_v156_rep_subject_name\n        ON v156_reputation_subjects(display_name)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS idx_v156_rep_event_rel_subject\n        ON v156_reputation_event_relations(subject_id)\n        ')
+    conn.execute("\n        CREATE TABLE IF NOT EXISTS v157_reputation_tasks (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            battle_id INTEGER,\n            entity_type TEXT NOT NULL DEFAULT 'subject',\n            entity_id INTEGER NOT NULL,\n            entity_name TEXT DEFAULT '',\n            entity_identifier TEXT DEFAULT '',\n            priority TEXT NOT NULL DEFAULT 'P3',\n            task_reason TEXT DEFAULT '',\n            recommended_action TEXT DEFAULT '',\n            owner TEXT DEFAULT '',\n            status TEXT NOT NULL DEFAULT 'pending',\n            result_note TEXT DEFAULT '',\n            source_type TEXT DEFAULT 'workbench',\n            created_at TEXT DEFAULT (\n                datetime('now','localtime')\n            ),\n            updated_at TEXT DEFAULT (\n                datetime('now','localtime')\n            ),\n            completed_at TEXT DEFAULT ''\n        )\n        ")
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v157_rep_task_status\n        ON v157_reputation_tasks(status)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v157_rep_task_priority\n        ON v157_reputation_tasks(priority)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v157_rep_task_entity\n        ON v157_reputation_tasks(\n            entity_type,\n            entity_id\n        )\n        ')
+    conn.execute("\n        CREATE UNIQUE INDEX IF NOT EXISTS\n        idx_v157_rep_task_active_unique\n        ON v157_reputation_tasks(\n            entity_type,\n            entity_id\n        )\n        WHERE status IN (\n            'pending',\n            'processing'\n        )\n        ")
     conn.commit()
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v156_rep_subject_battle
-        ON v156_reputation_subjects(battle_id)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v156_rep_event_battle
-        ON v156_reputation_events(battle_id)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v156_rep_relation_battle
-        ON v156_reputation_event_relations(battle_id)
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v156_rep_relation_battle_event
-        ON v156_reputation_event_relations(
-            battle_id,
-            event_id
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS
-        idx_v156_rep_relation_battle_subject
-        ON v156_reputation_event_relations(
-            battle_id,
-            subject_id
-        )
-        """
-    )
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_rep_subject_battle\n        ON v156_reputation_subjects(battle_id)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_rep_event_battle\n        ON v156_reputation_events(battle_id)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_rep_relation_battle\n        ON v156_reputation_event_relations(battle_id)\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_rep_relation_battle_event\n        ON v156_reputation_event_relations(\n            battle_id,\n            event_id\n        )\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_rep_relation_battle_subject\n        ON v156_reputation_event_relations(\n            battle_id,\n            subject_id\n        )\n        ')
+    conn.execute('\n    CREATE INDEX IF NOT EXISTS\n    idx_v157_rep_task_battle_id\n    ON v157_reputation_tasks(\n        battle_id,\n        id\n    )\n    ')
 
 
 def get_reputation_dashboard(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -2562,171 +2390,41 @@ def _get_reputation_task_entity_snapshot(
     return None
 
 
-def create_reputation_task(
-    conn: sqlite3.Connection,
-    data: dict[str, Any],
-) -> dict[str, Any]:
+def create_reputation_task(conn: sqlite3.Connection, data: dict[str, Any], *, battle_id=None) -> dict[str, Any]:
+    if battle_id is not None:
+        battle_id = _v155_reputation_positive_battle_id(battle_id)
     ensure_reputation_tables(conn)
-
-    entity_type = (
-        data.get("entity_type")
-        or ""
-    ).strip().lower()
-
+    entity_type = (data.get('entity_type') or '').strip().lower()
     try:
-        entity_id = int(
-            data.get("entity_id")
-            or 0
-        )
+        entity_id = int(data.get('entity_id') or 0)
     except Exception:
         entity_id = 0
-
-    priority = (
-        data.get("priority")
-        or "P3"
-    ).strip().upper()
-
-    task_reason = (
-        data.get("task_reason")
-        or ""
-    ).strip()
-
-    recommended_action = (
-        data.get("recommended_action")
-        or ""
-    ).strip()
-
-    owner = (
-        data.get("owner")
-        or ""
-    ).strip()
-
-    source_type = (
-        data.get("source_type")
-        or "workbench"
-    ).strip()
-
+    priority = (data.get('priority') or 'P3').strip().upper()
+    task_reason = (data.get('task_reason') or '').strip()
+    recommended_action = (data.get('recommended_action') or '').strip()
+    owner = (data.get('owner') or '').strip()
+    source_type = (data.get('source_type') or 'workbench').strip()
     if entity_type not in _REPUTATION_TASK_ENTITY_TYPES:
-        return {
-            "ok": False,
-            "message": "任务对象类型无效。",
-        }
-
+        return {'ok': False, 'message': '任务对象类型无效。'}
     if entity_id <= 0:
-        return {
-            "ok": False,
-            "message": "任务对象编号无效。",
-        }
-
+        return {'ok': False, 'message': '任务对象编号无效。'}
     if priority not in _REPUTATION_TASK_PRIORITIES:
-        return {
-            "ok": False,
-            "message": "任务优先级无效。",
-        }
-
+        return {'ok': False, 'message': '任务优先级无效。'}
     if not task_reason:
-        return {
-            "ok": False,
-            "message": "任务风险原因不能为空。",
-        }
-
-    snapshot = _get_reputation_task_entity_snapshot(
-        conn,
-        entity_type,
-        entity_id,
-    )
-
+        return {'ok': False, 'message': '任务风险原因不能为空。'}
+    snapshot = _get_reputation_task_entity_snapshot(conn, entity_type, entity_id)
     if not snapshot:
-        return {
-            "ok": False,
-            "not_found": True,
-            "message": "任务对应的主体或事件不存在。",
-        }
-
-    existing = conn.execute(
-        """
-        SELECT
-            id,
-            status
-        FROM v157_reputation_tasks
-        WHERE entity_type=?
-          AND entity_id=?
-          AND status IN (
-              'pending',
-              'processing'
-          )
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (
-            entity_type,
-            entity_id,
-        ),
-    ).fetchone()
-
+        return {'ok': False, 'not_found': True, 'message': '任务对应的主体或事件不存在。'}
+    existing = conn.execute("\n        SELECT\n            id,\n            status\n        FROM v157_reputation_tasks\n        WHERE entity_type=?\n          AND entity_id=?\n          AND status IN (\n              'pending',\n              'processing'\n          )\n        ORDER BY id DESC\n        LIMIT 1\n        ", (entity_type, entity_id)).fetchone()
     if existing:
-        return {
-            "ok": False,
-            "duplicate": True,
-            "task_id": int(existing["id"]),
-            "status": existing["status"],
-            "message": "该对象已有未闭环处置任务。",
-        }
-
+        return {'ok': False, 'duplicate': True, 'task_id': int(existing['id']), 'status': existing['status'], 'message': '该对象已有未闭环处置任务。'}
     try:
-        cursor = conn.execute(
-            """
-            INSERT INTO v157_reputation_tasks (
-                entity_type,
-                entity_id,
-                entity_name,
-                entity_identifier,
-                priority,
-                task_reason,
-                recommended_action,
-                owner,
-                status,
-                result_note,
-                source_type,
-                updated_at,
-                completed_at
-            )
-            VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?,
-                'pending', '', ?,
-                datetime('now','localtime'),
-                ''
-            )
-            """,
-            (
-                entity_type,
-                entity_id,
-                snapshot["entity_name"],
-                snapshot["entity_identifier"],
-                priority,
-                task_reason,
-                recommended_action,
-                owner,
-                source_type,
-            ),
-        )
-
+        cursor = conn.execute("\n            INSERT INTO v157_reputation_tasks (\n                battle_id,\n            entity_type,\n                entity_id,\n                entity_name,\n                entity_identifier,\n                priority,\n                task_reason,\n                recommended_action,\n                owner,\n                status,\n                result_note,\n                source_type,\n                updated_at,\n                completed_at\n            )\n            VALUES (\n                ?,\n            ?, ?, ?, ?, ?, ?, ?, ?,\n                'pending', '', ?,\n                datetime('now','localtime'),\n                ''\n            )\n            ", (battle_id,) + tuple((entity_type, entity_id, snapshot['entity_name'], snapshot['entity_identifier'], priority, task_reason, recommended_action, owner, source_type)))
         conn.commit()
-
     except sqlite3.IntegrityError:
-        return {
-            "ok": False,
-            "duplicate": True,
-            "message": "该对象已有未闭环处置任务。",
-        }
-
+        return {'ok': False, 'duplicate': True, 'message': '该对象已有未闭环处置任务。'}
     task_id = int(cursor.lastrowid)
-
-    return {
-        "ok": True,
-        "task_id": task_id,
-        "message": "处置任务已创建。",
-    }
+    return {'ok': True, 'task_id': task_id, 'message': '处置任务已创建。'}
 
 
 def get_reputation_task(
@@ -3183,94 +2881,29 @@ def get_active_reputation_task_map(
     return result
 
 
-def create_reputation_task_from_workbench(
-    conn: sqlite3.Connection,
-    *,
-    entity_type: str,
-    entity_id: int,
-) -> dict[str, Any]:
+def create_reputation_task_from_workbench(conn: sqlite3.Connection, *, entity_type: str, entity_id: int, battle_id=None) -> dict[str, Any]:
     ensure_reputation_tables(conn)
-
-    entity_type = (
-        entity_type
-        or ""
-    ).strip().lower()
-
+    entity_type = (entity_type or '').strip().lower()
     try:
-        entity_id = int(
-            entity_id
-            or 0
-        )
+        entity_id = int(entity_id or 0)
     except Exception:
         entity_id = 0
-
     if entity_type not in _REPUTATION_TASK_ENTITY_TYPES:
-        return {
-            "ok": False,
-            "message": "工作台任务对象类型无效。",
-        }
-
+        return {'ok': False, 'message': '工作台任务对象类型无效。'}
     if entity_id <= 0:
-        return {
-            "ok": False,
-            "message": "工作台任务对象编号无效。",
-        }
-
-    report = build_reputation_workbench_report(
-        conn,
-        limit_per_priority=5000,
-    )
-
+        return {'ok': False, 'message': '工作台任务对象编号无效。'}
+    report = build_reputation_workbench_report(conn, limit_per_priority=5000)
     matched_item = None
-
-    for priority in ("P1", "P2", "P3"):
-        for item in report["queues"].get(
-            priority,
-            [],
-        ):
-            if (
-                item.get("object_type") == entity_type
-                and int(
-                    item.get("object_id")
-                    or 0
-                ) == entity_id
-            ):
+    for priority in ('P1', 'P2', 'P3'):
+        for item in report['queues'].get(priority, []):
+            if item.get('object_type') == entity_type and int(item.get('object_id') or 0) == entity_id:
                 matched_item = item
                 break
-
         if matched_item:
             break
-
     if not matched_item:
-        return {
-            "ok": False,
-            "not_found": True,
-            "message": (
-                "该对象已经不在当前风险处置队列中，"
-                "请刷新工作台后重新确认。"
-            ),
-        }
-
-    return create_reputation_task(
-        conn,
-        {
-            "entity_type": entity_type,
-            "entity_id": entity_id,
-            "priority": (
-                matched_item.get("priority")
-                or "P3"
-            ),
-            "task_reason": (
-                matched_item.get("reason")
-                or ""
-            ),
-            "recommended_action": (
-                matched_item.get("action")
-                or ""
-            ),
-            "source_type": "workbench",
-        },
-    )
+        return {'ok': False, 'not_found': True, 'message': '该对象已经不在当前风险处置队列中，请刷新工作台后重新确认。'}
+    return create_reputation_task(conn, {'entity_type': entity_type, 'entity_id': entity_id, 'priority': matched_item.get('priority') or 'P3', 'task_reason': matched_item.get('reason') or '', 'recommended_action': matched_item.get('action') or '', 'source_type': 'workbench'}, battle_id=battle_id)
 
 
 # ============================================================
@@ -4045,3 +3678,314 @@ def delete_reputation_subject_safely_scoped(
         "relation_count": 0,
         "first_event_id": 0,
     }
+
+# ============================================================
+# V15.5-A5-P0-S08 battle-scoped reputation helpers
+# ============================================================
+
+def get_reputation_subject_scoped(conn: sqlite3.Connection, subject_id: int, *, battle_id):
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+    ensure_reputation_tables(conn)
+    return conn.execute('\n        SELECT *\n        FROM v156_reputation_subjects\n        WHERE id=?\n          AND battle_id = ?\n        ', (subject_id, battle_id)).fetchone()
+
+def update_reputation_subject_scoped(conn: sqlite3.Connection, subject_id: int, data: dict[str, Any], *, battle_id) -> bool:
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+    ensure_reputation_tables(conn)
+    display_name = (data.get('display_name') or '').strip()
+    game_id = (data.get('game_id') or '').strip()
+    if not display_name and (not game_id):
+        return False
+    conn.execute("\n        UPDATE v156_reputation_subjects\n        SET\n            subject_type=?,\n            display_name=?,\n            game_id=?,\n            alias_names=?,\n            trust_level=?,\n            risk_level=?,\n            status=?,\n            source_type=?,\n            note=?,\n            updated_at=datetime('now','localtime')\n        WHERE id=?\n          AND battle_id = ?\n        ", ((data.get('subject_type') or 'player').strip(), display_name, game_id, (data.get('alias_names') or '').strip(), (data.get('trust_level') or 'unknown').strip(), (data.get('risk_level') or 'normal').strip(), (data.get('status') or 'active').strip(), (data.get('source_type') or 'manual').strip(), (data.get('note') or '').strip(), subject_id, battle_id))
+    conn.commit()
+    return True
+
+def get_reputation_task_scoped(conn: sqlite3.Connection, task_id: int, *, battle_id):
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+    ensure_reputation_tables(conn)
+    return conn.execute('\n        SELECT *\n        FROM v157_reputation_tasks\n        WHERE id=?\n          AND battle_id = ?\n        ', (task_id, battle_id)).fetchone()
+
+def update_reputation_task_scoped(conn: sqlite3.Connection, task_id: int, data: dict[str, Any], *, battle_id) -> dict[str, Any]:
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+    ensure_reputation_tables(conn)
+    row = get_reputation_task_scoped(conn, task_id, battle_id=battle_id)
+    if not row:
+        return {'ok': False, 'not_found': True, 'message': '处置任务不存在。'}
+    priority = (data.get('priority') or row['priority'] or 'P3').strip().upper()
+    status = (data.get('status') or row['status'] or 'pending').strip().lower()
+    owner = data.get('owner') if data.get('owner') is not None else row['owner']
+    result_note = data.get('result_note') if data.get('result_note') is not None else row['result_note']
+    owner = (owner or '').strip()
+    result_note = (result_note or '').strip()
+    if priority not in _REPUTATION_TASK_PRIORITIES:
+        return {'ok': False, 'message': '任务优先级无效。'}
+    if status not in _REPUTATION_TASK_STATUSES:
+        return {'ok': False, 'message': '任务状态无效。'}
+    if len(owner) > 100:
+        return {'ok': False, 'message': '负责人名称不能超过100个字符。'}
+    if len(result_note) > 2000:
+        return {'ok': False, 'message': '处置结果不能超过2000个字符。'}
+    if status in _REPUTATION_TASK_CLOSED_STATUSES and (not result_note):
+        return {'ok': False, 'result_required': True, 'message': '完成或忽略任务前，必须填写处置结果。'}
+    try:
+        if status in _REPUTATION_TASK_CLOSED_STATUSES:
+            conn.execute("\n                UPDATE v157_reputation_tasks\n                SET\n                    priority=?,\n                    owner=?,\n                    status=?,\n                    result_note=?,\n                    updated_at=datetime(\n                        'now',\n                        'localtime'\n                    ),\n                    completed_at=CASE\n                        WHEN IFNULL(\n                            completed_at,\n                            ''\n                        )=''\n                        THEN datetime(\n                            'now',\n                            'localtime'\n                        )\n                        ELSE completed_at\n                    END\n                WHERE id=?\n          AND battle_id = ?\n                ", (priority, owner, status, result_note, task_id, battle_id))
+        else:
+            conn.execute("\n                UPDATE v157_reputation_tasks\n                SET\n                    priority=?,\n                    owner=?,\n                    status=?,\n                    result_note=?,\n                    updated_at=datetime(\n                        'now',\n                        'localtime'\n                    ),\n                    completed_at=''\n                WHERE id=?\n          AND battle_id = ?\n                ", (priority, owner, status, result_note, task_id, battle_id))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return {'ok': False, 'duplicate': True, 'message': '该对象已经存在另一条未闭环任务。'}
+    updated = get_reputation_task_scoped(conn, task_id, battle_id=battle_id)
+    return {'ok': True, 'task': updated, 'message': '处置任务已更新。'}
+
+def list_reputation_events_scoped(
+    conn,
+    q="",
+    limit=100,
+    *,
+    battle_id,
+):
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+
+    ensure_reputation_tables(conn)
+
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 100
+
+    limit = max(
+        1,
+        min(
+            limit,
+            5000,
+        ),
+    )
+
+    q = str(
+        q or ""
+    ).strip()
+
+    cols = {
+        str(row[1])
+        for row in conn.execute(
+            "PRAGMA table_info(v156_reputation_events)"
+        ).fetchall()
+    }
+
+    search_cols = [
+        name
+        for name in (
+            "title",
+            "event_type",
+            "summary",
+            "evidence_note",
+            "note",
+        )
+        if name in cols
+    ]
+
+    where_parts = [
+        "battle_id = ?",
+    ]
+
+    params = [
+        battle_id,
+    ]
+
+    if q and search_cols:
+        where_parts.append(
+            "("
+            + " OR ".join(
+                "IFNULL(" + name + ", '') LIKE ?"
+                for name in search_cols
+            )
+            + ")"
+        )
+
+        params.extend(
+            ["%" + q + "%"]
+            * len(search_cols)
+        )
+
+    if "updated_at" in cols:
+        order_sql = "updated_at DESC, id DESC"
+    elif "created_at" in cols:
+        order_sql = "created_at DESC, id DESC"
+    elif "event_time" in cols:
+        order_sql = "event_time DESC, id DESC"
+    else:
+        order_sql = "id DESC"
+
+    sql = (
+        "SELECT * "
+        "FROM v156_reputation_events "
+        "WHERE "
+        + " AND ".join(where_parts)
+        + " ORDER BY "
+        + order_sql
+        + " LIMIT ?"
+    )
+
+    params.append(limit)
+
+    rows = conn.execute(
+        sql,
+        params,
+    ).fetchall()
+
+    return _v155_reputation_rows_dict(rows)
+
+def build_reputation_duplicate_report_scoped(
+    conn,
+    *,
+    battle_id,
+):
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+
+    ensure_reputation_tables(conn)
+
+    scoped_conn = sqlite3.connect(":memory:")
+    scoped_conn.row_factory = sqlite3.Row
+
+    try:
+        ensure_reputation_tables(scoped_conn)
+
+        source_cols = [
+            str(row[1])
+            for row in conn.execute(
+                "PRAGMA table_info(v156_reputation_subjects)"
+            ).fetchall()
+        ]
+
+        target_cols = {
+            str(row[1])
+            for row in scoped_conn.execute(
+                "PRAGMA table_info(v156_reputation_subjects)"
+            ).fetchall()
+        }
+
+        cols = [
+            name
+            for name in source_cols
+            if name in target_cols
+        ]
+
+        if not cols:
+            return build_reputation_duplicate_report(
+                scoped_conn
+            )
+
+        quoted = ", ".join(
+            '"' + name.replace('"', '""') + '"'
+            for name in cols
+        )
+
+        rows = conn.execute(
+            "SELECT "
+            + quoted
+            + " FROM v156_reputation_subjects "
+              "WHERE battle_id = ?",
+            (
+                battle_id,
+            ),
+        ).fetchall()
+
+        placeholders = ", ".join(
+            ["?"] * len(cols)
+        )
+
+        if rows:
+            scoped_conn.executemany(
+                "INSERT INTO v156_reputation_subjects ("
+                + quoted
+                + ") VALUES ("
+                + placeholders
+                + ")",
+                [
+                    tuple(row)
+                    for row in rows
+                ],
+            )
+
+        scoped_conn.commit()
+
+        return build_reputation_duplicate_report(
+            scoped_conn
+        )
+
+    finally:
+        scoped_conn.close()
+
+def merge_reputation_subjects_scoped(
+    conn,
+    keep_id,
+    merge_id,
+    *,
+    battle_id,
+):
+    battle_id = _v155_reputation_positive_battle_id(battle_id)
+
+    try:
+        keep_id = int(keep_id)
+        merge_id = int(merge_id)
+    except (TypeError, ValueError):
+        return False
+
+    if (
+        keep_id <= 0
+        or merge_id <= 0
+        or keep_id == merge_id
+    ):
+        return False
+
+    keep_row = get_reputation_subject_scoped(
+        conn,
+        keep_id,
+        battle_id=battle_id,
+    )
+
+    merge_row = get_reputation_subject_scoped(
+        conn,
+        merge_id,
+        battle_id=battle_id,
+    )
+
+    if (
+        keep_row is None
+        or merge_row is None
+    ):
+        return False
+
+    unsafe_relation = conn.execute(
+        """
+        SELECT 1
+        FROM v156_reputation_event_relations AS r
+        LEFT JOIN v156_reputation_events AS e
+          ON e.id = r.event_id
+         AND e.battle_id = r.battle_id
+        WHERE r.subject_id IN (?, ?)
+          AND (
+                r.battle_id IS NULL
+             OR r.battle_id <> ?
+             OR e.id IS NULL
+             OR e.battle_id IS NULL
+             OR e.battle_id <> ?
+          )
+        LIMIT 1
+        """,
+        (
+            keep_id,
+            merge_id,
+            battle_id,
+            battle_id,
+        ),
+    ).fetchone()
+
+    if unsafe_relation is not None:
+        return False
+
+    return merge_reputation_subjects(
+        conn,
+        keep_id=keep_id,
+        merge_id=merge_id,
+    )
