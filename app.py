@@ -11998,23 +11998,30 @@ def v155_security_console():
 
 # V15.6-A8 reputation home dashboard route
 @app.route("/reputation")
+@app.route('/reputation')
 def v156_reputation_home():
     import sqlite3
     from flask import render_template
-    from services.v156_reputation_store import build_reputation_home_report
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import build_reputation_home_report_scoped
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    report = build_reputation_home_report(conn)
-
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    report = build_reputation_home_report_scoped(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "reputation_home.html",
-        report=report,
-        title="信誉档案库",
-    )
+    return render_template('reputation_home.html', report=report, title='信誉档案库')
 
 
 # =========================
@@ -12208,113 +12215,64 @@ def v157_reputation_tasks():
 
 
 @app.route("/reputation/search")
+@app.route('/reputation/search')
 def v156_reputation_search():
     import sqlite3
     from flask import request, render_template
-    from services.v156_reputation_store import search_reputation
-
-    q = request.args.get("q", "").strip()
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import search_reputation_scoped
+    q = request.args.get('q', '').strip()
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    result = search_reputation(conn, q)
-
-    # V15.6-A21 search evidence chain summary
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    result = search_reputation_scoped(conn, q, battle_id=battle_id)
     subject_evidence_map = {}
     event_subject_summary_map = {}
-
     try:
-        subject_rows = result.get("subjects", []) if isinstance(result, dict) else []
-        event_rows = result.get("events", []) if isinstance(result, dict) else []
-
+        subject_rows = result.get('subjects', []) if isinstance(result, dict) else []
+        event_rows = result.get('events', []) if isinstance(result, dict) else []
         subject_ids = []
         for item in subject_rows:
             try:
-                subject_ids.append(int(item["id"]))
+                subject_ids.append(int(item['id']))
             except Exception:
                 pass
-
         event_ids = []
         for item in event_rows:
             try:
-                event_ids.append(int(item["id"]))
+                event_ids.append(int(item['id']))
             except Exception:
                 pass
-
         if subject_ids:
-            placeholders = ",".join(["?"] * len(subject_ids))
-            stat_rows = conn.execute(
-                f"""
-                SELECT
-                    r.subject_id,
-                    COUNT(DISTINCT e.id) AS event_count,
-                    SUM(
-                        CASE
-                            WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1
-                            ELSE 0
-                        END
-                    ) AS high_impact_count,
-                    MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time
-                FROM v156_reputation_event_relations r
-                LEFT JOIN v156_reputation_events e ON e.id = r.event_id
-                WHERE r.subject_id IN ({placeholders})
-                  AND e.id IS NOT NULL
-                GROUP BY r.subject_id
-                """,
-                subject_ids,
-            ).fetchall()
-
+            placeholders = ','.join(['?'] * len(subject_ids))
+            stat_rows = scoped_conn.execute(f"\n                SELECT\n                    r.subject_id,\n                    COUNT(DISTINCT e.id) AS event_count,\n                    SUM(\n                        CASE\n                            WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1\n                            ELSE 0\n                        END\n                    ) AS high_impact_count,\n                    MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time\n                FROM v156_reputation_event_relations r\n                LEFT JOIN v156_reputation_events e ON e.id = r.event_id\n                WHERE r.subject_id IN ({placeholders})\n                  AND e.id IS NOT NULL\n                GROUP BY r.subject_id\n                ", subject_ids).fetchall()
             for row in stat_rows:
-                subject_evidence_map[int(row["subject_id"])] = {
-                    "event_count": int(row["event_count"] or 0),
-                    "high_impact_count": int(row["high_impact_count"] or 0),
-                    "latest_event_time": row["latest_event_time"] or "",
-                    "is_complete": int(row["event_count"] or 0) > 0,
-                }
-
+                subject_evidence_map[int(row['subject_id'])] = {'event_count': int(row['event_count'] or 0), 'high_impact_count': int(row['high_impact_count'] or 0), 'latest_event_time': row['latest_event_time'] or '', 'is_complete': int(row['event_count'] or 0) > 0}
         if event_ids:
-            placeholders = ",".join(["?"] * len(event_ids))
-            stat_rows = conn.execute(
-                f"""
-                SELECT
-                    r.event_id,
-                    COUNT(DISTINCT s.id) AS subject_count,
-                    SUM(
-                        CASE
-                            WHEN s.risk_level IN ('danger', 'black')
-                              OR s.trust_level IN ('black', 'risky')
-                            THEN 1
-                            ELSE 0
-                        END
-                    ) AS high_risk_count
-                FROM v156_reputation_event_relations r
-                LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
-                WHERE r.event_id IN ({placeholders})
-                  AND s.id IS NOT NULL
-                GROUP BY r.event_id
-                """,
-                event_ids,
-            ).fetchall()
-
+            placeholders = ','.join(['?'] * len(event_ids))
+            stat_rows = scoped_conn.execute(f"\n                SELECT\n                    r.event_id,\n                    COUNT(DISTINCT s.id) AS subject_count,\n                    SUM(\n                        CASE\n                            WHEN s.risk_level IN ('danger', 'black')\n                              OR s.trust_level IN ('black', 'risky')\n                            THEN 1\n                            ELSE 0\n                        END\n                    ) AS high_risk_count\n                FROM v156_reputation_event_relations r\n                LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id\n                WHERE r.event_id IN ({placeholders})\n                  AND s.id IS NOT NULL\n                GROUP BY r.event_id\n                ", event_ids).fetchall()
             for row in stat_rows:
-                event_subject_summary_map[int(row["event_id"])] = {
-                    "subject_count": int(row["subject_count"] or 0),
-                    "high_risk_count": int(row["high_risk_count"] or 0),
-                    "is_complete": int(row["subject_count"] or 0) > 0,
-                }
-
+                event_subject_summary_map[int(row['event_id'])] = {'subject_count': int(row['subject_count'] or 0), 'high_risk_count': int(row['high_risk_count'] or 0), 'is_complete': int(row['subject_count'] or 0) > 0}
     except Exception as e:
-        print("⚠️ V15.6-A21 search evidence chain summary error:", e)
-
-    # V15.7-A4 search risk conclusion
+        print('⚠️ V15.6-A21 search evidence chain summary error:', e)
     search_risk_conclusion = None
-
     if q:
-        subject_rows = result.get("subjects", []) if isinstance(result, dict) else []
-        event_rows = result.get("events", []) if isinstance(result, dict) else []
+        subject_rows = result.get('subjects', []) if isinstance(result, dict) else []
+        event_rows = result.get('events', []) if isinstance(result, dict) else []
 
-        def row_value(item, key, default=""):
+        def row_value(item, key, default=''):
             try:
                 value = item[key]
             except Exception:
@@ -12322,188 +12280,75 @@ def v156_reputation_search():
                     value = item.get(key, default)
                 except Exception:
                     value = default
-
             return value if value is not None else default
-
         subject_total = len(subject_rows)
         event_total = len(event_rows)
-
         black_subject_count = 0
         high_risk_subject_count = 0
-
         for item in subject_rows:
-            risk_level = str(row_value(item, "risk_level")).strip()
-            trust_level = str(row_value(item, "trust_level")).strip()
-
-            if risk_level == "black" or trust_level == "black":
+            risk_level = str(row_value(item, 'risk_level')).strip()
+            trust_level = str(row_value(item, 'trust_level')).strip()
+            if risk_level == 'black' or trust_level == 'black':
                 black_subject_count += 1
-
-            if (
-                risk_level in ("danger", "black")
-                or trust_level in ("risky", "black")
-            ):
+            if risk_level in ('danger', 'black') or trust_level in ('risky', 'black'):
                 high_risk_subject_count += 1
-
         severe_event_count = 0
         high_impact_event_count = 0
         disputed_event_count = 0
-
         for item in event_rows:
-            impact_level = str(row_value(item, "impact_level")).strip()
-            event_status = str(row_value(item, "status")).strip()
-
-            if impact_level in ("severe", "critical"):
+            impact_level = str(row_value(item, 'impact_level')).strip()
+            event_status = str(row_value(item, 'status')).strip()
+            if impact_level in ('severe', 'critical'):
                 severe_event_count += 1
-
-            if impact_level in ("high", "severe", "critical"):
+            if impact_level in ('high', 'severe', 'critical'):
                 high_impact_event_count += 1
-
-            if event_status == "disputed":
+            if event_status == 'disputed':
                 disputed_event_count += 1
-
         subject_missing_evidence_count = 0
-
         for item in subject_rows:
             try:
-                subject_id = int(row_value(item, "id", 0) or 0)
+                subject_id = int(row_value(item, 'id', 0) or 0)
             except Exception:
                 subject_id = 0
-
             stat = subject_evidence_map.get(subject_id, {})
-
-            if not stat or not stat.get("is_complete"):
+            if not stat or not stat.get('is_complete'):
                 subject_missing_evidence_count += 1
-
         event_missing_subject_count = 0
-
         for item in event_rows:
             try:
-                event_id = int(row_value(item, "id", 0) or 0)
+                event_id = int(row_value(item, 'id', 0) or 0)
             except Exception:
                 event_id = 0
-
             stat = event_subject_summary_map.get(event_id, {})
-
-            if not stat or not stat.get("is_complete"):
+            if not stat or not stat.get('is_complete'):
                 event_missing_subject_count += 1
-
-        evidence_missing_count = (
-            subject_missing_evidence_count
-            + event_missing_subject_count
-        )
-
+        evidence_missing_count = subject_missing_evidence_count + event_missing_subject_count
         matched_total = subject_total + event_total
-
         if matched_total == 0:
-            evidence_label = "无档案"
+            evidence_label = '无档案'
         elif evidence_missing_count == 0:
-            evidence_label = "完整"
+            evidence_label = '完整'
         else:
-            evidence_label = "待补"
-
+            evidence_label = '待补'
         if matched_total == 0:
-            search_risk_conclusion = {
-                "level": "未命中",
-                "title": "未命中信誉档案",
-                "summary": "当前关键词没有匹配到已有信誉主体或信誉事件。",
-                "advice": "可核对关键词是否准确；如属于新的玩家、账号或事件，可以进入快速处理区建立档案。",
-                "color": "#2563eb",
-                "bg": "#eff6ff",
-            }
-
+            search_risk_conclusion = {'level': '未命中', 'title': '未命中信誉档案', 'summary': '当前关键词没有匹配到已有信誉主体或信誉事件。', 'advice': '可核对关键词是否准确；如属于新的玩家、账号或事件，可以进入快速处理区建立档案。', 'color': '#2563eb', 'bg': '#eff6ff'}
         elif black_subject_count > 0:
-            search_risk_conclusion = {
-                "level": "高风险",
-                "title": "命中黑名单主体",
-                "summary": "检索结果命中了黑名单主体，应当视为高优先级风险信号。",
-                "advice": "暂停直接吸纳、合作或回流，优先核对主体身份、历史事件、证据来源和关联责任。",
-                "color": "#dc2626",
-                "bg": "#fef2f2",
-            }
-
+            search_risk_conclusion = {'level': '高风险', 'title': '命中黑名单主体', 'summary': '检索结果命中了黑名单主体，应当视为高优先级风险信号。', 'advice': '暂停直接吸纳、合作或回流，优先核对主体身份、历史事件、证据来源和关联责任。', 'color': '#dc2626', 'bg': '#fef2f2'}
         elif high_risk_subject_count > 0 and severe_event_count > 0:
-            search_risk_conclusion = {
-                "level": "重点风险",
-                "title": "命中重点风险记录",
-                "summary": "检索结果同时包含高风险主体和严重事件，风险信号相互印证。",
-                "advice": "谨慎吸纳或合作，必须完成身份核验、历史事件复核和管理层人工确认。",
-                "color": "#dc2626",
-                "bg": "#fef2f2",
-            }
-
+            search_risk_conclusion = {'level': '重点风险', 'title': '命中重点风险记录', 'summary': '检索结果同时包含高风险主体和严重事件，风险信号相互印证。', 'advice': '谨慎吸纳或合作，必须完成身份核验、历史事件复核和管理层人工确认。', 'color': '#dc2626', 'bg': '#fef2f2'}
         elif high_risk_subject_count > 0:
-            search_risk_conclusion = {
-                "level": "风险复核",
-                "title": "命中高风险主体",
-                "summary": "检索结果包含危险、黑名单或低信任主体，需要进一步查看历史证据。",
-                "advice": "不要仅凭名称作最终判断，应结合游戏编号、曾用名、关联事件和证据完整度人工复核。",
-                "color": "#f97316",
-                "bg": "#fff7ed",
-            }
-
+            search_risk_conclusion = {'level': '风险复核', 'title': '命中高风险主体', 'summary': '检索结果包含危险、黑名单或低信任主体，需要进一步查看历史证据。', 'advice': '不要仅凭名称作最终判断，应结合游戏编号、曾用名、关联事件和证据完整度人工复核。', 'color': '#f97316', 'bg': '#fff7ed'}
         elif severe_event_count > 0:
-            search_risk_conclusion = {
-                "level": "高影响",
-                "title": "命中严重事件",
-                "summary": "检索结果包含严重或极严重事件，可能对后续招募和管理决策产生重大影响。",
-                "advice": "优先查看事件详情、关联主体及处理状态，完成复核前保持谨慎。",
-                "color": "#f97316",
-                "bg": "#fff7ed",
-            }
-
+            search_risk_conclusion = {'level': '高影响', 'title': '命中严重事件', 'summary': '检索结果包含严重或极严重事件，可能对后续招募和管理决策产生重大影响。', 'advice': '优先查看事件详情、关联主体及处理状态，完成复核前保持谨慎。', 'color': '#f97316', 'bg': '#fff7ed'}
         elif disputed_event_count > 0:
-            search_risk_conclusion = {
-                "level": "争议复核",
-                "title": "存在争议事件",
-                "summary": "检索结果包含尚未形成稳定结论的争议事件。",
-                "advice": "暂不直接形成最终处置结论，应补充不同来源证据并完成人工复核。",
-                "color": "#d97706",
-                "bg": "#fffbeb",
-            }
-
+            search_risk_conclusion = {'level': '争议复核', 'title': '存在争议事件', 'summary': '检索结果包含尚未形成稳定结论的争议事件。', 'advice': '暂不直接形成最终处置结论，应补充不同来源证据并完成人工复核。', 'color': '#d97706', 'bg': '#fffbeb'}
         elif evidence_missing_count > 0:
-            search_risk_conclusion = {
-                "level": "证据待补",
-                "title": "证据链不完整",
-                "summary": "检索结果已命中档案，但部分主体缺少事件依据，或部分事件缺少关联主体。",
-                "advice": "优先补充主体与事件之间的关联关系，再决定是否进行风险升级或处置。",
-                "color": "#d97706",
-                "bg": "#fffbeb",
-            }
-
+            search_risk_conclusion = {'level': '证据待补', 'title': '证据链不完整', 'summary': '检索结果已命中档案，但部分主体缺少事件依据，或部分事件缺少关联主体。', 'advice': '优先补充主体与事件之间的关联关系，再决定是否进行风险升级或处置。', 'color': '#d97706', 'bg': '#fffbeb'}
         else:
-            search_risk_conclusion = {
-                "level": "一般记录",
-                "title": "命中普通信誉档案",
-                "summary": "当前检索结果以普通历史记录为主，暂未发现明显的高风险组合。",
-                "advice": "可以作为历史参考保留；正式招募或合作前仍应核对游戏编号和主体身份。",
-                "color": "#16a34a",
-                "bg": "#ecfdf5",
-            }
-
-        search_risk_conclusion.update({
-            "subject_total": subject_total,
-            "event_total": event_total,
-            "black_subject_count": black_subject_count,
-            "high_risk_subject_count": high_risk_subject_count,
-            "severe_event_count": severe_event_count,
-            "high_impact_event_count": high_impact_event_count,
-            "disputed_event_count": disputed_event_count,
-            "evidence_missing_count": evidence_missing_count,
-            "evidence_label": evidence_label,
-        })
-
+            search_risk_conclusion = {'level': '一般记录', 'title': '命中普通信誉档案', 'summary': '当前检索结果以普通历史记录为主，暂未发现明显的高风险组合。', 'advice': '可以作为历史参考保留；正式招募或合作前仍应核对游戏编号和主体身份。', 'color': '#16a34a', 'bg': '#ecfdf5'}
+        search_risk_conclusion.update({'subject_total': subject_total, 'event_total': event_total, 'black_subject_count': black_subject_count, 'high_risk_subject_count': high_risk_subject_count, 'severe_event_count': severe_event_count, 'high_impact_event_count': high_impact_event_count, 'disputed_event_count': disputed_event_count, 'evidence_missing_count': evidence_missing_count, 'evidence_label': evidence_label})
     conn.close()
-
-    return render_template(
-        "reputation_search.html",
-        result=result,
-        q=q,
-        subject_evidence_map=subject_evidence_map,
-        event_subject_summary_map=event_subject_summary_map,
-        search_risk_conclusion=search_risk_conclusion,
-        title="信誉检索",
-    )
+    return render_template('reputation_search.html', result=result, q=q, subject_evidence_map=subject_evidence_map, event_subject_summary_map=event_subject_summary_map, search_risk_conclusion=search_risk_conclusion, title='信誉检索')
 
 
 # V15.6-A3 reputation subject CRUD routes
@@ -12924,159 +12769,71 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
 # =========================
 
 @app.route("/reputation/subjects/<int:subject_id>")
+@app.route('/reputation/subjects/<int:subject_id>')
 def v156_reputation_subject_detail(subject_id):
     import sqlite3
     from flask import request, render_template, abort
-    from services.v156_reputation_store import (
-        get_reputation_subject,
-        list_reputation_events_by_subject,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import get_reputation_subject_scoped, list_reputation_events_by_subject_scoped
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    row = get_reputation_subject(conn, subject_id)
-
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    row = get_reputation_subject_scoped(conn, subject_id, battle_id=battle_id)
     if not row:
         conn.close()
         abort(404)
-
-    return_to = _v157_reputation_return_to(
-        request.args.get("return_to", "")
-    )
-
-    events = list_reputation_events_by_subject(conn, subject_id)
-
+    return_to = _v157_reputation_return_to(request.args.get('return_to', ''))
+    events = list_reputation_events_by_subject_scoped(conn, subject_id, battle_id=battle_id)
     conn.close()
-
-
-    # V15.6-A19 fix closed db connection
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    # V15.6-A19 subject detail evidence summary
-    evidence_summary = {
-        "event_count": 0,
-        "high_impact_count": 0,
-        "latest_event_title": "",
-        "latest_event_time": "",
-        "is_complete": False,
-    }
-
-    evidence_row = conn.execute(
-        """
-        SELECT
-            COUNT(DISTINCT e.id) AS event_count,
-            SUM(
-                CASE
-                    WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1
-                    ELSE 0
-                END
-            ) AS high_impact_count,
-            MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time
-        FROM v156_reputation_event_relations r
-        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
-        WHERE r.subject_id = ?
-          AND e.id IS NOT NULL
-        """,
-        (subject_id,),
-    ).fetchone()
-
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    evidence_summary = {'event_count': 0, 'high_impact_count': 0, 'latest_event_title': '', 'latest_event_time': '', 'is_complete': False}
+    evidence_row = scoped_conn.execute("\n        SELECT\n            COUNT(DISTINCT e.id) AS event_count,\n            SUM(\n                CASE\n                    WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1\n                    ELSE 0\n                END\n            ) AS high_impact_count,\n            MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time\n        FROM v156_reputation_event_relations r\n        LEFT JOIN v156_reputation_events e ON e.id = r.event_id\n        WHERE r.subject_id = ?\n          AND e.id IS NOT NULL\n        ", (subject_id,)).fetchone()
     if evidence_row:
-        evidence_summary["event_count"] = int(evidence_row["event_count"] or 0)
-        evidence_summary["high_impact_count"] = int(evidence_row["high_impact_count"] or 0)
-        evidence_summary["latest_event_time"] = evidence_row["latest_event_time"] or ""
-        evidence_summary["is_complete"] = evidence_summary["event_count"] > 0
-
-    latest_event_row = conn.execute(
-        """
-        SELECT e.title, IFNULL(e.event_time, e.created_at) AS event_time
-        FROM v156_reputation_event_relations r
-        LEFT JOIN v156_reputation_events e ON e.id = r.event_id
-        WHERE r.subject_id = ?
-          AND e.id IS NOT NULL
-        ORDER BY IFNULL(e.event_time, e.created_at) DESC, e.id DESC
-        LIMIT 1
-        """,
-        (subject_id,),
-    ).fetchone()
-
+        evidence_summary['event_count'] = int(evidence_row['event_count'] or 0)
+        evidence_summary['high_impact_count'] = int(evidence_row['high_impact_count'] or 0)
+        evidence_summary['latest_event_time'] = evidence_row['latest_event_time'] or ''
+        evidence_summary['is_complete'] = evidence_summary['event_count'] > 0
+    latest_event_row = scoped_conn.execute('\n        SELECT e.title, IFNULL(e.event_time, e.created_at) AS event_time\n        FROM v156_reputation_event_relations r\n        LEFT JOIN v156_reputation_events e ON e.id = r.event_id\n        WHERE r.subject_id = ?\n          AND e.id IS NOT NULL\n        ORDER BY IFNULL(e.event_time, e.created_at) DESC, e.id DESC\n        LIMIT 1\n        ', (subject_id,)).fetchone()
     if latest_event_row:
-        evidence_summary["latest_event_title"] = latest_event_row["title"] or ""
-        evidence_summary["latest_event_time"] = latest_event_row["event_time"] or evidence_summary["latest_event_time"]
-
-    # V15.7-A1 subject disposal advice
-    trust_level = (row["trust_level"] or "").strip()
-    risk_level = (row["risk_level"] or "").strip()
-    event_count = int(evidence_summary.get("event_count") or 0)
-    high_impact_count = int(evidence_summary.get("high_impact_count") or 0)
-
-    if trust_level in ("black", "blacklist") or risk_level == "black":
-        disposal_advice = {
-            "level": "重点处置",
-            "title": "黑名单主体",
-            "summary": "该主体已进入黑名单范围，建议重点标记，避免重新吸纳或分配关键资源。",
-            "actions": [
-                "保留当前证据链，避免后续遗忘或误判。",
-                "如涉及跨赛季回流，建议先人工复核历史事件。",
-                "不要仅凭口头说明解除风险标记，必须补充反证记录。",
-            ],
-            "color": "#dc2626",
-            "bg": "#fef2f2",
-        }
-    elif risk_level == "danger" or trust_level == "risky" or high_impact_count > 0:
-        disposal_advice = {
-            "level": "高危复核",
-            "title": "高风险主体",
-            "summary": "该主体存在高风险信号，建议人工复核并补充证据，不宜直接放行。",
-            "actions": [
-                "优先核对关联事件是否完整。",
-                "确认是否存在严重事件或多次负面记录。",
-                "复核完成前，建议保持观察或限制关键权限。",
-            ],
-            "color": "#f97316",
-            "bg": "#fff7ed",
-        }
-    elif risk_level == "warning":
-        disposal_advice = {
-            "level": "持续观察",
-            "title": "预警主体",
-            "summary": "该主体目前处于预警状态，建议继续观察，不建议直接处置。",
-            "actions": [
-                "继续补充后续表现记录。",
-                "如出现新负面事件，再升级风险等级。",
-                "暂不建议进入黑名单。",
-            ],
-            "color": "#f59e0b",
-            "bg": "#fffbeb",
-        }
+        evidence_summary['latest_event_title'] = latest_event_row['title'] or ''
+        evidence_summary['latest_event_time'] = latest_event_row['event_time'] or evidence_summary['latest_event_time']
+    trust_level = (row['trust_level'] or '').strip()
+    risk_level = (row['risk_level'] or '').strip()
+    event_count = int(evidence_summary.get('event_count') or 0)
+    high_impact_count = int(evidence_summary.get('high_impact_count') or 0)
+    if trust_level in ('black', 'blacklist') or risk_level == 'black':
+        disposal_advice = {'level': '重点处置', 'title': '黑名单主体', 'summary': '该主体已进入黑名单范围，建议重点标记，避免重新吸纳或分配关键资源。', 'actions': ['保留当前证据链，避免后续遗忘或误判。', '如涉及跨赛季回流，建议先人工复核历史事件。', '不要仅凭口头说明解除风险标记，必须补充反证记录。'], 'color': '#dc2626', 'bg': '#fef2f2'}
+    elif risk_level == 'danger' or trust_level == 'risky' or high_impact_count > 0:
+        disposal_advice = {'level': '高危复核', 'title': '高风险主体', 'summary': '该主体存在高风险信号，建议人工复核并补充证据，不宜直接放行。', 'actions': ['优先核对关联事件是否完整。', '确认是否存在严重事件或多次负面记录。', '复核完成前，建议保持观察或限制关键权限。'], 'color': '#f97316', 'bg': '#fff7ed'}
+    elif risk_level == 'warning':
+        disposal_advice = {'level': '持续观察', 'title': '预警主体', 'summary': '该主体目前处于预警状态，建议继续观察，不建议直接处置。', 'actions': ['继续补充后续表现记录。', '如出现新负面事件，再升级风险等级。', '暂不建议进入黑名单。'], 'color': '#f59e0b', 'bg': '#fffbeb'}
     else:
-        disposal_advice = {
-            "level": "正常记录",
-            "title": "暂无明显风险",
-            "summary": "该主体当前没有明显高风险信号，建议作为普通信誉档案保留。",
-            "actions": [
-                "保持档案记录完整。",
-                "如后续出现事件，再补充证据链。",
-            ],
-            "color": "#16a34a",
-            "bg": "#ecfdf5",
-        }
-
+        disposal_advice = {'level': '正常记录', 'title': '暂无明显风险', 'summary': '该主体当前没有明显高风险信号，建议作为普通信誉档案保留。', 'actions': ['保持档案记录完整。', '如后续出现事件，再补充证据链。'], 'color': '#16a34a', 'bg': '#ecfdf5'}
     if event_count == 0:
-        disposal_advice["actions"].insert(0, "当前证据链缺失，建议先补充至少一条关联事件。")
-
+        disposal_advice['actions'].insert(0, '当前证据链缺失，建议先补充至少一条关联事件。')
     if high_impact_count > 0:
-        disposal_advice["actions"].append("已存在高影响事件，后续复核时应优先查看事件详情。")
-
-    # V15.7-A5 subject comprehensive risk assessment
+        disposal_advice['actions'].append('已存在高影响事件，后续复核时应优先查看事件详情。')
     severe_event_count = 0
     severe_verified_count = 0
     disputed_event_count = 0
     verified_event_count = 0
     archived_event_count = 0
 
-    def event_value(item, key, default=""):
+    def event_value(item, key, default=''):
         try:
             value = item[key]
         except Exception:
@@ -13084,270 +12841,77 @@ def v156_reputation_subject_detail(subject_id):
                 value = item.get(key, default)
             except Exception:
                 value = default
-
         return value if value is not None else default
-
     for item in events or []:
-        item_impact = str(
-            event_value(item, "impact_level", "")
-        ).strip()
-
-        item_status = str(
-            event_value(item, "status", "")
-        ).strip()
-
-        if item_impact in ("severe", "critical"):
+        item_impact = str(event_value(item, 'impact_level', '')).strip()
+        item_status = str(event_value(item, 'status', '')).strip()
+        if item_impact in ('severe', 'critical'):
             severe_event_count += 1
-
-            if item_status == "verified":
+            if item_status == 'verified':
                 severe_verified_count += 1
-
-        if item_status == "disputed":
+        if item_status == 'disputed':
             disputed_event_count += 1
-
-        if item_status == "verified":
+        if item_status == 'verified':
             verified_event_count += 1
-
-        if item_status == "archived":
+        if item_status == 'archived':
             archived_event_count += 1
-
-    black_mark = (
-        trust_level in ("black", "blacklist")
-        or risk_level == "black"
-    )
-
-    high_risk_mark = (
-        risk_level == "danger"
-        or trust_level == "risky"
-    )
-
-    warning_mark = risk_level == "warning"
-
-    evidence_label = (
-        "完整"
-        if event_count > 0
-        else "缺失"
-    )
-
-    evidence_strength = "较低"
-
+    black_mark = trust_level in ('black', 'blacklist') or risk_level == 'black'
+    high_risk_mark = risk_level == 'danger' or trust_level == 'risky'
+    warning_mark = risk_level == 'warning'
+    evidence_label = '完整' if event_count > 0 else '缺失'
+    evidence_strength = '较低'
     if event_count == 0:
-        evidence_strength = "较低"
+        evidence_strength = '较低'
     elif verified_event_count > 0:
-        evidence_strength = "较高"
+        evidence_strength = '较高'
     elif disputed_event_count == event_count:
-        evidence_strength = "待复核"
+        evidence_strength = '待复核'
     else:
-        evidence_strength = "中等"
-
+        evidence_strength = '中等'
     basis = []
     evidence_gaps = []
-
-    trust_cn = {
-        "trusted": "可信",
-        "risky": "存疑",
-        "black": "黑名单",
-        "blacklist": "黑名单",
-        "unknown": "未知",
-    }.get(trust_level, trust_level or "未知")
-
-    risk_cn = {
-        "normal": "正常",
-        "warning": "预警",
-        "danger": "高危",
-        "black": "黑名单",
-    }.get(risk_level, risk_level or "未知")
-
-    basis.append(
-        f"主体信任等级为“{trust_cn}”，风险等级为“{risk_cn}”。"
-    )
-
+    trust_cn = {'trusted': '可信', 'risky': '存疑', 'black': '黑名单', 'blacklist': '黑名单', 'unknown': '未知'}.get(trust_level, trust_level or '未知')
+    risk_cn = {'normal': '正常', 'warning': '预警', 'danger': '高危', 'black': '黑名单'}.get(risk_level, risk_level or '未知')
+    basis.append(f'主体信任等级为“{trust_cn}”，风险等级为“{risk_cn}”。')
     if event_count > 0:
-        basis.append(
-            f"当前共关联 {event_count} 条信誉事件，其中高影响事件 {high_impact_count} 条。"
-        )
+        basis.append(f'当前共关联 {event_count} 条信誉事件，其中高影响事件 {high_impact_count} 条。')
     else:
-        basis.append(
-            "当前尚未关联信誉事件，主体风险标记缺少事件证据支撑。"
-        )
-
+        basis.append('当前尚未关联信誉事件，主体风险标记缺少事件证据支撑。')
     if severe_event_count > 0:
-        basis.append(
-            f"关联事件中包含 {severe_event_count} 条严重或极严重事件。"
-        )
-
+        basis.append(f'关联事件中包含 {severe_event_count} 条严重或极严重事件。')
     if verified_event_count > 0:
-        basis.append(
-            f"已有 {verified_event_count} 条事件完成核实。"
-        )
-
+        basis.append(f'已有 {verified_event_count} 条事件完成核实。')
     if disputed_event_count > 0:
-        basis.append(
-            f"另有 {disputed_event_count} 条事件仍处于争议状态。"
-        )
-
+        basis.append(f'另有 {disputed_event_count} 条事件仍处于争议状态。')
     if event_count == 0:
-        evidence_gaps.append(
-            "尚无关联信誉事件，无法核对风险标记的具体事实依据。"
-        )
-
+        evidence_gaps.append('尚无关联信誉事件，无法核对风险标记的具体事实依据。')
     if high_impact_count > 0 and verified_event_count == 0:
-        evidence_gaps.append(
-            "存在高影响事件，但目前没有已核实事件，结论仍需人工确认。"
-        )
-
+        evidence_gaps.append('存在高影响事件，但目前没有已核实事件，结论仍需人工确认。')
     if disputed_event_count > 0:
-        evidence_gaps.append(
-            f"存在 {disputed_event_count} 条争议事件，不能单独作为最终处置依据。"
-        )
-
-    if not (row["game_id"] or "").strip():
-        evidence_gaps.append(
-            "主体游戏编号缺失，存在同名或身份误判风险。"
-        )
-
+        evidence_gaps.append(f'存在 {disputed_event_count} 条争议事件，不能单独作为最终处置依据。')
+    if not (row['game_id'] or '').strip():
+        evidence_gaps.append('主体游戏编号缺失，存在同名或身份误判风险。')
     if black_mark:
-        comprehensive_assessment = {
-            "level": "极高风险",
-            "title": "黑名单综合研判",
-            "summary": "该主体已经具有明确黑名单标记，应当作为最高优先级风险对象管理。",
-            "actions": [
-                "暂停直接吸纳、合作、回流和关键资源分配。",
-                "核对游戏编号、曾用名和历史关联事件，确认主体身份。",
-                "解除黑名单前必须保留人工复核记录及有效反证。",
-            ],
-            "color": "#dc2626",
-            "bg": "#fef2f2",
-        }
-
+        comprehensive_assessment = {'level': '极高风险', 'title': '黑名单综合研判', 'summary': '该主体已经具有明确黑名单标记，应当作为最高优先级风险对象管理。', 'actions': ['暂停直接吸纳、合作、回流和关键资源分配。', '核对游戏编号、曾用名和历史关联事件，确认主体身份。', '解除黑名单前必须保留人工复核记录及有效反证。'], 'color': '#dc2626', 'bg': '#fef2f2'}
     elif high_risk_mark and severe_verified_count > 0:
-        comprehensive_assessment = {
-            "level": "重点风险",
-            "title": "严重事件已印证风险",
-            "summary": "该主体的高风险标记已经被已核实的严重事件进一步印证，建议纳入重点风险管理。",
-            "actions": [
-                "限制关键权限或重要管理岗位安排。",
-                "优先复核已核实的严重事件和责任关系。",
-                "后续招募、合作或回流必须由管理层人工确认。",
-            ],
-            "color": "#dc2626",
-            "bg": "#fef2f2",
-        }
-
+        comprehensive_assessment = {'level': '重点风险', 'title': '严重事件已印证风险', 'summary': '该主体的高风险标记已经被已核实的严重事件进一步印证，建议纳入重点风险管理。', 'actions': ['限制关键权限或重要管理岗位安排。', '优先复核已核实的严重事件和责任关系。', '后续招募、合作或回流必须由管理层人工确认。'], 'color': '#dc2626', 'bg': '#fef2f2'}
     elif high_risk_mark:
-        comprehensive_assessment = {
-            "level": "高危复核",
-            "title": "高风险标记待进一步核实",
-            "summary": "该主体存在危险或存疑标记，但仍需结合事件证据和核实状态形成最终结论。",
-            "actions": [
-                "查看全部关联事件及主体责任关系。",
-                "补充游戏编号、曾用名和身份核验资料。",
-                "复核完成前保持观察并限制关键权限。",
-            ],
-            "color": "#f97316",
-            "bg": "#fff7ed",
-        }
-
+        comprehensive_assessment = {'level': '高危复核', 'title': '高风险标记待进一步核实', 'summary': '该主体存在危险或存疑标记，但仍需结合事件证据和核实状态形成最终结论。', 'actions': ['查看全部关联事件及主体责任关系。', '补充游戏编号、曾用名和身份核验资料。', '复核完成前保持观察并限制关键权限。'], 'color': '#f97316', 'bg': '#fff7ed'}
     elif severe_verified_count > 0:
-        comprehensive_assessment = {
-            "level": "高影响风险",
-            "title": "存在已核实严重事件",
-            "summary": "该主体虽然没有直接高危标记，但关联了已核实的严重事件，不能按普通主体处理。",
-            "actions": [
-                "核对主体在严重事件中的责任角色。",
-                "根据责任程度考虑调整主体风险等级。",
-                "在管理决策中保留高影响事件提示。",
-            ],
-            "color": "#f97316",
-            "bg": "#fff7ed",
-        }
-
+        comprehensive_assessment = {'level': '高影响风险', 'title': '存在已核实严重事件', 'summary': '该主体虽然没有直接高危标记，但关联了已核实的严重事件，不能按普通主体处理。', 'actions': ['核对主体在严重事件中的责任角色。', '根据责任程度考虑调整主体风险等级。', '在管理决策中保留高影响事件提示。'], 'color': '#f97316', 'bg': '#fff7ed'}
     elif disputed_event_count > 0 and verified_event_count == 0:
-        comprehensive_assessment = {
-            "level": "争议待定",
-            "title": "当前证据尚未形成稳定结论",
-            "summary": "该主体关联的事件仍以争议记录为主，不宜直接升级为最终风险处置。",
-            "actions": [
-                "补充不同来源的证据和反证材料。",
-                "记录争议双方陈述及核实过程。",
-                "事件完成复核后重新进行综合研判。",
-            ],
-            "color": "#d97706",
-            "bg": "#fffbeb",
-        }
-
+        comprehensive_assessment = {'level': '争议待定', 'title': '当前证据尚未形成稳定结论', 'summary': '该主体关联的事件仍以争议记录为主，不宜直接升级为最终风险处置。', 'actions': ['补充不同来源的证据和反证材料。', '记录争议双方陈述及核实过程。', '事件完成复核后重新进行综合研判。'], 'color': '#d97706', 'bg': '#fffbeb'}
     elif warning_mark or high_impact_count > 0:
-        comprehensive_assessment = {
-            "level": "持续观察",
-            "title": "存在需要持续关注的风险信号",
-            "summary": "该主体存在预警标记或高影响事件，但现阶段尚不足以直接列为高危主体。",
-            "actions": [
-                "持续补充后续行为和事件记录。",
-                "重点关注是否出现重复负面事件。",
-                "出现新的严重证据时及时升级风险等级。",
-            ],
-            "color": "#d97706",
-            "bg": "#fffbeb",
-        }
-
+        comprehensive_assessment = {'level': '持续观察', 'title': '存在需要持续关注的风险信号', 'summary': '该主体存在预警标记或高影响事件，但现阶段尚不足以直接列为高危主体。', 'actions': ['持续补充后续行为和事件记录。', '重点关注是否出现重复负面事件。', '出现新的严重证据时及时升级风险等级。'], 'color': '#d97706', 'bg': '#fffbeb'}
     elif event_count == 0:
-        comprehensive_assessment = {
-            "level": "证据不足",
-            "title": "主体档案尚未形成证据闭环",
-            "summary": "当前没有关联事件，无法仅凭主体基础标记形成可靠的综合结论。",
-            "actions": [
-                "至少补充一条可核实的关联事件。",
-                "完善主体游戏编号、曾用名和来源信息。",
-                "证据补齐前仅作为基础档案保留。",
-            ],
-            "color": "#2563eb",
-            "bg": "#eff6ff",
-        }
-
+        comprehensive_assessment = {'level': '证据不足', 'title': '主体档案尚未形成证据闭环', 'summary': '当前没有关联事件，无法仅凭主体基础标记形成可靠的综合结论。', 'actions': ['至少补充一条可核实的关联事件。', '完善主体游戏编号、曾用名和来源信息。', '证据补齐前仅作为基础档案保留。'], 'color': '#2563eb', 'bg': '#eff6ff'}
     else:
-        comprehensive_assessment = {
-            "level": "一般记录",
-            "title": "暂未发现明显综合风险",
-            "summary": "该主体当前没有明显高风险标记，现有事件也未形成严重风险组合。",
-            "actions": [
-                "继续保持主体资料和事件关系完整。",
-                "如后续出现新的高影响事件，再重新评估。",
-            ],
-            "color": "#16a34a",
-            "bg": "#ecfdf5",
-        }
-
+        comprehensive_assessment = {'level': '一般记录', 'title': '暂未发现明显综合风险', 'summary': '该主体当前没有明显高风险标记，现有事件也未形成严重风险组合。', 'actions': ['继续保持主体资料和事件关系完整。', '如后续出现新的高影响事件，再重新评估。'], 'color': '#16a34a', 'bg': '#ecfdf5'}
     if not evidence_gaps:
-        evidence_gaps.append(
-            "当前主体身份与事件证据基本完整，暂未发现明显证据缺口。"
-        )
-
-    comprehensive_assessment.update({
-        "basis": basis,
-        "evidence_gaps": evidence_gaps,
-        "event_count": event_count,
-        "high_impact_count": high_impact_count,
-        "severe_event_count": severe_event_count,
-        "severe_verified_count": severe_verified_count,
-        "verified_event_count": verified_event_count,
-        "disputed_event_count": disputed_event_count,
-        "archived_event_count": archived_event_count,
-        "evidence_label": evidence_label,
-        "evidence_strength": evidence_strength,
-    })
-
+        evidence_gaps.append('当前主体身份与事件证据基本完整，暂未发现明显证据缺口。')
+    comprehensive_assessment.update({'basis': basis, 'evidence_gaps': evidence_gaps, 'event_count': event_count, 'high_impact_count': high_impact_count, 'severe_event_count': severe_event_count, 'severe_verified_count': severe_verified_count, 'verified_event_count': verified_event_count, 'disputed_event_count': disputed_event_count, 'archived_event_count': archived_event_count, 'evidence_label': evidence_label, 'evidence_strength': evidence_strength})
     conn.close()
-
-    return render_template(
-        "reputation_subject_detail.html",
-        row=row,
-        events=events,
-        evidence_summary=evidence_summary,
-        disposal_advice=disposal_advice,
-        comprehensive_assessment=comprehensive_assessment,
-        return_to=return_to,
-        title="信誉主体详情",
-    )
+    return render_template('reputation_subject_detail.html', row=row, events=events, evidence_summary=evidence_summary, disposal_advice=disposal_advice, comprehensive_assessment=comprehensive_assessment, return_to=return_to, title='信誉主体详情')
 
 
 # =========================
@@ -13355,168 +12919,58 @@ def v156_reputation_subject_detail(subject_id):
 # =========================
 
 @app.route("/reputation/events/<int:event_id>")
+@app.route('/reputation/events/<int:event_id>')
 def v156_reputation_event_detail(event_id):
     import sqlite3
     from flask import request, render_template, abort
-    from services.v156_reputation_store import (
-        get_reputation_event,
-        list_reputation_event_relations,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import get_reputation_event_scoped, list_reputation_event_relations_scoped
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    row = get_reputation_event(conn, event_id)
-
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    row = get_reputation_event_scoped(conn, event_id, battle_id=battle_id)
     if not row:
         conn.close()
         abort(404)
-
-    return_to = _v157_reputation_return_to(
-        request.args.get("return_to", "")
-    )
-
-    relations = list_reputation_event_relations(conn, event_id)
-
-
-    # V15.6-A20 event detail subject summary
-    subject_summary = {
-        "subject_count": 0,
-        "high_risk_count": 0,
-        "main_subjects": "",
-        "is_complete": False,
-    }
-
-    summary_row = conn.execute(
-        """
-        SELECT
-            COUNT(DISTINCT s.id) AS subject_count,
-            SUM(
-                CASE
-                    WHEN s.risk_level IN ('danger', 'black')
-                      OR s.trust_level IN ('black', 'risky')
-                    THEN 1
-                    ELSE 0
-                END
-            ) AS high_risk_count,
-            GROUP_CONCAT(
-                IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),
-                '；'
-            ) AS main_subjects
-        FROM v156_reputation_event_relations r
-        LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id
-        WHERE r.event_id = ?
-          AND s.id IS NOT NULL
-        """,
-        (event_id,),
-    ).fetchone()
-
+    return_to = _v157_reputation_return_to(request.args.get('return_to', ''))
+    relations = list_reputation_event_relations_scoped(conn, event_id, battle_id=battle_id)
+    subject_summary = {'subject_count': 0, 'high_risk_count': 0, 'main_subjects': '', 'is_complete': False}
+    summary_row = scoped_conn.execute("\n        SELECT\n            COUNT(DISTINCT s.id) AS subject_count,\n            SUM(\n                CASE\n                    WHEN s.risk_level IN ('danger', 'black')\n                      OR s.trust_level IN ('black', 'risky')\n                    THEN 1\n                    ELSE 0\n                END\n            ) AS high_risk_count,\n            GROUP_CONCAT(\n                IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),\n                '；'\n            ) AS main_subjects\n        FROM v156_reputation_event_relations r\n        LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id\n        WHERE r.event_id = ?\n          AND s.id IS NOT NULL\n        ", (event_id,)).fetchone()
     if summary_row:
-        subject_summary["subject_count"] = int(summary_row["subject_count"] or 0)
-        subject_summary["high_risk_count"] = int(summary_row["high_risk_count"] or 0)
-        subject_summary["main_subjects"] = summary_row["main_subjects"] or ""
-        subject_summary["is_complete"] = subject_summary["subject_count"] > 0
-
-    # V15.7-A3 event impact assessment
-    impact_level = (row["impact_level"] or "").strip()
-    event_status = (row["status"] or "").strip()
-    subject_count = int(subject_summary.get("subject_count") or 0)
-    high_risk_count = int(subject_summary.get("high_risk_count") or 0)
-
+        subject_summary['subject_count'] = int(summary_row['subject_count'] or 0)
+        subject_summary['high_risk_count'] = int(summary_row['high_risk_count'] or 0)
+        subject_summary['main_subjects'] = summary_row['main_subjects'] or ''
+        subject_summary['is_complete'] = subject_summary['subject_count'] > 0
+    impact_level = (row['impact_level'] or '').strip()
+    event_status = (row['status'] or '').strip()
+    subject_count = int(subject_summary.get('subject_count') or 0)
+    high_risk_count = int(subject_summary.get('high_risk_count') or 0)
     if subject_count == 0:
-        impact_assessment = {
-            "level": "证据待补",
-            "title": "关联主体缺失",
-            "summary": "当前事件尚未关联信誉主体，证据链不完整，暂不适合形成最终风险结论。",
-            "actions": [
-                "优先补充涉及的玩家、账号、同盟或团体。",
-                "明确各主体在事件中的责任或关联角色。",
-                "补齐关联后重新评估事件影响。",
-            ],
-            "color": "#dc2626",
-            "bg": "#fef2f2",
-        }
-
-    elif event_status == "disputed":
-        impact_assessment = {
-            "level": "争议复核",
-            "title": "事件结论存在争议",
-            "summary": "该事件仍处于争议状态，不建议直接作为最终处置依据。",
-            "actions": [
-                "补充不同来源的证据或说明。",
-                "记录争议双方的陈述和反证。",
-                "完成复核后再调整事件状态及相关主体风险等级。",
-            ],
-            "color": "#f59e0b",
-            "bg": "#fffbeb",
-        }
-
-    elif impact_level in ("severe", "critical") and high_risk_count > 0:
-        impact_assessment = {
-            "level": "重点风险",
-            "title": "重点风险事件",
-            "summary": "该事件影响严重且关联高风险主体，建议列入重点风险档案并优先人工复核。",
-            "actions": [
-                "核对事件证据、时间和责任关系是否完整。",
-                "优先查看关联高风险主体的历史档案。",
-                "后续招募、回流或管理决策时重点提示。",
-            ],
-            "color": "#dc2626",
-            "bg": "#fef2f2",
-        }
-
-    elif impact_level in ("severe", "critical"):
-        impact_assessment = {
-            "level": "高影响",
-            "title": "高影响事件",
-            "summary": "该事件影响等级较高，建议保留完整证据并进行人工复核。",
-            "actions": [
-                "确认事件摘要和证据备注是否充分。",
-                "复核关联主体及其责任关系是否完整。",
-                "复核后决定是否提升相关主体风险等级。",
-            ],
-            "color": "#f97316",
-            "bg": "#fff7ed",
-        }
-
-    elif impact_level == "high" and high_risk_count > 0:
-        impact_assessment = {
-            "level": "风险复核",
-            "title": "高风险关联事件",
-            "summary": "该事件影响较高，并关联高风险主体，建议持续关注并人工复核。",
-            "actions": [
-                "检查高风险主体是否存在重复负面记录。",
-                "保留本事件作为后续风险判断依据。",
-                "如出现新的严重证据，再升级事件等级。",
-            ],
-            "color": "#f97316",
-            "bg": "#fff7ed",
-        }
-
+        impact_assessment = {'level': '证据待补', 'title': '关联主体缺失', 'summary': '当前事件尚未关联信誉主体，证据链不完整，暂不适合形成最终风险结论。', 'actions': ['优先补充涉及的玩家、账号、同盟或团体。', '明确各主体在事件中的责任或关联角色。', '补齐关联后重新评估事件影响。'], 'color': '#dc2626', 'bg': '#fef2f2'}
+    elif event_status == 'disputed':
+        impact_assessment = {'level': '争议复核', 'title': '事件结论存在争议', 'summary': '该事件仍处于争议状态，不建议直接作为最终处置依据。', 'actions': ['补充不同来源的证据或说明。', '记录争议双方的陈述和反证。', '完成复核后再调整事件状态及相关主体风险等级。'], 'color': '#f59e0b', 'bg': '#fffbeb'}
+    elif impact_level in ('severe', 'critical') and high_risk_count > 0:
+        impact_assessment = {'level': '重点风险', 'title': '重点风险事件', 'summary': '该事件影响严重且关联高风险主体，建议列入重点风险档案并优先人工复核。', 'actions': ['核对事件证据、时间和责任关系是否完整。', '优先查看关联高风险主体的历史档案。', '后续招募、回流或管理决策时重点提示。'], 'color': '#dc2626', 'bg': '#fef2f2'}
+    elif impact_level in ('severe', 'critical'):
+        impact_assessment = {'level': '高影响', 'title': '高影响事件', 'summary': '该事件影响等级较高，建议保留完整证据并进行人工复核。', 'actions': ['确认事件摘要和证据备注是否充分。', '复核关联主体及其责任关系是否完整。', '复核后决定是否提升相关主体风险等级。'], 'color': '#f97316', 'bg': '#fff7ed'}
+    elif impact_level == 'high' and high_risk_count > 0:
+        impact_assessment = {'level': '风险复核', 'title': '高风险关联事件', 'summary': '该事件影响较高，并关联高风险主体，建议持续关注并人工复核。', 'actions': ['检查高风险主体是否存在重复负面记录。', '保留本事件作为后续风险判断依据。', '如出现新的严重证据，再升级事件等级。'], 'color': '#f97316', 'bg': '#fff7ed'}
     else:
-        impact_assessment = {
-            "level": "历史留档",
-            "title": "普通信誉事件",
-            "summary": "该事件目前适合作为历史信誉记录保留，暂无需升级处置。",
-            "actions": [
-                "保持事件资料和关联主体完整。",
-                "如出现新证据，再重新评估影响等级。",
-            ],
-            "color": "#16a34a",
-            "bg": "#ecfdf5",
-        }
-
+        impact_assessment = {'level': '历史留档', 'title': '普通信誉事件', 'summary': '该事件目前适合作为历史信誉记录保留，暂无需升级处置。', 'actions': ['保持事件资料和关联主体完整。', '如出现新证据，再重新评估影响等级。'], 'color': '#16a34a', 'bg': '#ecfdf5'}
     conn.close()
-
-    return render_template(
-        "reputation_event_detail.html",
-        row=row,
-        relations=relations,
-        return_to=return_to,
-        title="信誉事件详情",
-        subject_summary=subject_summary,
-        impact_assessment=impact_assessment,
-    )
+    return render_template('reputation_event_detail.html', row=row, relations=relations, return_to=return_to, title='信誉事件详情', subject_summary=subject_summary, impact_assessment=impact_assessment)
 
 
 # =========================
@@ -13622,23 +13076,30 @@ def v156_reputation_duplicates():
 # =========================
 
 @app.route("/reputation/merge-logs")
+@app.route('/reputation/merge-logs')
 def v156_reputation_merge_logs():
     import sqlite3
     from flask import render_template
-    from services.v156_reputation_store import list_reputation_merge_logs
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v156_reputation_store import list_reputation_merge_logs_scoped
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    rows = list_reputation_merge_logs(conn, limit=100)
-
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    rows = list_reputation_merge_logs_scoped(conn, limit=100, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "reputation_merge_logs.html",
-        rows=rows,
-        title="主体合并日志",
-    )
+    return render_template('reputation_merge_logs.html', rows=rows, title='主体合并日志')
 
 
 # =========================

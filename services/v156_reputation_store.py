@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 import sqlite3
 from typing import Any
@@ -977,200 +978,52 @@ def _v156_pick_worse_level(a: str | None, b: str | None, order: list[str]) -> st
     return a or b
 
 
-def merge_reputation_subjects(
-    conn: sqlite3.Connection,
-    keep_id: int,
-    merge_id: int,
-) -> dict[str, Any]:
+def merge_reputation_subjects(conn: sqlite3.Connection, keep_id: int, merge_id: int, *, battle_id: int | None=None) -> dict[str, Any]:
     ensure_reputation_tables(conn)
-    # V15.6-A12 merge audit init
     ensure_reputation_merge_log_table(conn)
-
     if not keep_id or not merge_id:
-        return {"ok": False, "message": "缺少主体 ID。"}
-
+        return {'ok': False, 'message': '缺少主体 ID。'}
     if keep_id == merge_id:
-        return {"ok": False, "message": "保留主体和被合并主体不能相同。"}
-
-    keep = conn.execute(
-        "SELECT * FROM v156_reputation_subjects WHERE id=?",
-        (keep_id,),
-    ).fetchone()
-
-    merge = conn.execute(
-        "SELECT * FROM v156_reputation_subjects WHERE id=?",
-        (merge_id,),
-    ).fetchone()
-
+        return {'ok': False, 'message': '保留主体和被合并主体不能相同。'}
+    keep = conn.execute('SELECT * FROM v156_reputation_subjects WHERE id=?', (keep_id,)).fetchone()
+    merge = conn.execute('SELECT * FROM v156_reputation_subjects WHERE id=?', (merge_id,)).fetchone()
     if not keep or not merge:
-        return {"ok": False, "message": "主体不存在，无法合并。"}
-
-    # V15.6-A12 merge audit relation stats
-    merge_relation_total = int(
-        conn.execute(
-            "SELECT COUNT(*) FROM v156_reputation_event_relations WHERE subject_id=?",
-            (merge_id,),
-        ).fetchone()[0] or 0
-    )
-
-    duplicate_relation_total = int(
-        conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM v156_reputation_event_relations mr
-            INNER JOIN v156_reputation_event_relations kr
-                ON kr.event_id = mr.event_id
-               AND kr.subject_id = ?
-            WHERE mr.subject_id = ?
-            """,
-            (keep_id, merge_id),
-        ).fetchone()[0] or 0
-    )
-
+        return {'ok': False, 'message': '主体不存在，无法合并。'}
+    merge_relation_total = int(conn.execute('SELECT COUNT(*) FROM v156_reputation_event_relations WHERE subject_id=?', (merge_id,)).fetchone()[0] or 0)
+    duplicate_relation_total = int(conn.execute('\n            SELECT COUNT(*)\n            FROM v156_reputation_event_relations mr\n            INNER JOIN v156_reputation_event_relations kr\n                ON kr.event_id = mr.event_id\n               AND kr.subject_id = ?\n            WHERE mr.subject_id = ?\n            ', (keep_id, merge_id)).fetchone()[0] or 0)
     moved_relation_total = max(0, merge_relation_total - duplicate_relation_total)
-
-    keep_name = (keep["display_name"] or "").strip()
-    merge_name = (merge["display_name"] or "").strip()
-
+    keep_name = (keep['display_name'] or '').strip()
+    merge_name = (merge['display_name'] or '').strip()
     alias_items: list[str] = []
-
-    for item in _v156_split_aliases(keep["alias_names"]):
+    for item in _v156_split_aliases(keep['alias_names']):
         if item not in alias_items:
             alias_items.append(item)
-
-    if merge_name and merge_name != keep_name and merge_name not in alias_items:
+    if merge_name and merge_name != keep_name and (merge_name not in alias_items):
         alias_items.append(merge_name)
-
-    for item in _v156_split_aliases(merge["alias_names"]):
-        if item and item != keep_name and item not in alias_items:
+    for item in _v156_split_aliases(merge['alias_names']):
+        if item and item != keep_name and (item not in alias_items):
             alias_items.append(item)
-
-    merged_alias_names = ",".join(alias_items)
-
-    merged_game_id = (keep["game_id"] or "").strip() or (merge["game_id"] or "").strip()
-
-    merged_trust_level = _v156_pick_worse_level(
-        keep["trust_level"],
-        merge["trust_level"],
-        ["unknown", "trusted", "risky", "black"],
-    )
-
-    merged_risk_level = _v156_pick_worse_level(
-        keep["risk_level"],
-        merge["risk_level"],
-        ["normal", "warning", "danger", "black"],
-    )
-
-    keep_note = (keep["note"] or "").strip()
-    merge_note = (merge["note"] or "").strip()
-
-    merge_info = f"已合并主体 #{merge_id}"
+    merged_alias_names = ','.join(alias_items)
+    merged_game_id = (keep['game_id'] or '').strip() or (merge['game_id'] or '').strip()
+    merged_trust_level = _v156_pick_worse_level(keep['trust_level'], merge['trust_level'], ['unknown', 'trusted', 'risky', 'black'])
+    merged_risk_level = _v156_pick_worse_level(keep['risk_level'], merge['risk_level'], ['normal', 'warning', 'danger', 'black'])
+    keep_note = (keep['note'] or '').strip()
+    merge_note = (merge['note'] or '').strip()
+    merge_info = f'已合并主体 #{merge_id}'
     if merge_name:
-        merge_info += f"：{merge_name}"
-    if merge["game_id"]:
+        merge_info += f'：{merge_name}'
+    if merge['game_id']:
         merge_info += f"｜{merge['game_id']}"
-
     note_parts = [x for x in [keep_note, merge_note, merge_info] if x]
-    merged_note = "\n\n".join(note_parts)
-
-    # 先迁移不重复的事件关联
-    conn.execute(
-        """
-        UPDATE v156_reputation_event_relations
-        SET subject_id=?
-        WHERE subject_id=?
-          AND event_id NOT IN (
-              SELECT event_id
-              FROM v156_reputation_event_relations
-              WHERE subject_id=?
-          )
-        """,
-        (keep_id, merge_id, keep_id),
-    )
-
-    # 删除迁移后仍然剩下的重复关联，避免同一事件同一主体重复绑定
-    conn.execute(
-        """
-        DELETE FROM v156_reputation_event_relations
-        WHERE subject_id=?
-        """,
-        (merge_id,),
-    )
-
-    conn.execute(
-        """
-        UPDATE v156_reputation_subjects
-        SET
-            game_id=?,
-            alias_names=?,
-            trust_level=?,
-            risk_level=?,
-            note=?,
-            updated_at=datetime('now','localtime')
-        WHERE id=?
-        """,
-        (
-            merged_game_id,
-            merged_alias_names,
-            merged_trust_level,
-            merged_risk_level,
-            merged_note,
-            keep_id,
-        ),
-    )
-
-    conn.execute(
-        """
-        DELETE FROM v156_reputation_subjects
-        WHERE id=?
-        """,
-        (merge_id,),
-    )
-
-    # V15.6-A12 write merge audit log
+    merged_note = '\n\n'.join(note_parts)
+    conn.execute('\n        UPDATE v156_reputation_event_relations\n        SET subject_id=?\n        WHERE subject_id=?\n          AND event_id NOT IN (\n              SELECT event_id\n              FROM v156_reputation_event_relations\n              WHERE subject_id=?\n          )\n        ', (keep_id, merge_id, keep_id))
+    conn.execute('\n        DELETE FROM v156_reputation_event_relations\n        WHERE subject_id=?\n        ', (merge_id,))
+    conn.execute("\n        UPDATE v156_reputation_subjects\n        SET\n            game_id=?,\n            alias_names=?,\n            trust_level=?,\n            risk_level=?,\n            note=?,\n            updated_at=datetime('now','localtime')\n        WHERE id=?\n        ", (merged_game_id, merged_alias_names, merged_trust_level, merged_risk_level, merged_note, keep_id))
+    conn.execute('\n        DELETE FROM v156_reputation_subjects\n        WHERE id=?\n        ', (merge_id,))
     import json
-
-    conn.execute(
-        """
-        INSERT INTO v156_reputation_merge_logs (
-            keep_subject_id,
-            keep_display_name,
-            keep_game_id,
-            merge_subject_id,
-            merge_display_name,
-            merge_game_id,
-            moved_relations_count,
-            removed_duplicate_relations_count,
-            keep_snapshot,
-            merge_snapshot,
-            result_message,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
-        """,
-        (
-            keep_id,
-            keep_name,
-            merged_game_id,
-            merge_id,
-            merge_name,
-            (merge["game_id"] or "").strip(),
-            moved_relation_total,
-            duplicate_relation_total,
-            json.dumps(dict(keep), ensure_ascii=False),
-            json.dumps(dict(merge), ensure_ascii=False),
-            f"已合并主体 #{merge_id} 到 #{keep_id}",
-        ),
-    )
-
+    conn.execute("\n        INSERT INTO v156_reputation_merge_logs (battle_id,\n\n            keep_subject_id,\n            keep_display_name,\n            keep_game_id,\n            merge_subject_id,\n            merge_display_name,\n            merge_game_id,\n            moved_relations_count,\n            removed_duplicate_relations_count,\n            keep_snapshot,\n            merge_snapshot,\n            result_message,\n            created_at\n        )\n        VALUES (?,\n?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))\n        ", (battle_id, keep_id, keep_name, merged_game_id, merge_id, merge_name, (merge['game_id'] or '').strip(), moved_relation_total, duplicate_relation_total, json.dumps(dict(keep), ensure_ascii=False), json.dumps(dict(merge), ensure_ascii=False), f'已合并主体 #{merge_id} 到 #{keep_id}'))
     conn.commit()
-
-    return {
-        "ok": True,
-        "message": f"已合并主体 #{merge_id} 到 #{keep_id}。",
-        "keep_id": keep_id,
-        "merge_id": merge_id,
-    }
+    return {'ok': True, 'message': f'已合并主体 #{merge_id} 到 #{keep_id}。', 'keep_id': keep_id, 'merge_id': merge_id}
 
 
 # =========================
@@ -1178,25 +1031,8 @@ def merge_reputation_subjects(
 # =========================
 
 def ensure_reputation_merge_log_table(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v156_reputation_merge_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            keep_subject_id INTEGER,
-            keep_display_name TEXT,
-            keep_game_id TEXT,
-            merge_subject_id INTEGER,
-            merge_display_name TEXT,
-            merge_game_id TEXT,
-            moved_relations_count INTEGER DEFAULT 0,
-            removed_duplicate_relations_count INTEGER DEFAULT 0,
-            keep_snapshot TEXT,
-            merge_snapshot TEXT,
-            result_message TEXT,
-            created_at TEXT
-        )
-        """
-    )
+    conn.execute('\n        CREATE TABLE IF NOT EXISTS v156_reputation_merge_logs (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            battle_id INTEGER,\n            keep_subject_id INTEGER,\n            keep_display_name TEXT,\n            keep_game_id TEXT,\n            merge_subject_id INTEGER,\n            merge_display_name TEXT,\n            merge_game_id TEXT,\n            moved_relations_count INTEGER DEFAULT 0,\n            removed_duplicate_relations_count INTEGER DEFAULT 0,\n            keep_snapshot TEXT,\n            merge_snapshot TEXT,\n            result_message TEXT,\n            created_at TEXT\n        )\n        ')
+    conn.execute('\n        CREATE INDEX IF NOT EXISTS\n        idx_v156_reputation_merge_logs_battle_id\n        ON v156_reputation_merge_logs(battle_id)\n        ')
     conn.commit()
 
 
@@ -3988,4 +3824,214 @@ def merge_reputation_subjects_scoped(
         conn,
         keep_id=keep_id,
         merge_id=merge_id,
+    )
+
+
+# ============================================================
+# V15.5-A5-P0-S09 battle-scoped reputation read/report adapter
+# ============================================================
+
+class _V155S09BattleScopedConnection:
+    _TENANT_TABLES = (
+        "v156_reputation_subjects",
+        "v156_reputation_events",
+        "v156_reputation_event_relations",
+        "v157_reputation_tasks",
+        "v156_reputation_merge_logs",
+    )
+
+    def __init__(self, conn, battle_id: int):
+        self._conn = conn
+        self._battle_id = _v155_reputation_positive_battle_id(
+            battle_id
+        )
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    @staticmethod
+    def _is_read_statement(sql: str) -> bool:
+        text = str(sql or "").lstrip()
+        return bool(
+            re.match(
+                r"^(SELECT|WITH)\b",
+                text,
+                flags=re.I,
+            )
+        )
+
+    def _scope_select(self, sql: str, params=()):
+        text = str(sql or "")
+
+        if not self._is_read_statement(text):
+            return text, params
+
+        tables = [
+            table
+            for table in self._TENANT_TABLES
+            if re.search(
+                r"(?<![A-Za-z0-9_])"
+                + re.escape(table)
+                + r"(?![A-Za-z0-9_])",
+                text,
+                flags=re.I,
+            )
+        ]
+
+        if not tables:
+            return text, params
+
+        stripped = text.lstrip()
+
+        if re.match(
+            r"^WITH\b",
+            stripped,
+            flags=re.I,
+        ):
+            raise RuntimeError(
+                "P0-S09 scoped adapter refuses nested WITH "
+                "without explicit review"
+            )
+
+        ctes = []
+
+        for table in tables:
+            ctes.append(
+                f"{table} AS ("
+                f"SELECT * FROM main.{table} "
+                f"WHERE battle_id=?"
+                f")"
+            )
+
+        scoped_sql = (
+            "WITH "
+            + ", ".join(ctes)
+            + " "
+            + stripped
+        )
+
+        if params is None:
+            params = ()
+
+        if isinstance(
+            params,
+            tuple,
+        ):
+            scoped_params = (
+                tuple(
+                    self._battle_id
+                    for _ in tables
+                )
+                + params
+            )
+
+        elif isinstance(
+            params,
+            list,
+        ):
+            scoped_params = (
+                [
+                    self._battle_id
+                    for _ in tables
+                ]
+                + params
+            )
+
+        else:
+            raise TypeError(
+                "P0-S09 scoped adapter only accepts "
+                "positional tuple/list SQL bindings"
+            )
+
+        return (
+            scoped_sql,
+            scoped_params,
+        )
+
+    def execute(self, sql, params=()):
+        scoped_sql, scoped_params = self._scope_select(
+            sql,
+            params,
+        )
+
+        return self._conn.execute(
+            scoped_sql,
+            scoped_params,
+        )
+
+
+def make_reputation_battle_scoped_connection(
+    conn,
+    battle_id: int,
+):
+    return _V155S09BattleScopedConnection(
+        conn,
+        battle_id,
+    )
+
+
+def build_reputation_home_report_scoped(
+    conn,
+    *,
+    battle_id: int,
+):
+    scoped_conn = make_reputation_battle_scoped_connection(
+        conn,
+        battle_id,
+    )
+
+    return build_reputation_home_report(
+        scoped_conn
+    )
+
+
+def search_reputation_scoped(
+    conn,
+    q: str,
+    *,
+    battle_id: int,
+):
+    scoped_conn = make_reputation_battle_scoped_connection(
+        conn,
+        battle_id,
+    )
+
+    return search_reputation(
+        scoped_conn,
+        q,
+    )
+
+
+def list_reputation_events_by_subject_scoped(
+    conn,
+    subject_id: int,
+    *,
+    battle_id: int,
+):
+    scoped_conn = make_reputation_battle_scoped_connection(
+        conn,
+        battle_id,
+    )
+
+    return list_reputation_events_by_subject(
+        scoped_conn,
+        subject_id,
+    )
+
+
+def list_reputation_merge_logs_scoped(
+    conn,
+    *args,
+    battle_id: int,
+    **kwargs,
+):
+    scoped_conn = make_reputation_battle_scoped_connection(
+        conn,
+        battle_id,
+    )
+
+    return list_reputation_merge_logs(
+        scoped_conn,
+        *args,
+        **kwargs,
     )
