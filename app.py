@@ -12053,8 +12053,22 @@ def v157_reputation_workbench():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
     report = build_reputation_workbench_report(
-        conn,
+        scoped_conn,
         limit_per_priority=50,
     )
 
@@ -12197,8 +12211,22 @@ def v157_reputation_tasks():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
+    from flask import g, abort
+    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
+    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    try:
+        battle_id = int(_v155_boundary.current_battle_id)
+    except (AttributeError, TypeError, ValueError):
+        abort(403)
+    if battle_id <= 0:
+        abort(403)
+    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
     report = build_reputation_task_report(
-        conn,
+        scoped_conn,
         status=status,
         priority=priority,
         q=q,
