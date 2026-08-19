@@ -25,51 +25,25 @@ def init_archive_tables(conn: sqlite3.Connection) -> None:
     conn.row_factory = sqlite3.Row
 
     conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_archive_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            event_type TEXT DEFAULT '',
-            impact_level TEXT DEFAULT '普通',
-            status TEXT DEFAULT '记录中',
-            related_target TEXT DEFAULT '',
-            description TEXT DEFAULT '',
-            result TEXT DEFAULT '',
-            created_at TEXT DEFAULT '',
-            updated_at TEXT DEFAULT ''
-        )
-        """
+        "\n        CREATE TABLE IF NOT EXISTS v155_archive_events (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            title TEXT NOT NULL,\n            event_type TEXT DEFAULT '',\n            impact_level TEXT DEFAULT '普通',\n            status TEXT DEFAULT '记录中',\n            related_target TEXT DEFAULT '',\n            description TEXT DEFAULT '',\n            result TEXT DEFAULT '',\n            created_at TEXT DEFAULT '',\n            updated_at TEXT DEFAULT '',\n    battle_id INTEGER\n)\n        "
     )
 
     conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_archive_alliances (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            relation_status TEXT DEFAULT '观察',
-            trust_level TEXT DEFAULT 'C',
-            contact_name TEXT DEFAULT '',
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT '',
-            updated_at TEXT DEFAULT ''
-        )
-        """
+        "\n        CREATE TABLE IF NOT EXISTS v155_archive_alliances (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            name TEXT NOT NULL,\n            relation_status TEXT DEFAULT '观察',\n            trust_level TEXT DEFAULT 'C',\n            contact_name TEXT DEFAULT '',\n            notes TEXT DEFAULT '',\n            created_at TEXT DEFAULT '',\n            updated_at TEXT DEFAULT '',\n    battle_id INTEGER\n)\n        "
     )
 
     conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_archive_enemies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            threat_level TEXT DEFAULT '中',
-            activity_level TEXT DEFAULT '未知',
-            tactics TEXT DEFAULT '',
-            core_members TEXT DEFAULT '',
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT '',
-            updated_at TEXT DEFAULT ''
-        )
-        """
+        "\n        CREATE TABLE IF NOT EXISTS v155_archive_enemies (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            name TEXT NOT NULL,\n            threat_level TEXT DEFAULT '中',\n            activity_level TEXT DEFAULT '未知',\n            tactics TEXT DEFAULT '',\n            core_members TEXT DEFAULT '',\n            notes TEXT DEFAULT '',\n            created_at TEXT DEFAULT '',\n            updated_at TEXT DEFAULT '',\n    battle_id INTEGER\n)\n        "
+    )
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_v155_archive_alliances_battle_id ON v155_archive_alliances (battle_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_v155_archive_enemies_battle_id ON v155_archive_enemies (battle_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_v155_archive_events_battle_id ON v155_archive_events (battle_id)"
     )
 
     conn.commit()
@@ -208,17 +182,13 @@ def get_event(conn: sqlite3.Connection, event_id: int) -> Optional[Dict[str, Any
     return dict(row) if row else None
 
 
-def save_event(conn: sqlite3.Connection, data: Dict[str, str]) -> int:
+def save_event(conn: sqlite3.Connection, data: Dict[str, str], battle_id: int) -> int:
     init_archive_tables(conn)
     now = _now()
 
     cur = conn.execute(
-        """
-        INSERT INTO v155_archive_events
-        (title, event_type, impact_level, status, related_target, description, result, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
+        '\n        INSERT INTO v155_archive_events\n        (title, event_type, impact_level, status, related_target, description, result, created_at, updated_at, battle_id)\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n        ',
+        tuple((
             data.get("title", "").strip(),
             data.get("event_type", "").strip(),
             data.get("impact_level", "普通").strip(),
@@ -228,30 +198,19 @@ def save_event(conn: sqlite3.Connection, data: Dict[str, str]) -> int:
             data.get("result", "").strip(),
             now,
             now,
-        ),
+        )) + (battle_id,),
     )
     conn.commit()
     return int(cur.lastrowid)
 
 
-def update_event(conn: sqlite3.Connection, event_id: int, data: Dict[str, str]) -> None:
+def update_event(conn: sqlite3.Connection, event_id: int, data: Dict[str, str], battle_id: int) -> None:
     init_archive_tables(conn)
     now = _now()
 
     conn.execute(
-        """
-        UPDATE v155_archive_events
-        SET title=?,
-            event_type=?,
-            impact_level=?,
-            status=?,
-            related_target=?,
-            description=?,
-            result=?,
-            updated_at=?
-        WHERE id=?
-        """,
-        (
+        '\n        UPDATE v155_archive_events\n        SET title=?,\n            event_type=?,\n            impact_level=?,\n            status=?,\n            related_target=?,\n            description=?,\n            result=?,\n            updated_at=?\n        WHERE id=? AND battle_id = ?',
+        tuple((
             data.get("title", "").strip(),
             data.get("event_type", "").strip(),
             data.get("impact_level", "普通").strip(),
@@ -261,7 +220,7 @@ def update_event(conn: sqlite3.Connection, event_id: int, data: Dict[str, str]) 
             data.get("result", "").strip(),
             now,
             event_id,
-        ),
+        )) + (battle_id,),
     )
     conn.commit()
 
@@ -361,22 +320,13 @@ def get_alliance(conn: sqlite3.Connection, alliance_id: int) -> Optional[Dict[st
     return dict(row) if row else None
 
 
-def update_alliance(conn: sqlite3.Connection, alliance_id: int, data: Dict[str, str]) -> None:
+def update_alliance(conn: sqlite3.Connection, alliance_id: int, data: Dict[str, str], battle_id: int) -> None:
     init_archive_tables(conn)
     now = _now()
 
     conn.execute(
-        """
-        UPDATE v155_archive_alliances
-        SET name=?,
-            relation_status=?,
-            trust_level=?,
-            contact_name=?,
-            notes=?,
-            updated_at=?
-        WHERE id=?
-        """,
-        (
+        '\n        UPDATE v155_archive_alliances\n        SET name=?,\n            relation_status=?,\n            trust_level=?,\n            contact_name=?,\n            notes=?,\n            updated_at=?\n        WHERE id=? AND battle_id = ?',
+        tuple((
             data.get("name", "").strip(),
             data.get("relation_status", "观察").strip(),
             data.get("trust_level", "C").strip(),
@@ -384,7 +334,7 @@ def update_alliance(conn: sqlite3.Connection, alliance_id: int, data: Dict[str, 
             data.get("notes", "").strip(),
             now,
             alliance_id,
-        ),
+        )) + (battle_id,),
     )
     conn.commit()
 
@@ -399,23 +349,13 @@ def get_enemy(conn: sqlite3.Connection, enemy_id: int) -> Optional[Dict[str, Any
     return dict(row) if row else None
 
 
-def update_enemy(conn: sqlite3.Connection, enemy_id: int, data: Dict[str, str]) -> None:
+def update_enemy(conn: sqlite3.Connection, enemy_id: int, data: Dict[str, str], battle_id: int) -> None:
     init_archive_tables(conn)
     now = _now()
 
     conn.execute(
-        """
-        UPDATE v155_archive_enemies
-        SET name=?,
-            threat_level=?,
-            activity_level=?,
-            tactics=?,
-            core_members=?,
-            notes=?,
-            updated_at=?
-        WHERE id=?
-        """,
-        (
+        '\n        UPDATE v155_archive_enemies\n        SET name=?,\n            threat_level=?,\n            activity_level=?,\n            tactics=?,\n            core_members=?,\n            notes=?,\n            updated_at=?\n        WHERE id=? AND battle_id = ?',
+        tuple((
             data.get("name", "").strip(),
             data.get("threat_level", "中").strip(),
             data.get("activity_level", "未知").strip(),
@@ -424,7 +364,7 @@ def update_enemy(conn: sqlite3.Connection, enemy_id: int, data: Dict[str, str]) 
             data.get("notes", "").strip(),
             now,
             enemy_id,
-        ),
+        )) + (battle_id,),
     )
     conn.commit()
 
@@ -437,16 +377,7 @@ def init_archive_relation_tables(conn: sqlite3.Connection) -> None:
     conn.row_factory = sqlite3.Row
 
     conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS v155_archive_event_relations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_id INTEGER NOT NULL,
-            target_type TEXT DEFAULT '',
-            target_name TEXT DEFAULT '',
-            note TEXT DEFAULT '',
-            created_at TEXT DEFAULT ''
-        )
-        """
+        "\n        CREATE TABLE IF NOT EXISTS v155_archive_event_relations (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            event_id INTEGER NOT NULL,\n            target_type TEXT DEFAULT '',\n            target_name TEXT DEFAULT '',\n            note TEXT DEFAULT '',\n            created_at TEXT DEFAULT '',\n    battle_id INTEGER\n)\n        "
     )
 
     conn.execute(
@@ -478,6 +409,10 @@ def init_archive_relation_tables(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_v155_archive_event_relations_game_id
         ON v155_archive_event_relations(target_game_id)
         """
+    )
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_v155_archive_event_relations_battle_id ON v155_archive_event_relations (battle_id)"
     )
 
     conn.commit()
@@ -516,7 +451,13 @@ def list_event_relations(conn: sqlite3.Connection, event_id: int) -> List[Dict[s
     return rows
 
 
-def save_event_relation(conn: sqlite3.Connection, event_id: int, data: Dict[str, str]) -> int:
+def save_event_relation(conn: sqlite3.Connection, event_id: int, data: Dict[str, str], battle_id: int) -> int:
+    if conn.execute(
+        "SELECT 1 FROM v155_archive_events WHERE id = ? AND battle_id = ? LIMIT 1",
+        (event_id, battle_id),
+    ).fetchone() is None:
+        return None
+
     init_archive_tables(conn)
     init_archive_relation_tables(conn)
 
@@ -531,34 +472,33 @@ def save_event_relation(conn: sqlite3.Connection, event_id: int, data: Dict[str,
         return 0
 
     cur = conn.execute(
-        """
-        INSERT INTO v155_archive_event_relations
-        (event_id, target_type, target_name, target_game_id, note, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
+        '\n        INSERT INTO v155_archive_event_relations\n        (event_id, target_type, target_name, target_game_id, note, created_at, battle_id)\n        VALUES (?, ?, ?, ?, ?, ?, ?)\n        ',
+        tuple((
             event_id,
             target_type,
             target_name,
             target_game_id,
             note,
             now,
-        ),
+        )) + (battle_id,),
     )
 
     conn.commit()
     return int(cur.lastrowid)
 
 
-def delete_event_relation(conn: sqlite3.Connection, event_id: int, relation_id: int) -> None:
+def delete_event_relation(conn: sqlite3.Connection, event_id: int, relation_id: int, battle_id: int) -> None:
+    if conn.execute(
+        "SELECT 1 FROM v155_archive_events WHERE id = ? AND battle_id = ? LIMIT 1",
+        (event_id, battle_id),
+    ).fetchone() is None:
+        return None
+
     init_archive_relation_tables(conn)
 
     conn.execute(
-        """
-        DELETE FROM v155_archive_event_relations
-        WHERE id=? AND event_id=?
-        """,
-        (relation_id, event_id),
+        '\n        DELETE FROM v155_archive_event_relations\n        WHERE id=? AND event_id=? AND battle_id = ?',
+        tuple((relation_id, event_id)) + (battle_id,),
     )
 
     conn.commit()

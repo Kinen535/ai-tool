@@ -9842,6 +9842,16 @@ def v155_archive_events():
 
 @app.route("/archives/events/save", methods=["POST"])
 def v155_archive_event_save():
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import save_event
@@ -9854,7 +9864,7 @@ def v155_archive_event_save():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    event_id = save_event(conn, dict(request.form))
+    event_id = save_event(conn, dict(request.form), battle_id=battle_id)
 
     conn.close()
 
@@ -9883,6 +9893,16 @@ def v155_archive_event_detail(event_id):
 
 @app.route("/archives/events/<int:event_id>/update", methods=["POST"])
 def v155_archive_event_update(event_id):
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import update_event
@@ -9890,7 +9910,7 @@ def v155_archive_event_update(event_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    update_event(conn, event_id, dict(request.form))
+    update_event(conn, event_id, dict(request.form), battle_id=battle_id)
 
     conn.close()
 
@@ -10075,6 +10095,16 @@ def v155_archive_friend_detail_a2(alliance_id):
 @app.route("/archive_friends/<int:alliance_id>/update", methods=["POST"])
 @app.route("/archive_alliances/<int:alliance_id>/update", methods=["POST"])
 def v155_archive_friend_update_a2(alliance_id):
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import update_alliance
@@ -10082,7 +10112,7 @@ def v155_archive_friend_update_a2(alliance_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    update_alliance(conn, alliance_id, dict(request.form))
+    update_alliance(conn, alliance_id, dict(request.form), battle_id=battle_id)
 
     conn.close()
 
@@ -10113,6 +10143,16 @@ def v155_archive_enemy_detail_a2(enemy_id):
 @app.route("/archives/enemies/<int:enemy_id>/update", methods=["POST"])
 @app.route("/archive_enemies/<int:enemy_id>/update", methods=["POST"])
 def v155_archive_enemy_update_a2(enemy_id):
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import update_enemy
@@ -10120,7 +10160,7 @@ def v155_archive_enemy_update_a2(enemy_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    update_enemy(conn, enemy_id, dict(request.form))
+    update_enemy(conn, enemy_id, dict(request.form), battle_id=battle_id)
 
     conn.close()
 
@@ -10163,6 +10203,16 @@ def v155_archive_event_detail_legacy_a3(event_id):
 @app.route("/archives/events/<int:event_id>/relations/save", methods=["POST"])
 @app.route("/archive_events/<int:event_id>/relations/save", methods=["POST"])
 def v155_archive_event_relation_save_a3(event_id):
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import save_event_relation
@@ -10170,7 +10220,7 @@ def v155_archive_event_relation_save_a3(event_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    save_event_relation(conn, event_id, dict(request.form))
+    save_event_relation(conn, event_id, dict(request.form), battle_id=battle_id)
 
     conn.close()
 
@@ -10180,6 +10230,16 @@ def v155_archive_event_relation_save_a3(event_id):
 @app.route("/archives/events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
 @app.route("/archive_events/<int:event_id>/relations/<int:relation_id>/delete", methods=["POST"])
 def v155_archive_event_relation_delete_a3(event_id, relation_id):
+    try:
+        _v155_s11_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s11_boundary, "battle_id", None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import redirect
     from services.v155_archive_store import delete_event_relation
@@ -10187,7 +10247,7 @@ def v155_archive_event_relation_delete_a3(event_id, relation_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    delete_event_relation(conn, event_id, relation_id)
+    delete_event_relation(conn, event_id, relation_id, battle_id=battle_id)
 
     conn.close()
 
