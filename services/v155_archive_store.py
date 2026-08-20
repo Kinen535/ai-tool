@@ -49,46 +49,26 @@ def init_archive_tables(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def get_archive_overview(conn: sqlite3.Connection) -> Dict[str, Any]:
+def get_archive_overview(conn: sqlite3.Connection, *, battle_id) -> Dict[str, Any]:
     init_archive_tables(conn)
-
     person_count = 0
     group_count = 0
-
-    if _table_exists(conn, "member_profiles"):
-        cur = conn.execute(
-            "SELECT COUNT(DISTINCT member_name) AS c FROM member_profiles WHERE member_name IS NOT NULL AND member_name != ''"
-        )
+    if _table_exists(conn, 'member_profiles'):
+        cur = conn.execute("SELECT COUNT(DISTINCT member_name) AS c FROM member_profiles WHERE member_name IS NOT NULL AND member_name != ''")
         row = cur.fetchone()
-        person_count = int(row["c"] or 0)
-
-    elif _table_exists(conn, "player_records"):
-        cur = conn.execute(
-            "SELECT COUNT(DISTINCT member) AS c FROM player_records WHERE member IS NOT NULL AND member != ''"
-        )
+        person_count = int(row['c'] or 0)
+    elif _table_exists(conn, 'player_records'):
+        cur = conn.execute("SELECT COUNT(DISTINCT member) AS c FROM player_records WHERE member IS NOT NULL AND member != ''")
         row = cur.fetchone()
-        person_count = int(row["c"] or 0)
-
-    if _table_exists(conn, "player_records"):
-        cur = conn.execute(
-            "SELECT COUNT(DISTINCT group_name) AS c FROM player_records WHERE group_name IS NOT NULL AND group_name != ''"
-        )
+        person_count = int(row['c'] or 0)
+    if _table_exists(conn, 'player_records'):
+        cur = conn.execute("SELECT COUNT(DISTINCT group_name) AS c FROM player_records WHERE group_name IS NOT NULL AND group_name != ''")
         row = cur.fetchone()
-        group_count = int(row["c"] or 0)
-
-    event_count = conn.execute("SELECT COUNT(*) AS c FROM v155_archive_events").fetchone()["c"]
-    alliance_count = conn.execute("SELECT COUNT(*) AS c FROM v155_archive_alliances").fetchone()["c"]
-    enemy_count = conn.execute("SELECT COUNT(*) AS c FROM v155_archive_enemies").fetchone()["c"]
-
-    return {
-        "person_count": person_count,
-        "group_count": group_count,
-        "event_count": int(event_count or 0),
-        "alliance_count": int(alliance_count or 0),
-        "enemy_count": int(enemy_count or 0),
-        "total_count": person_count + group_count + int(event_count or 0) + int(alliance_count or 0) + int(enemy_count or 0),
-        "summary": "V15.5 战场档案库基础闭环已启动：人物档案先复用身份中心，事件、友盟、敌军进入手动沉淀阶段。",
-    }
+        group_count = int(row['c'] or 0)
+    event_count = conn.execute('SELECT COUNT(*) AS c FROM v155_archive_events WHERE battle_id = ?', (battle_id,)).fetchone()['c']
+    alliance_count = conn.execute('SELECT COUNT(*) AS c FROM v155_archive_alliances WHERE battle_id = ?', (battle_id,)).fetchone()['c']
+    enemy_count = conn.execute('SELECT COUNT(*) AS c FROM v155_archive_enemies WHERE battle_id = ?', (battle_id,)).fetchone()['c']
+    return {'person_count': person_count, 'group_count': group_count, 'event_count': int(event_count or 0), 'alliance_count': int(alliance_count or 0), 'enemy_count': int(enemy_count or 0), 'total_count': person_count + group_count + int(event_count or 0) + int(alliance_count or 0) + int(enemy_count or 0), 'summary': 'V15.5 战场档案库基础闭环已启动：人物档案先复用身份中心，事件、友盟、敌军进入手动沉淀阶段。'}
 
 
 def list_players(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) -> List[Dict[str, Any]]:
@@ -159,19 +139,10 @@ def list_players(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) 
     return []
 
 
-def list_events(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) -> List[Dict[str, Any]]:
+def list_events(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
     init_archive_tables(conn)
-    kw = f"%{keyword.strip()}%"
-    cur = conn.execute(
-        """
-        SELECT *
-        FROM v155_archive_events
-        WHERE title LIKE ? OR event_type LIKE ? OR related_target LIKE ? OR description LIKE ?
-        ORDER BY id DESC
-        LIMIT ?
-        """,
-        (kw, kw, kw, kw, limit),
-    )
+    kw = f'%{keyword.strip()}%'
+    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_events\n        WHERE battle_id = ? AND title LIKE ? OR event_type LIKE ? OR related_target LIKE ? OR description LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, limit))
     return _rows(cur)
 
 
@@ -225,19 +196,10 @@ def update_event(conn: sqlite3.Connection, event_id: int, data: Dict[str, str], 
     conn.commit()
 
 
-def list_alliances(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) -> List[Dict[str, Any]]:
+def list_alliances(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
     init_archive_tables(conn)
-    kw = f"%{keyword.strip()}%"
-    cur = conn.execute(
-        """
-        SELECT *
-        FROM v155_archive_alliances
-        WHERE name LIKE ? OR relation_status LIKE ? OR contact_name LIKE ? OR notes LIKE ?
-        ORDER BY id DESC
-        LIMIT ?
-        """,
-        (kw, kw, kw, kw, limit),
-    )
+    kw = f'%{keyword.strip()}%'
+    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_alliances\n        WHERE battle_id = ? AND name LIKE ? OR relation_status LIKE ? OR contact_name LIKE ? OR notes LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, limit))
     return _rows(cur)
 
 
@@ -249,19 +211,10 @@ def save_alliance(conn: sqlite3.Connection, data: Dict[str, str], *, battle_id) 
     return int(cur.lastrowid)
 
 
-def list_enemies(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) -> List[Dict[str, Any]]:
+def list_enemies(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
     init_archive_tables(conn)
-    kw = f"%{keyword.strip()}%"
-    cur = conn.execute(
-        """
-        SELECT *
-        FROM v155_archive_enemies
-        WHERE name LIKE ? OR threat_level LIKE ? OR tactics LIKE ? OR core_members LIKE ? OR notes LIKE ?
-        ORDER BY id DESC
-        LIMIT ?
-        """,
-        (kw, kw, kw, kw, kw, limit),
-    )
+    kw = f'%{keyword.strip()}%'
+    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_enemies\n        WHERE battle_id = ? AND name LIKE ? OR threat_level LIKE ? OR tactics LIKE ? OR core_members LIKE ? OR notes LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, kw, limit))
     return _rows(cur)
 
 
@@ -277,12 +230,9 @@ def save_enemy(conn: sqlite3.Connection, data: Dict[str, str], *, battle_id) -> 
 # V15.5-A2 友盟 / 敌军详情与编辑
 # =========================
 
-def get_alliance(conn: sqlite3.Connection, alliance_id: int) -> Optional[Dict[str, Any]]:
+def get_alliance(conn: sqlite3.Connection, alliance_id: int, *, battle_id) -> Optional[Dict[str, Any]]:
     init_archive_tables(conn)
-    cur = conn.execute(
-        "SELECT * FROM v155_archive_alliances WHERE id=?",
-        (alliance_id,),
-    )
+    cur = conn.execute('SELECT * FROM v155_archive_alliances WHERE battle_id = ? AND id=?', (battle_id, alliance_id))
     row = cur.fetchone()
     return dict(row) if row else None
 
@@ -484,4 +434,161 @@ def list_related_events_by_target(
         ),
     )
 
+    return _rows(cur)
+
+
+# =========================
+# V15.5-A3.2 档案全局检索
+# =========================
+
+def search_archive_global(conn: sqlite3.Connection, keyword: str, limit: int = 50) -> Dict[str, Any]:
+    init_archive_tables(conn)
+    init_archive_relation_tables(conn)
+
+    q = (keyword or "").strip()
+
+    result = {
+        "keyword": q,
+        "relations": [],
+        "events": [],
+        "players": [],
+        "alliances": [],
+        "enemies": [],
+        "summary": {
+            "relations": 0,
+            "events": 0,
+            "players": 0,
+            "alliances": 0,
+            "enemies": 0,
+            "total": 0,
+        },
+    }
+
+    if not q:
+        return result
+
+    kw = f"%{q}%"
+
+    cur = conn.execute(
+        """
+        SELECT
+            r.id AS relation_id,
+            r.event_id,
+            r.target_type,
+            r.target_name,
+            r.target_game_id,
+            r.note AS relation_note,
+            r.created_at AS relation_created_at,
+            e.title AS event_title,
+            e.event_type,
+            e.impact_level,
+            e.status,
+            e.related_target,
+            e.created_at AS event_created_at
+        FROM v155_archive_event_relations r
+        JOIN v155_archive_events e ON e.id = r.event_id
+        WHERE
+            r.target_name LIKE ?
+            OR r.target_game_id LIKE ?
+            OR r.note LIKE ?
+            OR e.title LIKE ?
+            OR e.description LIKE ?
+            OR e.result LIKE ?
+        ORDER BY r.id DESC
+        LIMIT ?
+        """,
+        (kw, kw, kw, kw, kw, kw, limit),
+    )
+
+    relations = _rows(cur)
+
+    for row in relations:
+        row["target_type_label"] = archive_target_type_label(row.get("target_type", ""))
+
+    events = list_events(conn, q, limit=limit)
+    players = list_players(conn, q, limit=limit)
+    alliances = list_alliances(conn, q, limit=limit)
+    enemies = list_enemies(conn, q, limit=limit)
+
+    result["relations"] = relations
+    result["events"] = events
+    result["players"] = players
+    result["alliances"] = alliances
+    result["enemies"] = enemies
+
+    result["summary"] = {
+        "relations": len(relations),
+        "events": len(events),
+        "players": len(players),
+        "alliances": len(alliances),
+        "enemies": len(enemies),
+        "total": len(relations) + len(events) + len(players) + len(alliances) + len(enemies),
+    }
+
+    return result
+
+
+# =========================
+# V15.5-A3.3 战场事件搜索增强：支持关联对象与游戏编号
+# =========================
+
+def list_events(conn: sqlite3.Connection, keyword: str = "", limit: int = 100) -> List[Dict[str, Any]]:
+    """
+    覆盖旧版 list_events：
+    让战场事件列表页支持通过游戏编号、关联对象名称、关联备注搜索事件。
+    """
+    init_archive_tables(conn)
+    init_archive_relation_tables(conn)
+
+    q = (keyword or "").strip()
+
+    if not q:
+        cur = conn.execute(
+            """
+            SELECT *
+            FROM v155_archive_events
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return _rows(cur)
+
+    kw = f"%{q}%"
+
+    cur = conn.execute(
+        """
+        SELECT DISTINCT e.*
+        FROM v155_archive_events e
+        LEFT JOIN v155_archive_event_relations r
+            ON r.event_id = e.id
+        WHERE
+            e.title LIKE ?
+            OR e.event_type LIKE ?
+            OR e.impact_level LIKE ?
+            OR e.status LIKE ?
+            OR e.related_target LIKE ?
+            OR e.description LIKE ?
+            OR e.result LIKE ?
+            OR r.target_type LIKE ?
+            OR r.target_name LIKE ?
+            OR r.target_game_id LIKE ?
+            OR r.note LIKE ?
+        ORDER BY e.id DESC
+        LIMIT ?
+        """,
+        (
+            kw, kw, kw, kw, kw, kw, kw,
+            kw, kw, kw, kw,
+            limit,
+        ),
+    )
+
+    return _rows(cur)
+
+
+def list_events(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
+    init_archive_tables(conn)
+    kw = f'%{keyword.strip()}%'
+    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_events\n        WHERE battle_id = ? AND title LIKE ? OR event_type LIKE ? OR related_target LIKE ? OR description LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, limit))
     return _rows(cur)
