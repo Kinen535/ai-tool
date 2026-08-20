@@ -8456,175 +8456,40 @@ def archive_alliances():
         groups=groups
     )
 
-@app.route("/archives/group/<group_name>")
+@app.route('/archives/group/<group_name>')
 def group_detail(group_name):
-    group_name = (
-        group_name
-        or ""
-    ).strip()
-
-    conn = get_conn()
-
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
-
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+    group_name = (group_name or '').strip()
+    conn = get_conn()
+    try:
+        battle_row = conn.execute('SELECT ? AS id', (battle_id,)).fetchone()
         members = []
         battle_id = None
         latest_time = None
-
         if battle_row:
-            battle_id = battle_row["id"]
-
-            latest_row = conn.execute(
-                """
-                SELECT MAX(snapshot_time)
-                FROM player_records
-                WHERE battle_id = ?
-                  AND is_deleted = 0
-                """,
-                (battle_id,),
-            ).fetchone()
-
-            latest_time = (
-                latest_row[0]
-                if latest_row
-                else None
-            )
-
+            battle_id = battle_row['id']
+            latest_row = conn.execute('\n                SELECT MAX(snapshot_time)\n                FROM player_records\n                WHERE battle_id = ?\n                  AND is_deleted = 0\n                ', (battle_id,)).fetchone()
+            latest_time = latest_row[0] if latest_row else None
             if latest_time:
-                members = conn.execute(
-                    """
-                    SELECT
-                        member,
-                        COALESCE(
-                            role_tag,
-                            'member'
-                        ) AS role_tag,
-                        COALESCE(
-                            identity_score,
-                            0
-                        ) AS identity_score,
-                        COALESCE(
-                            risk_level,
-                            'safe'
-                        ) AS risk_level,
-                        COALESCE(
-                            av,
-                            0
-                        ) AS av,
-                        COALESCE(
-                            bs,
-                            0
-                        ) AS bs
-                    FROM player_records
-                    WHERE battle_id = ?
-                      AND snapshot_time = ?
-                      AND is_deleted = 0
-                      AND TRIM(
-                          COALESCE(
-                              group_name,
-                              ''
-                          )
-                      ) = ?
-                    ORDER BY
-                        identity_score DESC,
-                        member
-                    """,
-                    (
-                        battle_id,
-                        latest_time,
-                        group_name,
-                    ),
-                ).fetchall()
-
+                members = conn.execute("\n                    SELECT\n                        member,\n                        COALESCE(\n                            role_tag,\n                            'member'\n                        ) AS role_tag,\n                        COALESCE(\n                            identity_score,\n                            0\n                        ) AS identity_score,\n                        COALESCE(\n                            risk_level,\n                            'safe'\n                        ) AS risk_level,\n                        COALESCE(\n                            av,\n                            0\n                        ) AS av,\n                        COALESCE(\n                            bs,\n                            0\n                        ) AS bs\n                    FROM player_records\n                    WHERE battle_id = ?\n                      AND snapshot_time = ?\n                      AND is_deleted = 0\n                      AND TRIM(\n                          COALESCE(\n                              group_name,\n                              ''\n                          )\n                      ) = ?\n                    ORDER BY\n                        identity_score DESC,\n                        member\n                    ", (battle_id, latest_time, group_name)).fetchall()
     finally:
         conn.close()
-
     member_count = len(members)
-
     avg_identity = 0
-
     if member_count:
-        avg_identity = round(
-            sum(
-                float(
-                    member["identity_score"]
-                    or 0
-                )
-                for member in members
-            )
-            / member_count,
-            1,
-        )
-
-    risk_members = [
-        member
-        for member in members
-        if member["risk_level"]
-        in (
-            "clear",
-            "danger",
-            "warning",
-        )
-    ]
-
-    risk_order = {
-        "clear": 0,
-        "danger": 1,
-        "warning": 2,
-    }
-
-    risk_members = sorted(
-        risk_members,
-        key=lambda member: (
-            risk_order.get(
-                member["risk_level"],
-                9,
-            ),
-            float(
-                member["identity_score"]
-                or 0
-            ),
-            member["member"] or "",
-        ),
-    )
-
-    leaders = [
-        member
-        for member in members
-        if member["role_tag"] == "admin"
-    ]
-
-    a_count = sum(
-        1
-        for member in members
-        if float(
-            member["identity_score"]
-            or 0
-        ) >= 70
-    )
-
-    return render_template(
-        "group_detail.html",
-        title="分组详情",
-        group_name=group_name,
-        members=members,
-        member_count=member_count,
-        avg_identity=avg_identity,
-        risk_count=len(risk_members),
-        a_count=a_count,
-        leaders=leaders,
-        risk_members=risk_members,
-        current_battle_id=battle_id,
-        latest_time=latest_time,
-    )
+        avg_identity = round(sum((float(member['identity_score'] or 0) for member in members)) / member_count, 1)
+    risk_members = [member for member in members if member['risk_level'] in ('clear', 'danger', 'warning')]
+    risk_order = {'clear': 0, 'danger': 1, 'warning': 2}
+    risk_members = sorted(risk_members, key=lambda member: (risk_order.get(member['risk_level'], 9), float(member['identity_score'] or 0), member['member'] or ''))
+    leaders = [member for member in members if member['role_tag'] == 'admin']
+    a_count = sum((1 for member in members if float(member['identity_score'] or 0) >= 70))
+    return render_template('group_detail.html', title='分组详情', group_name=group_name, members=members, member_count=member_count, avg_identity=avg_identity, risk_count=len(risk_members), a_count=a_count, leaders=leaders, risk_members=risk_members, current_battle_id=battle_id, latest_time=latest_time)
 
 
 
@@ -9662,158 +9527,38 @@ def v155_archive_home():
     )
 
 
-@app.route("/archives/players")
-@app.route("/archive_players")
+@app.route('/archives/players')
+@app.route('/archive_players')
 def v155_archive_players():
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template, request
-
-    q = request.args.get("q", "").strip()
-    keyword = f"%{q}%"
-
-    conn = sqlite3.connect(
-        "data/snapshots.db"
-    )
+    q = request.args.get('q', '').strip()
+    keyword = f'%{q}%'
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
     players = []
     battle_id = None
     snapshot_time = None
-
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
-
+        battle_row = conn.execute('SELECT ? AS id', (battle_id,)).fetchone()
         if battle_row:
-            battle_id = battle_row["id"]
-
-            snapshot_row = conn.execute(
-                """
-                SELECT
-                    MAX(snapshot_time)
-                    AS snapshot_time
-                FROM player_records
-                WHERE battle_id = ?
-                  AND COALESCE(
-                      is_deleted,
-                      0
-                  ) = 0
-                """,
-                (
-                    battle_id,
-                ),
-            ).fetchone()
-
-            snapshot_time = (
-                snapshot_row["snapshot_time"]
-                if snapshot_row
-                else None
-            )
-
+            battle_id = battle_row['id']
+            snapshot_row = conn.execute('\n                SELECT\n                    MAX(snapshot_time)\n                    AS snapshot_time\n                FROM player_records\n                WHERE battle_id = ?\n                  AND COALESCE(\n                      is_deleted,\n                      0\n                  ) = 0\n                ', (battle_id,)).fetchone()
+            snapshot_time = snapshot_row['snapshot_time'] if snapshot_row else None
             if snapshot_time:
-                players = conn.execute(
-                    """
-                    SELECT
-                        pr.member,
-                        pr.group_name,
-                        NULL AS current_tag,
-                        COALESCE(
-                            pr.role_tag,
-                            'member'
-                        ) AS role_tag,
-                        COALESCE(
-                            pr.av,
-                            0
-                        ) AS av,
-                        COALESCE(
-                            pr.bs,
-                            0
-                        ) AS bs,
-                        COALESCE(
-                            pr.trend,
-                            'stable'
-                        ) AS trend,
-                        COALESCE(
-                            pr.risk_level,
-                            'safe'
-                        ) AS risk_level,
-                        COALESCE(
-                            pr.risk_reason,
-                            ''
-                        ) AS risk_reason,
-                        COALESCE(
-                            pr.identity_score,
-                            0
-                        ) AS identity_score
-                    FROM player_records AS pr
-                    WHERE pr.battle_id = ?
-                      AND pr.snapshot_time = ?
-                      AND COALESCE(
-                          pr.is_deleted,
-                          0
-                      ) = 0
-                      AND COALESCE(
-                          pr.member,
-                          ''
-                      ) != ''
-                      AND pr.member LIKE ?
-                      AND pr.id = (
-                          SELECT
-                              MAX(p2.id)
-                          FROM player_records AS p2
-                          WHERE p2.battle_id
-                                = pr.battle_id
-                            AND p2.snapshot_time
-                                = pr.snapshot_time
-                            AND p2.member
-                                = pr.member
-                            AND COALESCE(
-                                p2.is_deleted,
-                                0
-                            ) = 0
-                      )
-                    ORDER BY
-                        CASE pr.risk_level
-                            WHEN 'danger' THEN 1
-                            WHEN 'warning' THEN 2
-                            WHEN 'protected' THEN 3
-                            ELSE 9
-                        END,
-                        COALESCE(
-                            pr.identity_score,
-                            0
-                        ) DESC,
-                        COALESCE(
-                            pr.av,
-                            0
-                        ) ASC,
-                        pr.member ASC
-                    LIMIT 500
-                    """,
-                    (
-                        battle_id,
-                        snapshot_time,
-                        keyword,
-                    ),
-                ).fetchall()
-
+                players = conn.execute("\n                    SELECT\n                        pr.member,\n                        pr.group_name,\n                        NULL AS current_tag,\n                        COALESCE(\n                            pr.role_tag,\n                            'member'\n                        ) AS role_tag,\n                        COALESCE(\n                            pr.av,\n                            0\n                        ) AS av,\n                        COALESCE(\n                            pr.bs,\n                            0\n                        ) AS bs,\n                        COALESCE(\n                            pr.trend,\n                            'stable'\n                        ) AS trend,\n                        COALESCE(\n                            pr.risk_level,\n                            'safe'\n                        ) AS risk_level,\n                        COALESCE(\n                            pr.risk_reason,\n                            ''\n                        ) AS risk_reason,\n                        COALESCE(\n                            pr.identity_score,\n                            0\n                        ) AS identity_score\n                    FROM player_records AS pr\n                    WHERE pr.battle_id = ?\n                      AND pr.snapshot_time = ?\n                      AND COALESCE(\n                          pr.is_deleted,\n                          0\n                      ) = 0\n                      AND COALESCE(\n                          pr.member,\n                          ''\n                      ) != ''\n                      AND pr.member LIKE ?\n                      AND pr.id = (\n                          SELECT\n                              MAX(p2.id)\n                          FROM player_records AS p2\n                          WHERE p2.battle_id\n                                = pr.battle_id\n                            AND p2.snapshot_time\n                                = pr.snapshot_time\n                            AND p2.member\n                                = pr.member\n                            AND COALESCE(\n                                p2.is_deleted,\n                                0\n                            ) = 0\n                      )\n                    ORDER BY\n                        CASE pr.risk_level\n                            WHEN 'danger' THEN 1\n                            WHEN 'warning' THEN 2\n                            WHEN 'protected' THEN 3\n                            ELSE 9\n                        END,\n                        COALESCE(\n                            pr.identity_score,\n                            0\n                        ) DESC,\n                        COALESCE(\n                            pr.av,\n                            0\n                        ) ASC,\n                        pr.member ASC\n                    LIMIT 500\n                    ", (battle_id, snapshot_time, keyword)).fetchall()
     finally:
         conn.close()
+    return render_template('archive_players.html', players=players, q=q, current_battle_id=battle_id, current_snapshot_time=snapshot_time, title='人物档案')
 
-    return render_template(
-        "archive_players.html",
-        players=players,
-        q=q,
-        current_battle_id=battle_id,
-        current_snapshot_time=snapshot_time,
-        title="人物档案",
-    )
+app.view_functions["archive_players"] = v155_archive_players
 
 
 @app.route("/archives/events")
@@ -9871,24 +9616,23 @@ def v155_archive_event_save():
     return redirect(f"/archives/events/{event_id}")
 
 
-@app.route("/archives/events/<int:event_id>")
+@app.route('/archives/events/<int:event_id>')
 def v155_archive_event_detail(event_id):
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
     from services.v155_archive_store import get_event
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    event = get_event(conn, event_id)
-
+    event = get_event(conn, event_id, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_event_detail.html",
-        event=event,
-        title="战场事件详情",
-    )
+    return render_template('archive_event_detail.html', event=event, title='战场事件详情')
 
 
 @app.route("/archives/events/<int:event_id>/update", methods=["POST"])
@@ -9940,26 +9684,27 @@ def v155_archive_friends():
     )
 
 
-@app.route("/archives/friends/save", methods=["POST"])
-@app.route("/archives/allies/save", methods=["POST"])
+@app.route('/archives/friends/save', methods=['POST'])
+@app.route('/archives/allies/save', methods=['POST'])
 def v155_archive_friend_save():
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import save_alliance
-
-    name = request.form.get("name", "").strip()
-
+    name = request.form.get('name', '').strip()
     if not name:
-        return redirect("/archives/friends")
-
-    conn = sqlite3.connect("data/snapshots.db")
+        return redirect('/archives/friends')
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    save_alliance(conn, dict(request.form))
-
+    save_alliance(conn, dict(request.form), battle_id=battle_id)
     conn.close()
-
-    return redirect("/archives/friends")
+    return redirect('/archives/friends')
 
 
 @app.route("/archives/enemies")
@@ -9983,25 +9728,26 @@ def v155_archive_enemies():
     )
 
 
-@app.route("/archives/enemies/save", methods=["POST"])
+@app.route('/archives/enemies/save', methods=['POST'])
 def v155_archive_enemy_save():
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import request, redirect
     from services.v155_archive_store import save_enemy
-
-    name = request.form.get("name", "").strip()
-
+    name = request.form.get('name', '').strip()
     if not name:
-        return redirect("/archives/enemies")
-
-    conn = sqlite3.connect("data/snapshots.db")
+        return redirect('/archives/enemies')
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    save_enemy(conn, dict(request.form))
-
+    save_enemy(conn, dict(request.form), battle_id=battle_id)
     conn.close()
-
-    return redirect("/archives/enemies")
+    return redirect('/archives/enemies')
 
 
 
@@ -10119,25 +9865,24 @@ def v155_archive_friend_update_a2(alliance_id):
     return redirect(f"/archives/friends/{alliance_id}")
 
 
-@app.route("/archives/enemies/<int:enemy_id>")
-@app.route("/archive_enemies/<int:enemy_id>")
+@app.route('/archives/enemies/<int:enemy_id>')
+@app.route('/archive_enemies/<int:enemy_id>')
 def v155_archive_enemy_detail_a2(enemy_id):
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
     from services.v155_archive_store import get_enemy
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    enemy = get_enemy(conn, enemy_id)
-
+    enemy = get_enemy(conn, enemy_id, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_enemy_detail.html",
-        enemy=enemy,
-        title="敌军档案详情",
-    )
+    return render_template('archive_enemy_detail.html', enemy=enemy, title='敌军档案详情')
 
 
 @app.route("/archives/enemies/<int:enemy_id>/update", methods=["POST"])
@@ -10172,27 +9917,22 @@ def v155_archive_enemy_update_a2(enemy_id):
 # =========================
 
 def v155_archive_event_detail_a3(event_id):
+    try:
+        _v155_s12_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s12_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
-    from services.v155_archive_store import (
-        get_event,
-        list_event_relations,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v155_archive_store import get_event, list_event_relations
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    event = get_event(conn, event_id)
-    relations = list_event_relations(conn, event_id)
-
+    event = get_event(conn, event_id, battle_id=battle_id)
+    relations = list_event_relations(conn, event_id, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_event_detail.html",
-        event=event,
-        relations=relations,
-        title="战场事件详情",
-    )
+    return render_template('archive_event_detail.html', event=event, relations=relations, title='战场事件详情')
 
 
 @app.route("/archive_events/<int:event_id>")

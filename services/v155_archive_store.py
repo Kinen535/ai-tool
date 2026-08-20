@@ -175,9 +175,9 @@ def list_events(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) -
     return _rows(cur)
 
 
-def get_event(conn: sqlite3.Connection, event_id: int) -> Optional[Dict[str, Any]]:
+def get_event(conn: sqlite3.Connection, event_id: int, *, battle_id) -> Optional[Dict[str, Any]]:
     init_archive_tables(conn)
-    cur = conn.execute("SELECT * FROM v155_archive_events WHERE id=?", (event_id,))
+    cur = conn.execute('SELECT * FROM v155_archive_events WHERE id=? AND battle_id=?', (event_id, battle_id))
     row = cur.fetchone()
     return dict(row) if row else None
 
@@ -241,26 +241,10 @@ def list_alliances(conn: sqlite3.Connection, keyword: str = "", limit: int = 200
     return _rows(cur)
 
 
-def save_alliance(conn: sqlite3.Connection, data: Dict[str, str]) -> int:
+def save_alliance(conn: sqlite3.Connection, data: Dict[str, str], *, battle_id) -> int:
     init_archive_tables(conn)
     now = _now()
-
-    cur = conn.execute(
-        """
-        INSERT INTO v155_archive_alliances
-        (name, relation_status, trust_level, contact_name, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            data.get("name", "").strip(),
-            data.get("relation_status", "观察").strip(),
-            data.get("trust_level", "C").strip(),
-            data.get("contact_name", "").strip(),
-            data.get("notes", "").strip(),
-            now,
-            now,
-        ),
-    )
+    cur = conn.execute('\n        INSERT INTO v155_archive_alliances\n        (name, relation_status, trust_level, contact_name, notes, created_at, updated_at, battle_id)\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n        ', (data.get('name', '').strip(), data.get('relation_status', '观察').strip(), data.get('trust_level', 'C').strip(), data.get('contact_name', '').strip(), data.get('notes', '').strip(), now, now, battle_id))
     conn.commit()
     return int(cur.lastrowid)
 
@@ -281,27 +265,10 @@ def list_enemies(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) 
     return _rows(cur)
 
 
-def save_enemy(conn: sqlite3.Connection, data: Dict[str, str]) -> int:
+def save_enemy(conn: sqlite3.Connection, data: Dict[str, str], *, battle_id) -> int:
     init_archive_tables(conn)
     now = _now()
-
-    cur = conn.execute(
-        """
-        INSERT INTO v155_archive_enemies
-        (name, threat_level, activity_level, tactics, core_members, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            data.get("name", "").strip(),
-            data.get("threat_level", "中").strip(),
-            data.get("activity_level", "未知").strip(),
-            data.get("tactics", "").strip(),
-            data.get("core_members", "").strip(),
-            data.get("notes", "").strip(),
-            now,
-            now,
-        ),
-    )
+    cur = conn.execute('\n        INSERT INTO v155_archive_enemies\n        (name, threat_level, activity_level, tactics, core_members, notes, created_at, updated_at, battle_id)\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n        ', (data.get('name', '').strip(), data.get('threat_level', '中').strip(), data.get('activity_level', '未知').strip(), data.get('tactics', '').strip(), data.get('core_members', '').strip(), data.get('notes', '').strip(), now, now, battle_id))
     conn.commit()
     return int(cur.lastrowid)
 
@@ -339,12 +306,9 @@ def update_alliance(conn: sqlite3.Connection, alliance_id: int, data: Dict[str, 
     conn.commit()
 
 
-def get_enemy(conn: sqlite3.Connection, enemy_id: int) -> Optional[Dict[str, Any]]:
+def get_enemy(conn: sqlite3.Connection, enemy_id: int, *, battle_id) -> Optional[Dict[str, Any]]:
     init_archive_tables(conn)
-    cur = conn.execute(
-        "SELECT * FROM v155_archive_enemies WHERE id=?",
-        (enemy_id,),
-    )
+    cur = conn.execute('SELECT * FROM v155_archive_enemies WHERE id=? AND battle_id=?', (enemy_id, battle_id))
     row = cur.fetchone()
     return dict(row) if row else None
 
@@ -429,25 +393,13 @@ def archive_target_type_label(target_type: str) -> str:
     return mapping.get(target_type or "", target_type or "-")
 
 
-def list_event_relations(conn: sqlite3.Connection, event_id: int) -> List[Dict[str, Any]]:
+def list_event_relations(conn: sqlite3.Connection, event_id: int, *, battle_id) -> List[Dict[str, Any]]:
     init_archive_tables(conn)
     init_archive_relation_tables(conn)
-
-    cur = conn.execute(
-        """
-        SELECT *
-        FROM v155_archive_event_relations
-        WHERE event_id=?
-        ORDER BY id DESC
-        """,
-        (event_id,),
-    )
-
+    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_event_relations\n        WHERE event_id = ? AND battle_id = ?\n        ORDER BY id DESC\n        ', (event_id, battle_id))
     rows = _rows(cur)
-
     for row in rows:
-        row["target_type_label"] = archive_target_type_label(row.get("target_type", ""))
-
+        row['target_type_label'] = archive_target_type_label(row.get('target_type', ''))
     return rows
 
 
