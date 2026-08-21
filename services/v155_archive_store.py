@@ -139,13 +139,6 @@ def list_players(conn: sqlite3.Connection, keyword: str = "", limit: int = 200) 
     return []
 
 
-def list_events(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
-    init_archive_tables(conn)
-    kw = f'%{keyword.strip()}%'
-    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_events\n        WHERE battle_id = ? AND title LIKE ? OR event_type LIKE ? OR related_target LIKE ? OR description LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, limit))
-    return _rows(cur)
-
-
 def get_event(conn: sqlite3.Connection, event_id: int, *, battle_id) -> Optional[Dict[str, Any]]:
     init_archive_tables(conn)
     cur = conn.execute('SELECT * FROM v155_archive_events WHERE id=? AND battle_id=?', (event_id, battle_id))
@@ -441,7 +434,7 @@ def list_related_events_by_target(
 # V15.5-A3.2 档案全局检索
 # =========================
 
-def search_archive_global(conn: sqlite3.Connection, keyword: str, limit: int = 50) -> Dict[str, Any]:
+def search_archive_global(conn: sqlite3.Connection, keyword: str, limit: int = 50, *, battle_id) -> Dict[str, Any]:
     init_archive_tables(conn)
     init_archive_relation_tables(conn)
 
@@ -505,7 +498,7 @@ def search_archive_global(conn: sqlite3.Connection, keyword: str, limit: int = 5
     for row in relations:
         row["target_type_label"] = archive_target_type_label(row.get("target_type", ""))
 
-    events = list_events(conn, q, limit=limit)
+    events = list_events(conn, q, limit=limit, battle_id=battle_id)
     players = list_players(conn, q, limit=limit)
     alliances = list_alliances(conn, q, limit=limit)
     enemies = list_enemies(conn, q, limit=limit)
@@ -531,38 +524,36 @@ def search_archive_global(conn: sqlite3.Connection, keyword: str, limit: int = 5
 # =========================
 # V15.5-A3.3 战场事件搜索增强：支持关联对象与游戏编号
 # =========================
-
-def list_events(conn: sqlite3.Connection, keyword: str = "", limit: int = 100) -> List[Dict[str, Any]]:
-    """
-    覆盖旧版 list_events：
-    让战场事件列表页支持通过游戏编号、关联对象名称、关联备注搜索事件。
-    """
+def list_events(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
     init_archive_tables(conn)
     init_archive_relation_tables(conn)
 
-    q = (keyword or "").strip()
+    q = (keyword or '').strip()
 
     if not q:
         cur = conn.execute(
-            """
+            '''
             SELECT *
             FROM v155_archive_events
+            WHERE battle_id = ?
             ORDER BY id DESC
             LIMIT ?
-            """,
-            (limit,),
+            ''',
+            (battle_id, limit)
         )
         return _rows(cur)
 
-    kw = f"%{q}%"
+    kw = f'%{q}%'
 
     cur = conn.execute(
-        """
+        '''
         SELECT DISTINCT e.*
         FROM v155_archive_events e
         LEFT JOIN v155_archive_event_relations r
             ON r.event_id = e.id
-        WHERE
+            AND r.battle_id = ?
+        WHERE e.battle_id = ?
+        AND (
             e.title LIKE ?
             OR e.event_type LIKE ?
             OR e.impact_level LIKE ?
@@ -574,21 +565,18 @@ def list_events(conn: sqlite3.Connection, keyword: str = "", limit: int = 100) -
             OR r.target_name LIKE ?
             OR r.target_game_id LIKE ?
             OR r.note LIKE ?
+        )
         ORDER BY e.id DESC
         LIMIT ?
-        """,
+        ''',
         (
-            kw, kw, kw, kw, kw, kw, kw,
+            battle_id,
+            battle_id,
             kw, kw, kw, kw,
-            limit,
-        ),
+            kw, kw, kw,
+            kw, kw, kw, kw,
+            limit
+        )
     )
 
-    return _rows(cur)
-
-
-def list_events(conn: sqlite3.Connection, keyword: str='', limit: int=200, *, battle_id) -> List[Dict[str, Any]]:
-    init_archive_tables(conn)
-    kw = f'%{keyword.strip()}%'
-    cur = conn.execute('\n        SELECT *\n        FROM v155_archive_events\n        WHERE battle_id = ? AND title LIKE ? OR event_type LIKE ? OR related_target LIKE ? OR description LIKE ?\n        ORDER BY id DESC\n        LIMIT ?\n        ', (battle_id, kw, kw, kw, kw, limit))
     return _rows(cur)

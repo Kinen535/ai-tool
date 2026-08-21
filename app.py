@@ -10023,7 +10023,7 @@ def v155_archive_search_a32():
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    result = search_archive_global(conn, q)
+    result = search_archive_global(conn, q, battle_id=battle_id)
 
     conn.close()
 
