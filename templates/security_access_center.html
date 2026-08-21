@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="padding:24px;">
+
+<h1>🔐 权限中心</h1>
+
+<p style="color:#64748b;line-height:1.7;">
+查看当前系统账号、角色、工作区以及权限结构。
+<br>
+当前版本为只读审计视图，用于管理员权限审计。
+</p>
+
+
+<h2>📊 总览</h2>
+
+<div style="
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:15px;
+margin-bottom:25px;
+">
+
+{% for key,value in report.stats.items() %}
+
+<div style="
+background:white;
+padding:18px;
+border-radius:14px;
+box-shadow:0 4px 12px rgba(0,0,0,.08);
+">
+
+<div style="color:#64748b;">
+{% if key == 'user_count' %}
+系统账号
+{% elif key == 'role_count' %}
+角色数量
+{% elif key == 'permission_count' %}
+权限数量
+{% elif key == 'workspace_count' %}
+工作区数量
+{% elif key == 'battle_count' %}
+绑定战场
+{% else %}
+{{ key }}
+{% endif %}
+</div>
+
+<h2>{{ value }}</h2>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+
+<h2>👤 用户权限</h2>
+
+<table width="100%" cellpadding="10">
+
+<tr>
+<th>账号</th>
+<th>名称</th>
+<th>账号角色</th>
+<th>状态</th>
+<th>工作区</th>
+<th>工作区角色</th>
+</tr>
+
+
+{% for user in report.users %}
+
+<tr>
+
+<td>{{ user.username }}</td>
+
+<td>{{ user.display_name }}</td>
+
+<td>
+{% if user.account_role == 'super_admin' %}
+🟣 超级管理员
+{% elif user.account_role == 'manager' %}
+🔵 管理员
+{% else %}
+⚪ 只读用户
+{% endif %}
+</td>
+
+<td>
+{% if user.status == 'active' %}
+🟢 启用
+{% else %}
+🔴 停用
+{% endif %}
+</td>
+
+<td>
+{{ user.workspace_name }}
+</td>
+
+<td>
+{{ user.workspace_role }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+
+<h2 style="margin-top:30px;">
+🎭 角色权限
+</h2>
+
+
+<table width="100%" cellpadding="10">
+
+<tr>
+<th>角色</th>
+<th>名称</th>
+<th>权限数量</th>
+</tr>
+
+
+{% for role in report.roles %}
+
+<tr>
+
+<td>
+{{ role.role_key }}
+</td>
+
+<td>
+{{ role.role_name }}
+</td>
+
+<td>
+{{ role.permission_count }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+
+</table>
+
+
+
+<h2 style="margin-top:30px;">
+🎭 角色权限矩阵
+</h2>
+
+
+<div style="
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:18px;
+margin-bottom:30px;
+">
+
+
+{% for item in report.role_permissions %}
+
+<div style="
+background:white;
+padding:20px;
+border-radius:16px;
+box-shadow:0 4px 12px rgba(0,0,0,.08);
+">
+
+
+<h3 style="margin-top:0;">
+{{ item.role_name }}
+</h3>
+
+
+<div style="
+color:#64748b;
+margin-bottom:12px;
+">
+{{ item.role_key }}
+</div>
+
+
+<div style="
+margin-bottom:12px;
+font-weight:700;
+">
+权限数量：
+{{ item.permissions|length }}
+</div>
+
+
+<div>
+
+{% for permission in item.permissions %}
+
+<div style="
+padding:6px 0;
+border-bottom:1px solid #f1f5f9;
+">
+
+<span>
+✅ {{ permission.permission_name }}
+</span>
+
+<br>
+
+<small style="color:#94a3b8;">
+{{ permission.module_key }}
+/
+{{ permission.permission_key }}
+</small>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+
+
+<h2 style="margin-top:30px;">
+🏢 工作区
+</h2>
+
+
+<table width="100%" cellpadding="10">
+
+<tr>
+<th>工作区</th>
+<th>名称</th>
+<th>绑定战场</th>
+</tr>
+
+
+{% for workspace in report.workspaces %}
+
+<tr>
+
+<td>
+{{ workspace.workspace_key }}
+</td>
+
+<td>
+{{ workspace.workspace_name }}
+</td>
+
+<td>
+{{ workspace.battle_count }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+
+</div>
+
+{% endblock %}

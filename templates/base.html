@@ -1480,6 +1480,11 @@ html[data-theme="dark"] .v158-logout-button:hover {
 </head>
 
 <body data-page-path="{{ request.path }}">
+{# V15.5 dynamic Workspace menu visibility #}
+{% set v155_menu_access_context = g.get('v155_access_context') %}
+{% set v155_menu_permissions = v155_menu_access_context.get('permissions', []) if v155_menu_access_context else [] %}
+{# /V15.5 dynamic Workspace menu visibility #}
+
 
 <!-- 手机端遮罩 -->
 <div class="mobile-overlay"
@@ -1515,12 +1520,17 @@ html[data-theme="dark"] .v158-logout-button:hover {
         <!-- 导航 -->
         <nav class="nav">
 
-            <div class="nav-section">
+            {# V15.5-A3-22-R3 section:1 #}
+{% if 'dashboard.view' in v155_menu_permissions %}
+<div class="nav-section">
                 🏠 总览中心
             </div>
+{% endif %}
+{# /V15.5-A3-22-R3 section:1 #}
 
             <!-- 总览 -->
-            <a class="nav-item {% if request.path == '/' %}active{% endif %}"
+            {% if 'dashboard.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path == '/' %}active{% endif %}"
                href="{{ url_for('overview') }}">
 
                 <i data-lucide="layout-dashboard"></i>
@@ -1528,15 +1538,25 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>总览</span>
 
             </a>
+{% endif %}
 
-            <hr>
+            {# V15.5-A3-22-R3 separator:1 #}
+{% if ('dashboard.view' in v155_menu_permissions) and ('import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions) %}
+<hr>
+{% endif %}
+{# /V15.5-A3-22-R3 separator:1 #}
 
-            <div class="nav-section">
+            {# V15.5-A3-22-R3 section:2 #}
+{% if 'import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions %}
+<div class="nav-section">
                 📊 数据中心
             </div>
+{% endif %}
+{# /V15.5-A3-22-R3 section:2 #}
 
             <!-- 快照上传 -->
-            <a class="nav-item {% if request.path.startswith('/snapshots') %}active{% endif %}"
+            {% if 'import.use' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/snapshots') %}active{% endif %}"
                href="{{ url_for('snapshots') }}">
 
                 <i data-lucide="folder-up"></i>
@@ -1544,9 +1564,11 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>快照上传</span>
 
             </a>
+{% endif %}
 
             <!-- 对比分析 -->
-            <a class="nav-item {% if request.path.startswith('/compare') %}active{% endif %}"
+            {% if 'compare.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/compare') %}active{% endif %}"
                href="{{ url_for('compare') }}">
 
                 <i data-lucide="swords"></i>
@@ -1554,15 +1576,25 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>对比分析</span>
 
             </a>
+{% endif %}
 
-            <hr>
+            {# V15.5-A3-22-R3 separator:2 #}
+{% if ('trend.view' in v155_menu_permissions or 'risk.view' in v155_menu_permissions or 'identity.view' in v155_menu_permissions or 'talent.view' in v155_menu_permissions or 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions) and (('dashboard.view' in v155_menu_permissions) or ('import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions)) %}
+<hr>
+{% endif %}
+{# /V15.5-A3-22-R3 separator:2 #}
 
-            <div class="nav-section">
+            {# V15.5-A3-22-R3 section:3 #}
+{% if 'trend.view' in v155_menu_permissions or 'risk.view' in v155_menu_permissions or 'identity.view' in v155_menu_permissions or 'talent.view' in v155_menu_permissions or 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions %}
+<div class="nav-section">
                 🧠 AI分析中心
             </div>
+{% endif %}
+{# /V15.5-A3-22-R3 section:3 #}
 
             <!-- 趋势分析 -->
-            <a class="nav-item {% if request.path.startswith('/trends') %}active{% endif %}"
+            {% if 'trend.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/trends') %}active{% endif %}"
                href="{{ url_for('trends') }}">
 
                 <i data-lucide="chart-column"></i>
@@ -1570,23 +1602,31 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>趋势分析</span>
 
             </a>
+{% endif %}
 
             <li>
-                <a href="/risk">
+                {% if 'risk.view' in v155_menu_permissions %}
+<a href="/risk">
                     ⚠️ 风险中心
                 </a>
+{% endif %}
             </li>
 
-            <a href="/identity">
+            {% if 'identity.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions %}
+<a href="/identity">
                 🏛 身份中心
             </a>
+{% endif %}
 
-            <a href="/talent">
+            {% if 'talent.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions %}
+<a href="/talent">
                 👥 人才中心
             </a>
+{% endif %}
 
             <!-- 成员 -->
-            <a class="nav-item {% if request.path.startswith('/members') %}active{% endif %}"
+            {% if 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/members') %}active{% endif %}"
                href="/members">
 
                 <i data-lucide="users"></i>
@@ -1594,14 +1634,24 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>成员</span>
 
             </a>
+{% endif %}
 
-            <hr>
+            {# V15.5-A3-22-R3 separator:3 #}
+{% if ('archive.players.view' in v155_menu_permissions or 'archive.groups.view' in v155_menu_permissions or 'archive.friends.view' in v155_menu_permissions or 'archive.enemies.view' in v155_menu_permissions or 'archive.events.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions) and (('dashboard.view' in v155_menu_permissions) or ('import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions) or ('trend.view' in v155_menu_permissions or 'risk.view' in v155_menu_permissions or 'identity.view' in v155_menu_permissions or 'talent.view' in v155_menu_permissions or 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions)) %}
+<hr>
+{% endif %}
+{# /V15.5-A3-22-R3 separator:3 #}
 
-            <div class="nav-section">
+            {# V15.5-A3-22-R3 section:4 #}
+{% if 'archive.players.view' in v155_menu_permissions or 'archive.groups.view' in v155_menu_permissions or 'archive.friends.view' in v155_menu_permissions or 'archive.enemies.view' in v155_menu_permissions or 'archive.events.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<div class="nav-section">
                📚 战场档案库
             </div>
+{% endif %}
+{# /V15.5-A3-22-R3 section:4 #}
 
-            <a class="nav-item"
+            {% if 'archive.players.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/archives/players">
 
                 <i data-lucide="user"></i>
@@ -1609,8 +1659,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>人物档案</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'archive.groups.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/archives/groups">
 
                <i data-lucide="shield"></i>
@@ -1619,8 +1671,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                <!-- V15.5-A3.3 sidebar wrong leader href fix -->
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'archive.friends.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<a class="nav-item"
               href="/archives/friends">
 
                <i data-lucide="handshake"></i>
@@ -1628,8 +1682,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                <span>友盟档案</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'archive.enemies.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/archives/enemies">
 
                 <i data-lucide="swords"></i>
@@ -1637,8 +1693,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>敌军档案</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'archive.events.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/archives/events">
 
                 <i data-lucide="scroll-text"></i>
@@ -1646,55 +1704,85 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>战场事件</span>
 
             </a>
+{% endif %}
 
-            <hr>
+            {# V15.5-A3-22-R3 separator:4 #}
+{% if (('reputation.home.view' in v155_menu_permissions or 'reputation.search.view' in v155_menu_permissions or 'reputation.subjects.view' in v155_menu_permissions or 'reputation.events.view' in v155_menu_permissions or 'reputation.duplicates.view' in v155_menu_permissions or 'reputation.merge_logs.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions) or ('ai.daily.view' in v155_menu_permissions or 'staff.center.view' in v155_menu_permissions or 'strategic.view' in v155_menu_permissions or 'tasks.view' in v155_menu_permissions or 'leaders.view' in v155_menu_permissions or 'command.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions)) and (('dashboard.view' in v155_menu_permissions) or ('import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions) or ('trend.view' in v155_menu_permissions or 'risk.view' in v155_menu_permissions or 'identity.view' in v155_menu_permissions or 'talent.view' in v155_menu_permissions or 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions) or ('archive.players.view' in v155_menu_permissions or 'archive.groups.view' in v155_menu_permissions or 'archive.friends.view' in v155_menu_permissions or 'archive.enemies.view' in v155_menu_permissions or 'archive.events.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions)) %}
+<hr>
+{% endif %}
+{# /V15.5-A3-22-R3 separator:4 #}
 
-            <div class="nav-section">
+            {# V15.5-A3-22-R3 section:5_mixed #}
+{% if ('reputation.home.view' in v155_menu_permissions or 'reputation.search.view' in v155_menu_permissions or 'reputation.subjects.view' in v155_menu_permissions or 'reputation.events.view' in v155_menu_permissions or 'reputation.duplicates.view' in v155_menu_permissions or 'reputation.merge_logs.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions) or ('ai.daily.view' in v155_menu_permissions or 'staff.center.view' in v155_menu_permissions or 'strategic.view' in v155_menu_permissions or 'tasks.view' in v155_menu_permissions or 'leaders.view' in v155_menu_permissions or 'command.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions) %}
+<div class="nav-section">
                 
             <!-- V15.6-A2 reputation archive nav -->
-            <div class="nav-section-title">🧭 信誉档案库</div>
+            {# V15.5-A3-22-R3 subtitle:reputation #}
+{% if 'reputation.home.view' in v155_menu_permissions or 'reputation.search.view' in v155_menu_permissions or 'reputation.subjects.view' in v155_menu_permissions or 'reputation.events.view' in v155_menu_permissions or 'reputation.duplicates.view' in v155_menu_permissions or 'reputation.merge_logs.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<div class="nav-section-title">🧭 信誉档案库</div>
+{% endif %}
+{# /V15.5-A3-22-R3 subtitle:reputation #}
 
-            <a class="nav-item {% if request.path == '/reputation' %}active{% endif %}"
+            {% if 'reputation.home.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path == '/reputation' %}active{% endif %}"
                href="/reputation">
                 <span class="nav-icon">🧭</span>
                 <span>档案首页</span>
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/reputation/search') %}active{% endif %}"
+            {% if 'reputation.search.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/reputation/search') %}active{% endif %}"
                href="/reputation/search">
                 <span class="nav-icon">🔎</span>
                 <span>信誉检索</span>
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/reputation/subjects') %}active{% endif %}"
+            {% if 'reputation.subjects.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/reputation/subjects') %}active{% endif %}"
                href="/reputation/subjects">
                 <span class="nav-icon">👤</span>
                 <span>信誉主体</span>
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/reputation/events') %}active{% endif %}"
+            {% if 'reputation.events.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/reputation/events') %}active{% endif %}"
                href="/reputation/events">
                 <span class="nav-icon">📌</span>
                 <span>信誉事件</span>
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/reputation/duplicates') %}active{% endif %}"
+            {% if 'reputation.duplicates.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/reputation/duplicates') %}active{% endif %}"
                href="/reputation/duplicates">
                 <span>🧩</span>
                 <span>重复检测</span>
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/reputation/merge-logs') %}active{% endif %}"
+            {% if 'reputation.merge_logs.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/reputation/merge-logs') %}active{% endif %}"
                href="/reputation/merge-logs">
                 <span>📜</span>
                 <span>合并日志</span>
             </a>
+{% endif %}
 
 
-            🤖 AI幕僚中心
+            {# V15.5-A3-22-R3 label:staff #}
+{% if 'ai.daily.view' in v155_menu_permissions or 'staff.center.view' in v155_menu_permissions or 'strategic.view' in v155_menu_permissions or 'tasks.view' in v155_menu_permissions or 'leaders.view' in v155_menu_permissions or 'command.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+🤖 AI幕僚中心
+{% endif %}
+{# /V15.5-A3-22-R3 label:staff #}
             </div>
+{% endif %}
+{# /V15.5-A3-22-R3 section:5_mixed #}
 
-            <a class="nav-item"
+            {% if 'ai.daily.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/ai/daily">
 
                 <i data-lucide="newspaper"></i>
@@ -1702,8 +1790,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>AI日报</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'staff.center.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/staff">
 
                 <i data-lucide="brain"></i>
@@ -1711,8 +1801,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>AI幕僚中心</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/strategic') %}active{% endif %}"
+            {% if 'strategic.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/strategic') %}active{% endif %}"
                href="/strategic">
 
                 <i data-lucide="orbit"></i>
@@ -1720,8 +1812,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>AI战略推演中心</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item {% if request.path.startswith('/tasks') %}active{% endif %}"
+            {% if 'tasks.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/tasks') %}active{% endif %}"
                href="/tasks">
 
                 <i data-lucide="list-checks"></i>
@@ -1729,8 +1823,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>战场任务协同中心</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'leaders.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/leaders">
 
                 <i data-lucide="users-round"></i>
@@ -1738,8 +1834,10 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>组长驾驶舱</span>
 
             </a>
+{% endif %}
 
-            <a class="nav-item"
+            {% if 'command.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions %}
+<a class="nav-item"
                href="/command">
 
                 <i data-lucide="brain-circuit"></i>
@@ -1747,19 +1845,25 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>盟务指挥中枢</span>
 
             </a>
+{% endif %}
 
 
 
 
 
-            <hr>
+            {# V15.5-A3-22-R3 separator:5 #}
+{% if ('dashboard.view' in v155_menu_permissions) or ('import.use' in v155_menu_permissions or 'compare.view' in v155_menu_permissions) or ('trend.view' in v155_menu_permissions or 'risk.view' in v155_menu_permissions or 'identity.view' in v155_menu_permissions or 'talent.view' in v155_menu_permissions or 'members.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions) or ('archive.players.view' in v155_menu_permissions or 'archive.groups.view' in v155_menu_permissions or 'archive.friends.view' in v155_menu_permissions or 'archive.enemies.view' in v155_menu_permissions or 'archive.events.view' in v155_menu_permissions or 'archive.view' in v155_menu_permissions) or (('reputation.home.view' in v155_menu_permissions or 'reputation.search.view' in v155_menu_permissions or 'reputation.subjects.view' in v155_menu_permissions or 'reputation.events.view' in v155_menu_permissions or 'reputation.duplicates.view' in v155_menu_permissions or 'reputation.merge_logs.view' in v155_menu_permissions or 'reputation.view' in v155_menu_permissions) or ('ai.daily.view' in v155_menu_permissions or 'staff.center.view' in v155_menu_permissions or 'strategic.view' in v155_menu_permissions or 'tasks.view' in v155_menu_permissions or 'leaders.view' in v155_menu_permissions or 'command.view' in v155_menu_permissions or 'staff.view' in v155_menu_permissions)) %}
+<hr>
+{% endif %}
+{# /V15.5-A3-22-R3 separator:5 #}
 
             <div class="nav-section">
                 ⚙️ 管理中心
             </div>
 
             <!-- 战场管理 -->
-            <a class="nav-item {% if request.path.startswith('/battles') %}active{% endif %}"
+            {% if 'battle.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/battles') %}active{% endif %}"
                href="/battles">
 
                 <i data-lucide="flag"></i>
@@ -1767,9 +1871,11 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>战场管理</span>
 
             </a>
+{% endif %}
 
             <!-- 规则 -->
-            <a class="nav-item {% if request.path.startswith('/rules') %}active{% endif %}"
+            {% if 'rules.view' in v155_menu_permissions %}
+<a class="nav-item {% if request.path.startswith('/rules') %}active{% endif %}"
                href="{{ url_for('rules') }}">
 
                 <i data-lucide="shield-check"></i>
@@ -1777,6 +1883,7 @@ html[data-theme="dark"] .v158-logout-button:hover {
                 <span>规则</span>
 
             </a>
+{% endif %}
 
             {% if (
                 g.v158_current_user
@@ -1809,11 +1916,26 @@ html[data-theme="dark"] .v158-logout-button:hover {
 
                 <span>账号管理</span>
             </a>
+            <a
+                class="nav-item
+                {% if request.path.startswith('/security/access-center') %}
+                    active
+                {% endif %}"
+                href="{{ url_for('v155_security_access_center') }}"
+            >
+                <i data-lucide="lock-keyhole"></i>
+
+                <span>权限中心</span>
+            </a>
+
+
             {% endif %}
 
-            <a href="/identity/logs">
+            {% if 'identity.logs.view' in v155_menu_permissions or 'member.view' in v155_menu_permissions %}
+<a href="/identity/logs">
             📜 身份日志
             </a>
+{% endif %}
 
             <!-- 使用说明 -->
             <a class="nav-item {% if request.path.startswith('/usage') %}active{% endif %}"

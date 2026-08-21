@@ -10768,6 +10768,60 @@ def v158_authentication_before_request():
 
 
 
+
+# =========================
+# V15.5-A3 RBAC request context bridge
+# =========================
+
+@app.before_request
+def v155_rbac_request_context_before_request():
+    from services.v155_rbac_request_context import (
+        populate_request_access_context,
+    )
+
+    current_user = getattr(
+        g,
+        "v158_current_user",
+        None,
+    )
+
+    populate_request_access_context(
+        g,
+        DB_FILE,
+        current_user,
+    )
+
+    return None
+
+
+@app.before_request
+def v155_rbac_backend_permission_gate_before_request():
+    from flask import abort, g, request
+    from services.v155_rbac_backend_permission_gate import (
+        evaluate_backend_permission,
+    )
+
+    access_context = getattr(
+        g,
+        "v155_access_context",
+        None,
+    )
+
+    decision = evaluate_backend_permission(
+        context=access_context,
+        path=request.path,
+        method=request.method,
+    )
+
+    if (
+        decision["handled"]
+        and not decision["allowed"]
+    ):
+        abort(403)
+
+    return None
+
+
 @app.route(
     "/security/accounts",
     methods=["GET", "POST"],
