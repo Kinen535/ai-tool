@@ -8,6 +8,10 @@ from werkzeug.security import (
     generate_password_hash,
 )
 
+from services.v155_workspace_provisioning import (
+    ensure_default_workspace_membership,
+)
+
 from services.v158_auth_store import (
     create_user,
     get_user_by_id,
@@ -904,6 +908,12 @@ def create_account(
                     must_change_password
                 )
             ),
+        )
+
+        ensure_default_workspace_membership(
+            conn,
+            user_id=user_id,
+            account_role=role,
         )
 
         created = _require_target(

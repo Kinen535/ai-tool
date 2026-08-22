@@ -10014,6 +10014,21 @@ _v155_archive_event_detail_takeover_a3()
 @app.route("/archives/search")
 @app.route("/archive_search")
 def v155_archive_search_a32():
+    try:
+        _v155_s15_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    battle_id = getattr(
+        _v155_s15_boundary,
+        "current_battle_id",
+        None,
+    )
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
+
     import sqlite3
     from flask import render_template, request
     from services.v155_archive_store import search_archive_global
