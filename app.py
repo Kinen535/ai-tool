@@ -1,4 +1,9 @@
 from __future__ import annotations
+from services.v155_workspace_data_boundary import (
+    WorkspaceDataBoundaryError,
+    resolve_workspace_data_boundary,
+)
+
 from services.import_provenance import (
     count_source_members,
     validate_and_record_snapshot_counts,
@@ -289,18 +294,13 @@ def init_db():
     print("✅ 数据库初始化完成")
 
 
-def list_snapshot_times() -> list[str]:
+def list_snapshot_times(battle_id: int | None = None) -> list[str]:
 
     conn = get_conn()
 
     try:
 
-        battle_row = conn.execute("""
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-        """).fetchone()
+        battle_row = (conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (int(battle_id),)) if battle_id is not None else conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n        ')).fetchone()
 
         battle_id = (
             battle_row["id"]
@@ -471,7 +471,7 @@ def load_game_csv(file_storage) -> pd.DataFrame:
     return df
 
 
-def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "") -> bool:
+def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str='', battle_id: int | None = None) -> bool:
 
     conn = None
 
@@ -490,14 +490,7 @@ def save_snapshot(df: pd.DataFrame, snapshot_time: str, source_filename: str = "
         # 当前战场ID
         # =========================
 
-        battle_row = cur.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
+        battle_row = (cur.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (int(battle_id),)) if battle_id is not None else cur.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n            ')).fetchone()
 
         battle_id = battle_row["id"] if battle_row else 1
 
@@ -3492,20 +3485,13 @@ def calculate_stall_penalty(
         conn.close()
 
 
-def process_snapshot_pipeline(
-    snapshot_time: str
-):
+def process_snapshot_pipeline(snapshot_time: str, battle_id: int | None = None):
 
     try:
 
         conn = get_conn()
 
-        battle_row = conn.execute("""
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-        """).fetchone()
+        battle_row = (conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (int(battle_id),)) if battle_id is not None else conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n        ')).fetchone()
 
         battle_id = (
             battle_row["id"]
@@ -4071,6 +4057,13 @@ def test():
 
 @app.route("/")
 def overview():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     print("🔥 进入首页 overview")
 
     try:
@@ -4080,12 +4073,7 @@ def overview():
 
     conn = get_conn()
 
-    battle_row = conn.execute("""
-        SELECT id, battle_name
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-    """).fetchone()
+    battle_row = conn.execute('SELECT id, battle_name FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
     battle_id = battle_row["id"] if battle_row else 1
     current_battle = battle_row["battle_name"] if battle_row else "未设置战场"
@@ -4148,7 +4136,7 @@ def overview():
         if any(k in text for k in ["疑似偷地", "未执行", "低活跃", "完全摆烂", "违规"]):
             abnormal_count += 1
 
-    snapshot_count = len(list_snapshot_times())
+    snapshot_count = len(list_snapshot_times(battle_id=_v155_boundary.current_battle_id))
 
     risk_index = (
         abnormal_count * 100 // total_members
@@ -4216,6 +4204,13 @@ def overview():
 
 @app.route("/snapshots", methods=["GET", "POST"])
 def snapshots():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     init_db()
     if request.method == "POST":
         try:
@@ -4227,12 +4222,10 @@ def snapshots():
 
             df = load_game_csv(file)
             snapshot_time = manual_time if manual_time else extract_snapshot_time(file.filename)
-            inserted = save_snapshot(df, snapshot_time, file.filename)
+            inserted = save_snapshot(df, snapshot_time, file.filename, battle_id=_v155_boundary.current_battle_id)
             if inserted:
 
-                process_snapshot_pipeline(
-                    snapshot_time
-                )
+                process_snapshot_pipeline(snapshot_time, battle_id=_v155_boundary.current_battle_id)
             flash(f"快照保存成功：{snapshot_time}，共 {len(df)} 条" if inserted else f"该时间点快照已存在：{snapshot_time}", "success" if inserted else "warning")
             return redirect(url_for("snapshots"))
         except Exception as e:
@@ -4245,12 +4238,7 @@ def snapshots():
 
         conn = get_conn()
 
-        battle_row = conn.execute("""
-            SELECT *
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-        """).fetchone()
+        battle_row = conn.execute('SELECT * FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
         battle_id = battle_row["id"] if battle_row else 1
 
@@ -4367,6 +4355,13 @@ def build_compare_scope_ui_options(
 
 @app.route("/compare", methods=["GET", "POST"])
 def compare():
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
 
     import traceback
     import json
@@ -4511,7 +4506,7 @@ def compare():
 
     init_db()
 
-    times = list_snapshot_times()
+    times = list_snapshot_times(battle_id=_v155_boundary.current_battle_id)
 
     result_rows = []
     group_rows = []
@@ -4563,12 +4558,7 @@ def compare():
 
             cur = conn.cursor()
 
-            battle_row = get_conn().execute("""
-                SELECT id
-                FROM battles
-                WHERE is_current = 1
-                LIMIT 1
-            """).fetchone()
+            battle_row = get_conn().execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
             battle_id = battle_row["id"] if battle_row else 1
 
@@ -4627,6 +4617,19 @@ def compare():
                         locals().get("battle_id"),
                     )
                 )
+
+                cached_data = dict(cached_data)
+                for _v155_compare_render_override_key in (
+                    'analysis_scope_type',
+                    'analysis_scope_value',
+                    'analysis_scope',
+                    'scope_group_options',
+                    'scope_member_options',
+                ):
+                    cached_data.pop(
+                        _v155_compare_render_override_key,
+                        None,
+                    )
 
                 return render_template(
                     "compare.html",
@@ -4798,12 +4801,7 @@ def compare():
         # ==================================================
         # 加载快照
         # ==================================================
-        battle_row = get_conn().execute("""
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-        """).fetchone()
+        battle_row = get_conn().execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
         battle_id = (
             battle_row["id"]
@@ -5375,18 +5373,20 @@ def compare():
 @app.route("/trends")
 def trends():
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     member_keyword = request.args.get("member_keyword", "").strip()
     group_keyword = request.args.get("group_keyword", "").strip()
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
-    battle_row = conn.execute("""
-        SELECT id
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-    """).fetchone()
+    battle_row = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
     if not battle_row:
         conn.close()
@@ -5831,6 +5831,13 @@ def trends():
 
 @app.route("/risk")
 def risk_center():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     reason = request.args.get(
         "reason",
         "",
@@ -5853,14 +5860,7 @@ def risk_center():
     conn = get_conn()
 
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
+        battle_row = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
         rows = []
 
@@ -6095,11 +6095,18 @@ def members():
 
 @app.route('/identity')
 def identity():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     conn = get_conn()
     keyword = request.args.get('keyword', '').strip()
     role = request.args.get('role', '').strip()
     grade = request.args.get('grade', '').strip()
-    current_battle = conn.execute('\n        SELECT id\n        FROM battles\n        WHERE is_current = 1\n        LIMIT 1\n        ').fetchone()
+    current_battle = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
     all_members = []
     if current_battle:
         battle_id = current_battle[0]
@@ -6217,17 +6224,17 @@ def identity():
 
 @app.route("/talent")
 def talent():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     conn = get_conn()
 
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
+        battle_row = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
         rows = []
         latest_time = None
@@ -6619,15 +6626,29 @@ def rules():
 
 @app.route('/identity/logs')
 def identity_logs():
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     conn = get_conn()
-    logs = conn.execute('\n                SELECT il.*\n                FROM identity_logs AS il\n\n                INNER JOIN battles AS b\n                  ON b.id=il.battle_id\n                 AND b.is_current=1\n\n                ORDER BY il.id DESC\n                LIMIT 500\n                ').fetchall()
+    logs = conn.execute('SELECT il.* FROM identity_logs AS il WHERE il.battle_id = ? ORDER BY il.id DESC LIMIT 500', (_v155_boundary.current_battle_id,)).fetchall()
     conn.close()
     return render_template('identity_logs.html', logs=logs)
 
 @app.route('/identity/log/<int:log_id>')
 def identity_log_detail(log_id):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     conn = get_conn()
-    row = conn.execute('\n                SELECT il.*\n                FROM identity_logs AS il\n\n                INNER JOIN battles AS b\n                  ON b.id=il.battle_id\n                 AND b.is_current=1\n\n                WHERE il.id=?\n                ', (log_id,)).fetchone()
+    row = conn.execute('SELECT il.* FROM identity_logs AS il WHERE il.id = ? AND il.battle_id IN ({}) LIMIT 1'.format(",".join("?" for _ in _v155_boundary.battle_ids)), (log_id, *_v155_boundary.battle_ids)).fetchone()
     conn.close()
     if not row:
         return '日志不存在', 404
@@ -6734,30 +6755,27 @@ def identity_edit(member_name):
         )[:1000],
     }
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(
+                g,
+                "v155_access_context",
+                None,
+            )
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    if _v155_boundary.current_battle_id is None:
+        abort(403)
+
     conn = get_conn()
     battle_id = None
     latest_time = None
 
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current=1
-            LIMIT 1
-            """
-        ).fetchone()
-
-        if not battle_row:
-            flash(
-                "当前没有可用战场。",
-                "warning",
-            )
-
-            return redirect("/identity")
-
         battle_id = int(
-            battle_row["id"]
+            _v155_boundary.current_battle_id
         )
 
         if request.method == "GET":
@@ -7170,17 +7188,21 @@ def identity_view_legacy():
 
 @app.route('/identity/view/<member_name>')
 def identity_view(member_name):
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        return ('Forbidden', 403)
     source = request.args.get('from')
     group_name = request.args.get('group')
     conn = get_conn()
     try:
-        battle_row = conn.execute('\n            SELECT id\n            FROM battles\n            WHERE is_current = 1\n            LIMIT 1\n            ').fetchone()
+        battle_row = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
         if not battle_row:
             return '当前未设置战场'
         battle_id = battle_row['id']
         latest_record = conn.execute('\n            SELECT *\n            FROM player_records\n            WHERE battle_id = ?\n              AND member = ?\n              AND is_deleted = 0\n            ORDER BY\n                snapshot_time DESC,\n                id DESC\n            LIMIT 1\n            ', (battle_id, member_name)).fetchone()
         if not latest_record:
-            return '当前战场不存在该成员'
+            return ('当前战场不存在该成员', 404)
         seen_row = conn.execute('\n            SELECT\n                MIN(snapshot_time) AS first_seen,\n                MAX(snapshot_time) AS last_seen\n            FROM player_records\n            WHERE battle_id = ?\n              AND member = ?\n              AND is_deleted = 0\n            ', (battle_id, member_name)).fetchone()
         artificial_profile = conn.execute('\n                SELECT *\n                FROM member_battle_profiles\n                WHERE battle_id=?\n                  AND member_name=?\n                ORDER BY id DESC\n                LIMIT 1\n                ', (battle_id, member_name)).fetchone()
         latest_data = dict(latest_record)
@@ -7386,70 +7408,150 @@ def identity_view(member_name):
 @app.route("/battles")
 def battles():
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(
+                g,
+                "v155_access_context",
+                None,
+            )
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    _v155_battle_ids = tuple(
+        int(_value)
+        for _value
+        in _v155_boundary.battle_ids
+    )
+
+    if not _v155_battle_ids:
+        abort(403)
+
     conn = get_conn()
 
-    battle_rows = conn.execute("""
-        SELECT *
-        FROM battles
-        ORDER BY id DESC
-    """).fetchall()
+    try:
+        _v155_placeholders = ",".join(
+            "?"
+            for _ in _v155_battle_ids
+        )
 
-    battle_stats = {}
+        _v155_raw_battle_rows = conn.execute(
+            f"""
+            SELECT
+                b.*,
+                wb.is_current
+                    AS workspace_is_current
+            FROM battles AS b
+            JOIN v155_workspace_battles AS wb
+              ON wb.battle_id=b.id
+            WHERE wb.workspace_id=?
+              AND COALESCE(
+                    wb.status,
+                    'active'
+                  )='active'
+              AND b.id IN (
+                    {_v155_placeholders}
+                  )
+            ORDER BY b.id DESC
+            """,
+            (
+                int(
+                    _v155_boundary.workspace_id
+                ),
+                *_v155_battle_ids,
+            ),
+        ).fetchall()
 
-    for b in battle_rows:
+        battle_rows = []
 
-        snapshot_count = conn.execute("""
-            SELECT COUNT(*)
-            FROM snapshots
-            WHERE battle_id = ?
-            AND is_deleted = 0
-        """, (b["id"],)).fetchone()[0]
+        for _v155_row in _v155_raw_battle_rows:
 
-        last_upload = conn.execute("""
-            SELECT snapshot_time
-            FROM snapshots
-            WHERE battle_id = ?
-            AND is_deleted = 0
-            ORDER BY id DESC
-            LIMIT 1
-        """, (b["id"],)).fetchone()
+            _v155_battle = dict(
+                _v155_row
+            )
 
-        # 成员数量
-        member_count = 0
+            _v155_battle[
+                "is_current"
+            ] = int(
+                _v155_row[
+                    "workspace_is_current"
+                ]
+                or 0
+            )
 
-        try:
+            battle_rows.append(
+                _v155_battle
+            )
 
-            if last_upload:
+        battle_stats = {}
 
-                df = load_snapshot_df(
-                    last_upload["snapshot_time"],
-                    b["id"]
+        for b in battle_rows:
+
+            snapshot_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM snapshots
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                """,
+                (
+                    b["id"],
+                ),
+            ).fetchone()[0]
+
+            last_upload = conn.execute(
+                """
+                SELECT snapshot_time
+                FROM snapshots
+                WHERE battle_id = ?
+                  AND is_deleted = 0
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (
+                    b["id"],
+                ),
+            ).fetchone()
+
+            member_count = 0
+
+            try:
+                if last_upload:
+                    df = load_snapshot_df(
+                        last_upload[
+                            "snapshot_time"
+                        ],
+                        b["id"],
+                    )
+
+                    member_count = len(df)
+
+            except Exception as e:
+                print(
+                    f"成员数量统计失败 battle={b['id']}:",
+                    e,
                 )
 
-                member_count = len(df)
+            battle_stats[
+                b["id"]
+            ] = {
+                "snapshot_count":
+                    snapshot_count,
+                "member_count":
+                    member_count,
+                "last_upload":
+                    (
+                        last_upload[
+                            "snapshot_time"
+                        ]
+                        if last_upload
+                        else "-"
+                    ),
+            }
 
-        except Exception as e:
-
-            print(
-                f"成员数量统计失败 battle={b['id']}:",
-                e
-            )
-
-        battle_stats[b["id"]] = {
-
-            "snapshot_count": snapshot_count,
-
-            "member_count": member_count,
-
-            "last_upload": (
-                last_upload["snapshot_time"]
-                if last_upload
-                else "-"
-            )
-
-        }
-
-    conn.close()
+    finally:
+        conn.close()
 
     current_user = (
         getattr(
@@ -7489,6 +7591,7 @@ def battles():
     methods=["POST"],
 )
 def battle_create():
+
     current_user = (
         getattr(
             g,
@@ -7515,6 +7618,17 @@ def battle_create():
         ),
     ):
         abort(400)
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(
+                g,
+                "v155_access_context",
+                None,
+            )
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
 
     battle_name = request.form.get(
         "battle_name",
@@ -7548,7 +7662,7 @@ def battle_create():
             "BEGIN IMMEDIATE"
         )
 
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO battles
             (
@@ -7569,6 +7683,44 @@ def battle_create():
                 ),
             ),
         )
+
+        new_battle_id = int(
+            cursor.lastrowid
+            or 0
+        )
+
+        if new_battle_id <= 0:
+            raise RuntimeError(
+                "new battle id was not generated"
+            )
+
+        mapping_cursor = conn.execute(
+            """
+            INSERT INTO v155_workspace_battles
+            (
+                workspace_id,
+                battle_id,
+                is_current,
+                status
+            )
+            VALUES (?, ?, 0, 'active')
+            """,
+            (
+                int(
+                    _v155_boundary.workspace_id
+                ),
+                new_battle_id,
+            ),
+        )
+
+        if int(
+            mapping_cursor.rowcount
+            or 0
+        ) != 1:
+            raise RuntimeError(
+                "workspace battle mapping insert "
+                "did not affect exactly one row"
+            )
 
         conn.commit()
 
@@ -7595,6 +7747,7 @@ def battle_create():
     methods=["POST"],
 )
 def battle_delete(battle_id):
+
     current_user = (
         getattr(
             g,
@@ -7625,6 +7778,24 @@ def battle_delete(battle_id):
         abort(400)
 
     try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(
+                g,
+                "v155_access_context",
+                None,
+            )
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    if int(battle_id) not in tuple(
+        int(_value)
+        for _value
+        in _v155_boundary.battle_ids
+    ):
+        abort(403)
+
+    try:
         actor_user_id = int(
             current_user.get("id")
         )
@@ -7644,17 +7815,22 @@ def battle_delete(battle_id):
     )[:64]
 
     audit_common = {
-        "request_method": request.method,
-        "request_path": request.path,
-        "request_id": request.headers.get(
-            "X-Request-ID",
-            "",
-        )[:64],
-        "ip_address": _v158_request_ip(),
-        "user_agent": request.headers.get(
-            "User-Agent",
-            "",
-        )[:1000],
+        "request_method":
+            request.method,
+        "request_path":
+            request.path,
+        "request_id":
+            request.headers.get(
+                "X-Request-ID",
+                "",
+            )[:64],
+        "ip_address":
+            _v158_request_ip(),
+        "user_agent":
+            request.headers.get(
+                "User-Agent",
+                "",
+            )[:1000],
     }
 
     business_tables = (
@@ -7675,6 +7851,54 @@ def battle_delete(battle_id):
         conn.execute(
             "BEGIN IMMEDIATE"
         )
+
+        workspace_mapping = conn.execute(
+            """
+            SELECT
+                workspace_id,
+                battle_id,
+                is_current,
+                status
+            FROM v155_workspace_battles
+            WHERE workspace_id=?
+              AND battle_id=?
+              AND COALESCE(
+                    status,
+                    'active'
+                  )='active'
+            """,
+            (
+                int(
+                    _v155_boundary.workspace_id
+                ),
+                int(battle_id),
+            ),
+        ).fetchone()
+
+        if not workspace_mapping:
+            raise RuntimeError(
+                "workspace battle ownership "
+                "changed inside transaction"
+            )
+
+        mapping_count = int(
+            conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM v155_workspace_battles
+                WHERE battle_id=?
+                """,
+                (
+                    int(battle_id),
+                ),
+            ).fetchone()[0]
+        )
+
+        if mapping_count != 1:
+            raise RuntimeError(
+                "battle mapping cardinality "
+                "is not exactly one"
+            )
 
         battle = conn.execute(
             """
@@ -7723,7 +7947,31 @@ def battle_delete(battle_id):
             or f"#{battle_id}"
         )
 
-        if battle["is_current"]:
+        workspace_is_current = bool(
+            workspace_mapping[
+                "is_current"
+            ]
+        )
+
+        global_is_current = bool(
+            battle[
+                "is_current"
+            ]
+        )
+
+        if (
+            workspace_is_current
+            or global_is_current
+        ):
+            if workspace_is_current:
+                blocked_reason = (
+                    "workspace_current_battle_protected"
+                )
+            else:
+                blocked_reason = (
+                    "legacy_global_current_battle_protected"
+                )
+
             record_action_log(
                 conn,
                 user_id=actor_user_id,
@@ -7738,12 +7986,21 @@ def battle_delete(battle_id):
                 result_status="blocked",
                 before_data={
                     "battle": {
-                        "id": battle_id,
-                        "battle_name": battle_name,
-                        "is_current": 1,
+                        "id":
+                            battle_id,
+                        "battle_name":
+                            battle_name,
+                        "workspace_is_current":
+                            int(
+                                workspace_is_current
+                            ),
+                        "global_is_current":
+                            int(
+                                global_is_current
+                            ),
                     },
                 },
-                reason="current_battle_protected",
+                reason=blocked_reason,
                 **audit_common,
             )
 
@@ -7761,6 +8018,7 @@ def battle_delete(battle_id):
         deleted_counts = {}
 
         for table_name in business_tables:
+
             row = conn.execute(
                 f"""
                 SELECT COUNT(*) AS total
@@ -7772,7 +8030,9 @@ def battle_delete(battle_id):
                 ),
             ).fetchone()
 
-            deleted_counts[table_name] = int(
+            deleted_counts[
+                table_name
+            ] = int(
                 row["total"]
                 if row
                 else 0
@@ -7780,14 +8040,25 @@ def battle_delete(battle_id):
 
         before_data = {
             "battle": {
-                "id": battle_id,
-                "battle_name": battle_name,
-                "is_current": 0,
+                "id":
+                    battle_id,
+                "battle_name":
+                    battle_name,
+                "workspace_id":
+                    int(
+                        _v155_boundary.workspace_id
+                    ),
+                "workspace_is_current":
+                    0,
+                "global_is_current":
+                    0,
             },
-            "row_counts": deleted_counts,
+            "row_counts":
+                deleted_counts,
         }
 
         for table_name in business_tables:
+
             conn.execute(
                 f"""
                 DELETE FROM {table_name}
@@ -7796,6 +8067,34 @@ def battle_delete(battle_id):
                 (
                     battle_id,
                 ),
+            )
+
+        mapping_cursor = conn.execute(
+            """
+            DELETE FROM v155_workspace_battles
+            WHERE workspace_id=?
+              AND battle_id=?
+              AND is_current=0
+              AND COALESCE(
+                    status,
+                    'active'
+                  )='active'
+            """,
+            (
+                int(
+                    _v155_boundary.workspace_id
+                ),
+                int(battle_id),
+            ),
+        )
+
+        if int(
+            mapping_cursor.rowcount
+            or 0
+        ) != 1:
+            raise RuntimeError(
+                "workspace battle mapping delete "
+                "did not affect exactly one row"
             )
 
         cursor = conn.execute(
@@ -7828,8 +8127,12 @@ def battle_delete(battle_id):
             result_status="success",
             before_data=before_data,
             after_data={
-                "deleted": True,
-                "deleted_counts": deleted_counts,
+                "deleted":
+                    True,
+                "deleted_counts":
+                    deleted_counts,
+                "workspace_mapping_deleted":
+                    True,
             },
             reason="battle_deleted",
             **audit_common,
@@ -7923,6 +8226,19 @@ def battle_select(battle_id):
         )[:1000],
     }
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    if int(battle_id) not in tuple(
+        int(_value)
+        for _value in _v155_boundary.battle_ids
+    ):
+        abort(403)
+
     conn = get_conn()
 
     try:
@@ -7977,7 +8293,7 @@ def battle_select(battle_id):
             or f"#{battle_id}"
         )
 
-        if target["is_current"]:
+        if int(_v155_boundary.current_battle_id) == int(battle_id) and bool(target["is_current"]):
             record_action_log(
                 conn,
                 user_id=actor_user_id,
@@ -8036,6 +8352,29 @@ def battle_select(battle_id):
                 "battle_name": battle_name,
             },
         }
+
+        conn.execute(
+            "UPDATE v155_workspace_battles SET is_current=0 "
+            "WHERE workspace_id=? "
+            "AND COALESCE(status, 'active')='active' "
+            "AND is_current != 0",
+            (_v155_boundary.workspace_id,),
+        )
+
+        _v155_workspace_select_cursor = conn.execute(
+            "UPDATE v155_workspace_battles SET is_current=1 "
+            "WHERE workspace_id=? AND battle_id=? "
+            "AND COALESCE(status, 'active')='active'",
+            (
+                _v155_boundary.workspace_id,
+                int(battle_id),
+            ),
+        )
+
+        if int(_v155_workspace_select_cursor.rowcount or 0) != 1:
+            raise RuntimeError(
+                "workspace current battle update did not affect exactly one row"
+            )
 
         conn.execute(
             """
@@ -8108,13 +8447,16 @@ def battle_select(battle_id):
 @app.route("/snapshot/view/<int:snapshot_id>")
 def snapshot_view(snapshot_id):
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        return "Forbidden", 403
+
     conn = get_conn()
 
-    row = conn.execute("""
-        SELECT *
-        FROM snapshots
-        WHERE id = ?
-    """, (snapshot_id,)).fetchone()
+    row = conn.execute('SELECT * FROM snapshots WHERE id = ? AND battle_id IN ({})'.format(",".join("?" for _ in _v155_boundary.battle_ids)), (snapshot_id, *_v155_boundary.battle_ids)).fetchone()
 
     conn.close()
 
@@ -8153,6 +8495,13 @@ def snapshot_delete(snapshot_id):
         current_role,
         "super_admin",
     ):
+        abort(403)
+
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
         abort(403)
 
     if not validate_csrf_token(
@@ -8200,9 +8549,16 @@ def snapshot_delete(snapshot_id):
                     AS is_deleted
             FROM snapshots
             WHERE id=?
-            """,
+              AND battle_id IN ({})
+            """.format(
+                ",".join(
+                    "?"
+                    for _ in _v155_boundary.battle_ids
+                )
+            ),
             (
                 snapshot_id,
+                *_v155_boundary.battle_ids,
             ),
         ).fetchone()
 
@@ -8426,35 +8782,18 @@ def archive_players():
 
 @app.route("/archives/alliances")
 def archive_alliances():
-
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
-
-    groups = conn.execute("""
-        SELECT
-            group_name,
-            COUNT(DISTINCT member) AS member_count
-        FROM player_records
-        WHERE snapshot_time = (
-            SELECT MAX(snapshot_time)
-            FROM player_records
-            WHERE is_deleted = 0
-        )
-          AND is_deleted = 0
-          AND group_name IS NOT NULL
-          AND group_name != ''
-        GROUP BY group_name
-        HAVING COUNT(DISTINCT member) >= 1
-        ORDER BY member_count DESC
-    """).fetchall()
-
+    groups = conn.execute("\n        SELECT\n            group_name,\n            COUNT(DISTINCT member) AS member_count\n        FROM player_records\n        WHERE battle_id = ? AND snapshot_time = (\n            SELECT MAX(snapshot_time)\n            FROM player_records\n            WHERE battle_id = ? AND is_deleted = 0\n        )\n          AND is_deleted = 0\n          AND group_name IS NOT NULL\n          AND group_name != ''\n        GROUP BY group_name\n        HAVING COUNT(DISTINCT member) >= 1\n        ORDER BY member_count DESC\n    ", (battle_id, battle_id)).fetchall()
     conn.close()
-
-    return render_template(
-        "archive_alliances.html",
-        title="分组驾驶舱",
-        groups=groups
-    )
+    return render_template('archive_alliances.html', title='分组驾驶舱', groups=groups)
 
 @app.route('/archives/group/<group_name>')
 def group_detail(group_name):
@@ -8608,24 +8947,27 @@ def export_compare_excel_xlsx():
     )
     client_state = body.get("client_state") or {}
 
+    try:
+        _v155_boundary = resolve_workspace_data_boundary(
+            getattr(g, "v155_access_context", None)
+        )
+    except WorkspaceDataBoundaryError:
+        abort(403)
+
+    if _v155_boundary.current_battle_id is None:
+        abort(403)
+
+    battle_id = int(_v155_boundary.current_battle_id)
+
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
 
     try:
-        battle_row = conn.execute(
-            """
-            SELECT id
-            FROM battles
-            WHERE is_current = 1
-            LIMIT 1
-            """
-        ).fetchone()
+        battle_row = conn.execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (battle_id,)).fetchone()
 
-        battle_id = (
-            int(battle_row["id"])
-            if battle_row
-            else 1
-        )
+        if not battle_row:
+            abort(403)
+
 
         cache_row = conn.execute(
             """
@@ -8675,18 +9017,20 @@ def export_compare_excel_xlsx():
 
 @app.route("/export/compare_result")
 def export_compare_result():
-    if not COMPARE_RESULT_FILE.exists():
-        flash("暂无对比结果可导出", "warning")
-        return redirect(url_for("compare"))
-    return send_file(COMPARE_RESULT_FILE, as_attachment=True, download_name="compare_result.csv")
+    flash(
+        "旧版 CSV 导出已停用，请使用当前战场的数据对比导出功能。",
+        "warning",
+    )
+    return redirect(url_for("compare"))
 
 
 @app.route("/export/group_summary")
 def export_group_summary():
-    if not GROUP_SUMMARY_FILE.exists():
-        flash("暂无分团统计可导出", "warning")
-        return redirect(url_for("compare"))
-    return send_file(GROUP_SUMMARY_FILE, as_attachment=True, download_name="group_summary.csv")
+    flash(
+        "旧版分团 CSV 导出已停用，请使用当前战场的数据对比导出功能。",
+        "warning",
+    )
+    return redirect(url_for("compare"))
 
 
 @app.route("/export_members")
@@ -9504,27 +9848,22 @@ if __name__ == "__main__":
 
 @app.route("/archives")
 def v155_archive_home():
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
-    from services.v155_archive_store import (
-        get_archive_overview,
-        list_events,
-    )
-
-    conn = sqlite3.connect("data/snapshots.db")
+    from services.v155_archive_store import get_archive_overview, list_events
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    overview = get_archive_overview(conn)
-    recent_events = list_events(conn, limit=5)
-
+    overview = get_archive_overview(conn, battle_id=battle_id)
+    recent_events = list_events(conn, limit=5, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_home.html",
-        overview=overview,
-        recent_events=recent_events,
-        title="战场档案库",
-    )
+    return render_template('archive_home.html', overview=overview, recent_events=recent_events, title='战场档案库')
 
 
 @app.route('/archives/players')
@@ -9564,25 +9903,22 @@ app.view_functions["archive_players"] = v155_archive_players
 @app.route("/archives/events")
 @app.route("/archive_events")
 def v155_archive_events():
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template, request
     from services.v155_archive_store import list_events
-
-    q = request.args.get("q", "").strip()
-
-    conn = sqlite3.connect("data/snapshots.db")
+    q = request.args.get('q', '').strip()
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    events = list_events(conn, q)
-
+    events = list_events(conn, q, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_events.html",
-        events=events,
-        q=q,
-        title="战场事件",
-    )
+    return render_template('archive_events.html', events=events, q=q, title='战场事件')
 
 
 @app.route("/archives/events/save", methods=["POST"])
@@ -9666,22 +10002,21 @@ def v155_archive_event_update(event_id):
 @app.route("/archive_friends")
 @app.route("/archive_alliances")
 def v155_archive_friends():
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
     from services.v155_archive_store import list_alliances
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    alliances = list_alliances(conn)
-
+    alliances = list_alliances(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_friends.html",
-        alliances=alliances,
-        title="友盟档案",
-    )
+    return render_template('archive_friends.html', alliances=alliances, title='友盟档案')
 
 
 @app.route('/archives/friends/save', methods=['POST'])
@@ -9710,22 +10045,21 @@ def v155_archive_friend_save():
 @app.route("/archives/enemies")
 @app.route("/archive_enemies")
 def v155_archive_enemies():
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
     from services.v155_archive_store import list_enemies
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    enemies = list_enemies(conn)
-
+    enemies = list_enemies(conn, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_enemies.html",
-        enemies=enemies,
-        title="敌军档案",
-    )
+    return render_template('archive_enemies.html', enemies=enemies, title='敌军档案')
 
 
 @app.route('/archives/enemies/save', methods=['POST'])
@@ -9819,22 +10153,21 @@ _v155_archive_route_takeover_a1()
 @app.route("/archive_friends/<int:alliance_id>")
 @app.route("/archive_alliances/<int:alliance_id>")
 def v155_archive_friend_detail_a2(alliance_id):
+    try:
+        _v155_s13_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
+    except WorkspaceDataBoundaryError:
+        abort(403)
+    battle_id = getattr(_v155_s13_boundary, 'current_battle_id', None)
+    if not isinstance(battle_id, int) or battle_id <= 0:
+        abort(403)
     import sqlite3
     from flask import render_template
     from services.v155_archive_store import get_alliance
-
-    conn = sqlite3.connect("data/snapshots.db")
+    conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-
-    alliance = get_alliance(conn, alliance_id)
-
+    alliance = get_alliance(conn, alliance_id, battle_id=battle_id)
     conn.close()
-
-    return render_template(
-        "archive_friend_detail.html",
-        alliance=alliance,
-        title="友盟档案详情",
-    )
+    return render_template('archive_friend_detail.html', alliance=alliance, title='友盟档案详情')
 
 
 @app.route("/archives/friends/<int:alliance_id>/update", methods=["POST"])
@@ -10977,6 +11310,31 @@ def v158_security_accounts():
 
     finally:
         conn.close()
+
+
+@app.route("/security/access-center")
+def v155_security_access_center():
+
+    from services.v155_access_center_service import (
+        build_access_center_report,
+    )
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        report = build_access_center_report(
+            conn
+        )
+
+        return render_template(
+            "security_access_center.html",
+            report=report,
+            title="权限中心",
+        )
+
+    finally:
+        conn.close()
+
 
 
 @app.route("/security/guard", methods=["GET", "POST"])
@@ -12283,7 +12641,6 @@ def v156_reputation_subjects():
         abort(403)
     if battle_id <= 0:
         abort(403)
-
     if request.method == 'POST':
         data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': 'manual', 'note': request.form.get('note', '')}
         create_reputation_subject_scoped(conn, data, battle_id=battle_id)
@@ -13024,7 +13381,6 @@ def v156_reputation_events():
         abort(403)
     if battle_id <= 0:
         abort(403)
-
     if request.method == 'POST':
         data = {'title': (request.form.get('title', '') or request.form.get('event_title', '')).strip(), 'event_type': request.form.get('event_type', '').strip(), 'impact_level': request.form.get('impact_level', '').strip(), 'status': request.form.get('status', '').strip(), 'event_time': request.form.get('event_time', '').strip(), 'summary': (request.form.get('summary', '') or request.form.get('event_summary', '')).strip(), 'evidence_note': (request.form.get('evidence_note', '') or request.form.get('evidence', '') or request.form.get('note', '')).strip(), 'created_at': None, 'updated_at': None}
         if data['title']:
