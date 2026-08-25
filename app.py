@@ -11351,6 +11351,13 @@ def v155_security_guard_console():
 
     # V15.8：安全后台权限由全局认证钩子统一控制。
 
+    if request.method == "POST":
+        if not validate_csrf_token(
+            session,
+            request.form.get("csrf_token", ""),
+        ):
+            abort(400)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
@@ -11428,6 +11435,13 @@ def v155_security_cleanup():
 
     # V15.8：安全后台权限由全局认证钩子统一控制。
 
+    if request.method == "POST":
+        if not validate_csrf_token(
+            session,
+            request.form.get("csrf_token", ""),
+        ):
+            abort(400)
+
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
@@ -11488,6 +11502,13 @@ def v155_security_blocks():
     )
 
     # V15.8：安全后台权限由全局认证钩子统一控制。
+
+    if request.method == "POST":
+        if not validate_csrf_token(
+            session,
+            request.form.get("csrf_token", ""),
+        ):
+            abort(400)
 
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
@@ -11689,6 +11710,12 @@ def v155_security_nginx_sync_action():
 
     if not _v155_security_admin_allowed():
         return redirect("/security/login")
+
+    if not validate_csrf_token(
+        session,
+        request.form.get("csrf_token", ""),
+    ):
+        abort(400)
 
     steps = []
 

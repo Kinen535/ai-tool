@@ -92,6 +92,11 @@
                             </td>
                             <td style="padding:8px;">
                                 <form method="post" style="display:inline;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                                     <input type="hidden" name="action" value="add_candidate">
                                     <input type="hidden" name="ip" value="{{ row.ip }}">
                                     <input type="hidden" name="reason" value="{{ row.risk_reason }}">
@@ -119,6 +124,11 @@
             </p>
 
             <form method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <input type="hidden" name="action" value="add_block">
 
                 <label style="font-weight:bold;">IP 地址</label>
@@ -160,6 +170,11 @@
                         <td style="padding:8px;color:#64748b;">{{ row.updated_at }}</td>
                         <td style="padding:8px;">
                             <form method="post" style="display:inline;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                                 <input type="hidden" name="action" value="remove_block">
                                 <input type="hidden" name="ip" value="{{ row.ip }}">
                                 <button type="submit"

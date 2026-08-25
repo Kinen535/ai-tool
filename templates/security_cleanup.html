@@ -108,6 +108,11 @@
 
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;">
             <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <h3>清理本机测试日志</h3>
                 <p style="color:#64748b;">删除 127.0.0.1 和 ::1 产生的访问日志，避免自测污染判断。</p>
                 <input type="hidden" name="action" value="clear_local_test">
@@ -118,6 +123,11 @@
             </form>
 
             <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <h3>清理 3 天前搜索额度记录</h3>
                 <p style="color:#64748b;">额度记录只用于近期防刷，长期保留意义不大。</p>
                 <input type="hidden" name="action" value="clear_quota_older_3d">
@@ -128,6 +138,11 @@
             </form>
 
             <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <h3>清理 7 天前访问日志</h3>
                 <p style="color:#64748b;">删除较旧访问流水，保留近期安全判断数据。</p>
                 <input type="hidden" name="action" value="clear_access_older_7d">
@@ -138,6 +153,11 @@
             </form>
 
             <form method="post" style="background:white;border-radius:14px;padding:18px;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <h3>清理 30 天前拦截日志</h3>
                 <p style="color:#64748b;">安全闸门拦截记录建议保留更久，方便追踪攻击源。</p>
                 <input type="hidden" name="action" value="clear_guard_older_30d">
@@ -156,6 +176,11 @@
         </p>
 
         <form method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
             <input type="hidden" name="action" value="vacuum">
             <button type="submit"
                     style="background:#334155;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">

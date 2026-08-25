@@ -96,6 +96,11 @@
             </p>
 
             <form method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <input type="hidden" name="action" value="set_read_only">
 
                 <label style="font-weight:bold;">只读状态</label>
@@ -119,6 +124,11 @@
             </p>
 
             <form method="post">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                 <input type="hidden" name="action" value="set_quota">
 
                 <label style="font-weight:bold;">额度保护</label>
@@ -148,6 +158,11 @@
         </p>
 
         <form method="post" style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end;margin-bottom:16px;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
             <input type="hidden" name="action" value="add_whitelist">
 
             <div>
@@ -186,6 +201,11 @@
                     <td style="padding:9px;">
                         {% if row.ip not in ["127.0.0.1", "::1"] %}
                             <form method="post" style="display:inline;">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
                                 <input type="hidden" name="action" value="remove_whitelist">
                                 <input type="hidden" name="ip" value="{{ row.ip }}">
                                 <button type="submit"

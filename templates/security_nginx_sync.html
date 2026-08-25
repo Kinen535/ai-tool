@@ -133,6 +133,11 @@
 
         <form method="post" action="/security/nginx/sync"
               onsubmit="return confirm('确认同步封禁名单到 Nginx 并重载吗？');">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ session.get('v158_csrf_token', '') }}"
+                >
             <button type="submit"
                     style="background:#dc2626;color:white;border:none;border-radius:10px;padding:12px 18px;font-weight:bold;cursor:pointer;">
                 同步到 Nginx 并重载
