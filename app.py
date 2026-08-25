@@ -11178,6 +11178,10 @@ def v158_security_accounts():
     from services.v158_account_admin_service import (
         build_account_admin_report,
         create_account,
+        invalidate_account_sessions,
+        reset_account_password,
+        unlock_account,
+        update_account_access,
     )
 
     conn = _v158_open_auth_connection()
@@ -11201,7 +11205,13 @@ def v158_security_accounts():
                 or ""
             ).strip()
 
-            if action != "create_account":
+            if action not in {
+                "create_account",
+                "update_account_access",
+                "unlock_account",
+                "reset_account_password",
+                "invalidate_account_sessions",
+            }:
                 abort(400)
 
             current_user = (
@@ -11227,44 +11237,166 @@ def v158_security_accounts():
             if actor_user_id <= 0:
                 abort(403)
 
-            result = create_account(
-                conn,
-                actor_user_id=actor_user_id,
-                username=request.form.get(
-                    "username",
-                    "",
-                ),
-                display_name=request.form.get(
-                    "display_name",
-                    "",
-                ),
-                role=request.form.get(
-                    "role",
-                    "viewer",
-                ),
-                status=request.form.get(
-                    "status",
-                    "active",
-                ),
-                password=request.form.get(
-                    "password",
-                    "",
-                ),
-                must_change_password=False,
-                audit={
-                    "request_method": request.method,
-                    "request_path": request.path,
-                    "ip_address": (
-                        _v158_request_ip()
+            if action == "create_account":
+                result = create_account(
+                    conn,
+                    actor_user_id=actor_user_id,
+                    username=request.form.get(
+                        "username",
+                        "",
                     ),
-                    "user_agent": (
-                        request.headers.get(
-                            "User-Agent",
-                            "",
-                        )[:1000]
+                    display_name=request.form.get(
+                        "display_name",
+                        "",
                     ),
-                },
-            )
+                    role=request.form.get(
+                        "role",
+                        "viewer",
+                    ),
+                    status=request.form.get(
+                        "status",
+                        "active",
+                    ),
+                    password=request.form.get(
+                        "password",
+                        "",
+                    ),
+                    must_change_password=False,
+                    audit={
+                        "request_method": request.method,
+                        "request_path": request.path,
+                        "ip_address": (
+                            _v158_request_ip()
+                        ),
+                        "user_agent": (
+                            request.headers.get(
+                                "User-Agent",
+                                "",
+                            )[:1000]
+                        ),
+                    },
+                )
+
+            elif action == "update_account_access":
+                try:
+                    target_user_id = int(
+                        request.form.get("target_user_id", "")
+                    )
+                except (TypeError, ValueError):
+                    abort(400)
+
+                if (
+                    target_user_id <= 0
+                    or target_user_id == actor_user_id
+                ):
+                    abort(400)
+
+                result = update_account_access(
+                    conn,
+                    actor_user_id=actor_user_id,
+                    target_user_id=target_user_id,
+                    display_name=request.form.get("display_name", ""),
+                    role=request.form.get("role", "viewer"),
+                    status=request.form.get("status", "active"),
+                    invalidate_sessions=False,
+                    audit={
+                        "request_method": request.method,
+                        "request_path": request.path,
+                        "ip_address": _v158_request_ip(),
+                        "user_agent": request.headers.get(
+                            "User-Agent", ""
+                        )[:1000],
+                    },
+                )
+
+            elif action == "unlock_account":
+                try:
+                    target_user_id = int(
+                        request.form.get("target_user_id", "")
+                    )
+                except (TypeError, ValueError):
+                    abort(400)
+
+                if (
+                    target_user_id <= 0
+                    or target_user_id == actor_user_id
+                ):
+                    abort(400)
+
+                result = unlock_account(
+                    conn,
+                    actor_user_id=actor_user_id,
+                    target_user_id=target_user_id,
+                    audit={
+                        "request_method": request.method,
+                        "request_path": request.path,
+                        "ip_address": _v158_request_ip(),
+                        "user_agent": request.headers.get(
+                            "User-Agent", ""
+                        )[:1000],
+                    },
+                )
+
+            elif action == "reset_account_password":
+                try:
+                    target_user_id = int(
+                        request.form.get("target_user_id", "")
+                    )
+                except (TypeError, ValueError):
+                    abort(400)
+
+                if (
+                    target_user_id <= 0
+                    or target_user_id == actor_user_id
+                ):
+                    abort(400)
+
+                result = reset_account_password(
+                    conn,
+                    actor_user_id=actor_user_id,
+                    target_user_id=target_user_id,
+                    password=request.form.get("password", ""),
+                    must_change_password=False,
+                    audit={
+                        "request_method": request.method,
+                        "request_path": request.path,
+                        "ip_address": _v158_request_ip(),
+                        "user_agent": request.headers.get(
+                            "User-Agent", ""
+                        )[:1000],
+                    },
+                )
+
+            elif action == "invalidate_account_sessions":
+                try:
+                    target_user_id = int(
+                        request.form.get("target_user_id", "")
+                    )
+                except (TypeError, ValueError):
+                    abort(400)
+
+                if (
+                    target_user_id <= 0
+                    or target_user_id == actor_user_id
+                ):
+                    abort(400)
+
+                result = invalidate_account_sessions(
+                    conn,
+                    actor_user_id=actor_user_id,
+                    target_user_id=target_user_id,
+                    audit={
+                        "request_method": request.method,
+                        "request_path": request.path,
+                        "ip_address": _v158_request_ip(),
+                        "user_agent": request.headers.get(
+                            "User-Agent", ""
+                        )[:1000],
+                    },
+                )
+
+            else:
+                abort(400)
 
             if result.get("ok"):
                 category = "success"

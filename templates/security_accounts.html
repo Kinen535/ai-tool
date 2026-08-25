@@ -555,6 +555,7 @@
                         <th>最后登录 IP</th>
                         <th>密码状态</th>
                         <th>会话版本</th>
+                        <th>账号操作</th>
                     </tr>
                 </thead>
 
@@ -656,6 +657,170 @@
                         </td>
 
                         <td>{{ user.session_version }}</td>
+
+                        <td>
+                            {% if (
+                                g.v158_current_user
+                                and user.id
+                                    == g.v158_current_user.get("id")
+                            ) %}
+                            <span class="v158-account-self">
+                                当前账号不可在此管理
+                            </span>
+                            {% else %}
+                            <form
+                                method="post"
+                                action="{{ url_for('v158_security_accounts') }}"
+                                autocomplete="off"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="update_account_access"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <input
+                                    type="text"
+                                    name="display_name"
+                                    value="{{ user.display_name }}"
+                                    maxlength="100"
+                                    required
+                                >
+
+                                <select name="role" required>
+                                    <option value="viewer"
+                                        {% if user.role == 'viewer' %}selected{% endif %}>
+                                        只读用户
+                                    </option>
+                                    <option value="manager"
+                                        {% if user.role == 'manager' %}selected{% endif %}>
+                                        管理员
+                                    </option>
+                                    <option value="super_admin"
+                                        {% if user.role == 'super_admin' %}selected{% endif %}>
+                                        超级管理员
+                                    </option>
+                                </select>
+
+                                <select name="status" required>
+                                    <option value="active"
+                                        {% if user.status == 'active' %}selected{% endif %}>
+                                        启用
+                                    </option>
+                                    <option value="disabled"
+                                        {% if user.status == 'disabled' %}selected{% endif %}>
+                                        停用
+                                    </option>
+                                </select>
+
+                                <button type="submit">
+                                    保存账号资料
+                                </button>
+                            </form>
+
+                            {% if user.is_locked %}
+                            <form
+                                method="post"
+                                action="{{ url_for('v158_security_accounts') }}"
+                                style="margin-top:8px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="unlock_account"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <button type="submit">
+                                    解除登录锁定
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <form
+                                method="post"
+                                action="{{ url_for('v158_security_accounts') }}"
+                                autocomplete="off"
+                                style="margin-top:8px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="reset_account_password"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    minlength="12"
+                                    maxlength="128"
+                                    required
+                                    autocomplete="new-password"
+                                    placeholder="输入新的管理员设定密码"
+                                >
+
+                                <button type="submit">
+                                    重置账号密码
+                                </button>
+                            </form>
+
+                            <form
+                                method="post"
+                                action="{{ url_for('v158_security_accounts') }}"
+                                style="margin-top:8px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="invalidate_account_sessions"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <button type="submit">
+                                    强制注销全部会话
+                                </button>
+                            </form>
+
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
