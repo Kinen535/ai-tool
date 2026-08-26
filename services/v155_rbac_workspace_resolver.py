@@ -107,7 +107,7 @@ def resolve_default_access_context(
         row["role_id"]
     )
 
-    permission_rows = conn.execute(
+    role_permission_rows = conn.execute(
         """
         SELECT
             p.permission_key
@@ -126,24 +126,161 @@ def resolve_default_access_context(
         ),
     ).fetchall()
 
-    permissions = frozenset(
+    role_permissions = frozenset(
         str(
             permission_row[
                 "permission_key"
             ]
         )
         for permission_row
-        in permission_rows
+        in role_permission_rows
         if permission_row[
             "permission_key"
         ]
     )
 
-    # Workspace RBAC must never implicitly grant
-    # platform bootstrap/admin permissions.
+    # Preserve the existing Workspace RBAC
+    # platform-boundary defense.
+    role_permissions = frozenset(
+        permission
+        for permission in role_permissions
+        if permission
+        not in PLATFORM_ONLY_PERMISSIONS
+    )
+
+    # A membership grant is valid only when the
+    # permission belongs to at least one active role
+    # in this membership's Workspace.
+    grantable_permission_rows = conn.execute(
+        """
+        SELECT DISTINCT
+            p.permission_key
+
+        FROM v155_roles AS grant_role
+
+        JOIN v155_role_permissions AS rp
+          ON rp.role_id=grant_role.id
+
+        JOIN v155_permissions AS p
+          ON p.id=rp.permission_id
+
+        WHERE grant_role.workspace_id=?
+          AND grant_role.status='active'
+
+        ORDER BY p.permission_key
+        """,
+        (
+            workspace_id,
+        ),
+    ).fetchall()
+
+    grantable_permissions = frozenset(
+        str(
+            permission_row[
+                "permission_key"
+            ]
+        )
+        for permission_row
+        in grantable_permission_rows
+        if permission_row[
+            "permission_key"
+        ]
+    )
+
+    # PLATFORM_ONLY_PERMISSIONS remains an
+    # additional defense-in-depth boundary;
+    # it is not the grantability rule itself.
+    grantable_permissions = frozenset(
+        permission
+        for permission
+        in grantable_permissions
+        if permission
+        not in PLATFORM_ONLY_PERMISSIONS
+    )
+
+    override_rows = conn.execute(
+        """
+        SELECT
+            p.permission_key,
+            override.effect
+
+        FROM v155_membership_permission_overrides
+            AS override
+
+        JOIN v155_permissions AS p
+          ON p.id=override.permission_id
+
+        WHERE override.membership_id=?
+
+        ORDER BY p.permission_key
+        """,
+        (
+            int(
+                row["membership_id"]
+            ),
+        ),
+    ).fetchall()
+
+    membership_grants: set[str] = set()
+    membership_denies: set[str] = set()
+
+    for override_row in override_rows:
+        permission_key = str(
+            override_row[
+                "permission_key"
+            ]
+            or ""
+        ).strip()
+
+        effect = str(
+            override_row[
+                "effect"
+            ]
+            or ""
+        ).strip().lower()
+
+        # Schema constraints should already prevent
+        # malformed rows. Fail closed defensively if
+        # the persisted contract is ever corrupted.
+        if (
+            not permission_key
+            or effect
+            not in {
+                "grant",
+                "deny",
+            }
+        ):
+            return None
+
+        if effect == "deny":
+            membership_denies.add(
+                permission_key
+            )
+            continue
+
+        if (
+            permission_key
+            in grantable_permissions
+        ):
+            membership_grants.add(
+                permission_key
+            )
+
+    # Effective permission precedence:
+    #
+    #   (role baseline U valid grants) - denies
+    #
+    # Deny is therefore always applied last.
     permissions = frozenset(
         permission
-        for permission in permissions
+        for permission
+        in (
+            (
+                role_permissions
+                | membership_grants
+            )
+            - membership_denies
+        )
         if permission
         not in PLATFORM_ONLY_PERMISSIONS
     )
