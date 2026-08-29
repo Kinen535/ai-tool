@@ -11444,23 +11444,246 @@ def v158_security_accounts():
         conn.close()
 
 
-@app.route("/security/access-center")
+@app.route(
+    "/security/access-center",
+    methods=["GET", "POST"],
+)
 def v155_security_access_center():
 
     from services.v155_access_center_service import (
         build_access_center_report,
     )
 
+    from services.v155_membership_permission_override_service import (
+        clear_membership_permission_override,
+        get_membership_permission_admin_state,
+        set_membership_permission_override,
+    )
+
     conn = _v158_open_auth_connection()
 
     try:
+        if request.method == "POST":
+            if not validate_csrf_token(
+                session,
+                request.form.get(
+                    "csrf_token",
+                    "",
+                ),
+            ):
+                abort(400)
+
+            action = str(
+                request.form.get(
+                    "action",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if action not in {
+                "set_membership_permission_override",
+                "clear_membership_permission_override",
+            }:
+                abort(400)
+
+            current_user = (
+                getattr(
+                    g,
+                    "v158_current_user",
+                    None,
+                )
+                or {}
+            )
+
+            try:
+                actor_user_id = int(
+                    current_user.get("id")
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                abort(403)
+
+            if actor_user_id <= 0:
+                abort(403)
+
+            try:
+                target_membership_id = int(
+                    request.form.get(
+                        "target_membership_id",
+                        "",
+                    )
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                abort(400)
+
+            if target_membership_id <= 0:
+                abort(400)
+
+            permission_key = str(
+                request.form.get(
+                    "permission_key",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if not permission_key:
+                abort(400)
+
+            target_state = (
+                get_membership_permission_admin_state(
+                    conn,
+                    target_membership_id=(
+                        target_membership_id
+                    ),
+                )
+            )
+
+            if not target_state.get("ok"):
+                abort(404)
+
+            audit = {
+                "request_method": request.method,
+                "request_path": request.path,
+                "ip_address": _v158_request_ip(),
+                "user_agent": (
+                    request.headers.get(
+                        "User-Agent",
+                        "",
+                    )[:1000]
+                ),
+            }
+
+            if (
+                action
+                == "set_membership_permission_override"
+            ):
+                effect = str(
+                    request.form.get(
+                        "effect",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if effect not in {
+                    "grant",
+                    "deny",
+                }:
+                    abort(400)
+
+                result = (
+                    set_membership_permission_override(
+                        conn,
+                        actor_user_id=actor_user_id,
+                        target_membership_id=(
+                            target_membership_id
+                        ),
+                        permission_key=permission_key,
+                        effect=effect,
+                        audit=audit,
+                    )
+                )
+
+            else:
+                result = (
+                    clear_membership_permission_override(
+                        conn,
+                        actor_user_id=actor_user_id,
+                        target_membership_id=(
+                            target_membership_id
+                        ),
+                        permission_key=permission_key,
+                        audit=audit,
+                    )
+                )
+
+            if result.get("ok"):
+                category = "success"
+
+            elif (
+                result.get("result_status")
+                == "blocked"
+            ):
+                category = "warning"
+
+            else:
+                category = "error"
+
+            flash(
+                str(
+                    result.get("message")
+                    or "成员权限覆盖操作完成。"
+                ),
+                category,
+            )
+
+            return redirect(
+                url_for(
+                    "v155_security_access_center",
+                    membership_id=(
+                        target_membership_id
+                    ),
+                )
+            )
+
         report = build_access_center_report(
             conn
         )
 
+        csrf_token = issue_csrf_token(
+            session
+        )
+
+        selected_membership_id = None
+        selected_override_state = None
+
+        raw_membership_id = request.args.get(
+            "membership_id"
+        )
+
+        if raw_membership_id is not None:
+            try:
+                selected_membership_id = int(
+                    raw_membership_id
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                abort(400)
+
+            if selected_membership_id <= 0:
+                abort(400)
+
+            selected_override_state = (
+                get_membership_permission_admin_state(
+                    conn,
+                    target_membership_id=(
+                        selected_membership_id
+                    ),
+                )
+            )
+
+            if not selected_override_state.get("ok"):
+                abort(404)
+
         return render_template(
             "security_access_center.html",
             report=report,
+            csrf_token=csrf_token,
+            selected_membership_id=(
+                selected_membership_id
+            ),
+            selected_override_state=(
+                selected_override_state
+            ),
             title="权限中心",
         )
 

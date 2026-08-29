@@ -60,12 +60,26 @@ def build_access_center_report(
     users = conn.execute(
         """
         SELECT
+            u.id AS user_id,
             u.username,
             u.display_name,
             u.role AS account_role,
             u.status,
+
+            wm.id AS membership_id,
+            wm.status AS membership_status,
+            wm.is_default,
+
+            w.id AS workspace_id,
+            w.workspace_key,
             w.workspace_name,
-            r.role_name AS workspace_role
+            w.status AS workspace_status,
+
+            r.id AS workspace_role_id,
+            r.role_key AS workspace_role_key,
+            r.role_name AS workspace_role,
+            r.status AS workspace_role_status,
+            r.workspace_id AS role_workspace_id
 
         FROM v158_users u
 
@@ -77,8 +91,11 @@ def build_access_center_report(
 
         LEFT JOIN v155_roles r
         ON r.id=wm.role_id
+        AND r.workspace_id=wm.workspace_id
 
-        ORDER BY u.id
+        ORDER BY
+            u.id,
+            wm.id
         """
     )
 

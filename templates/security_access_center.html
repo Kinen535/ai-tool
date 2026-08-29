@@ -111,6 +111,324 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
 </table>
 
 
+
+<!-- V15.5 P0-S17 membership permission override -->
+<h2 style="margin-top:30px;">
+    🧩 成员权限覆盖
+</h2>
+
+<p>
+    权限覆盖按工作区成员身份（membership）管理，
+    不会修改账号的全局角色。
+</p>
+
+<form
+    method="get"
+    action="{{ url_for('v155_security_access_center') }}"
+    style="margin:16px 0 22px 0;"
+>
+    <label for="v155-membership-selector">
+        <strong>选择工作区成员：</strong>
+    </label>
+
+    <select
+        id="v155-membership-selector"
+        name="membership_id"
+        required
+        style="min-width:320px;padding:7px;"
+    >
+        <option value="">
+            请选择成员
+        </option>
+
+        {% for user in report.users %}
+            {% if
+                user.membership_id
+                and user.status == 'active'
+                and user.membership_status == 'active'
+                and user.workspace_status == 'active'
+                and user.workspace_role_status == 'active'
+                and user.role_workspace_id == user.workspace_id
+            %}
+            <option
+                value="{{ user.membership_id }}"
+                {% if selected_membership_id == user.membership_id %}
+                    selected
+                {% endif %}
+            >
+                {{ user.display_name or user.username }}
+                · {{ user.workspace_name }}
+                · {{ user.workspace_role }}
+                · membership #{{ user.membership_id }}
+            </option>
+            {% endif %}
+        {% endfor %}
+    </select>
+
+    <button
+        type="submit"
+        style="margin-left:8px;padding:7px 12px;"
+    >
+        查看权限
+    </button>
+</form>
+
+{% if selected_override_state %}
+    {% set membership = selected_override_state.membership %}
+
+    <div
+        style="
+            padding:12px;
+            margin-bottom:16px;
+            border:1px solid #ddd;
+            border-radius:8px;
+        "
+    >
+        <strong>
+            {{ membership.display_name or membership.username }}
+        </strong>
+
+        <span style="margin-left:12px;">
+            工作区：
+            {{ membership.workspace_name }}
+        </span>
+
+        <span style="margin-left:12px;">
+            角色：
+            {{ membership.role_name }}
+        </span>
+
+        <span style="margin-left:12px;">
+            membership #{{ membership.membership_id }}
+        </span>
+    </div>
+
+    <div style="margin-bottom:14px;">
+        <strong>角色基线：</strong>
+        {{ selected_override_state.role_baseline_permissions|length }}
+
+        <span style="margin-left:18px;">
+            <strong>工作区可覆盖：</strong>
+            {{ selected_override_state.grantable_permissions|length }}
+        </span>
+
+        <span style="margin-left:18px;">
+            <strong>已存覆盖：</strong>
+            {{ selected_override_state.stored_overrides|length }}
+        </span>
+
+        <span style="margin-left:18px;">
+            <strong>最终有效：</strong>
+            {{ selected_override_state.effective_permissions|length }}
+        </span>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table
+            width="100%"
+            cellpadding="9"
+            style="border-collapse:collapse;"
+        >
+            <thead>
+                <tr>
+                    <th>模块</th>
+                    <th>权限</th>
+                    <th>角色基线</th>
+                    <th>可覆盖</th>
+                    <th>当前覆盖</th>
+                    <th>最终有效</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for permission in selected_override_state.permissions %}
+                <tr>
+                    <td>
+                        {{ permission.module_key }}
+                    </td>
+
+                    <td>
+                        <strong>
+                            {{ permission.permission_name }}
+                        </strong>
+                        <div style="font-size:12px;color:#777;">
+                            {{ permission.permission_key }}
+                        </div>
+                    </td>
+
+                    <td>
+                        {% if permission.role_baseline %}
+                            ✅ 是
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if permission.platform_only %}
+                            🔒 平台权限
+                        {% elif permission.grantable %}
+                            ✅ 是
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if permission.override_effect == 'grant' %}
+                            🟢 Grant
+                        {% elif permission.override_effect == 'deny' %}
+                            🔴 Deny
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if permission.effective %}
+                            ✅ 有效
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if
+                            permission.grantable
+                            and not permission.platform_only
+                        %}
+                            <form
+                                method="post"
+                                action="{{ url_for('v155_security_access_center') }}"
+                                style="display:inline-block;margin:2px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="set_membership_permission_override"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_membership_id"
+                                    value="{{ membership.membership_id }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="permission_key"
+                                    value="{{ permission.permission_key }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="effect"
+                                    value="grant"
+                                >
+                                <button type="submit">
+                                    Grant
+                                </button>
+                            </form>
+
+                            <form
+                                method="post"
+                                action="{{ url_for('v155_security_access_center') }}"
+                                style="display:inline-block;margin:2px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="set_membership_permission_override"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_membership_id"
+                                    value="{{ membership.membership_id }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="permission_key"
+                                    value="{{ permission.permission_key }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="effect"
+                                    value="deny"
+                                >
+                                <button type="submit">
+                                    Deny
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if permission.override_effect %}
+                            <form
+                                method="post"
+                                action="{{ url_for('v155_security_access_center') }}"
+                                style="display:inline-block;margin:2px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="clear_membership_permission_override"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="target_membership_id"
+                                    value="{{ membership.membership_id }}"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="permission_key"
+                                    value="{{ permission.permission_key }}"
+                                >
+                                <button type="submit">
+                                    清除覆盖
+                                </button>
+                            </form>
+                        {% elif
+                            not permission.grantable
+                            or permission.platform_only
+                        %}
+                            <span style="color:#888;">
+                                不可覆盖
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% else %}
+    <div
+        style="
+            padding:14px;
+            border:1px dashed #bbb;
+            border-radius:8px;
+            color:#666;
+            margin-bottom:20px;
+        "
+    >
+        请选择一个有效的工作区成员，
+        查看并管理该 membership 的权限覆盖。
+    </div>
+{% endif %}
+
 <h2 style="margin-top:30px;">
 🎭 角色权限
 </h2>
