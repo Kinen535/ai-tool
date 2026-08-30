@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+from services.v158_auth_config import (
+    v155_session_registry_enforced,
+)
+
+from services.v155_session_registry_service import (
+    revoke_all_registry_sessions_in_transaction,
+)
+
 import sqlite3
 from typing import Any, Mapping
 
@@ -1174,6 +1182,14 @@ def update_account_access(
             ),
         )
 
+        if v155_session_registry_enforced() and bool(should_invalidate):
+            revoke_all_registry_sessions_in_transaction(
+                conn,
+                user_id=int(target_user_id),
+                actor_user_id=int(actor_user_id),
+                reason='account_access_update',
+            )
+
         if cursor.rowcount != 1:
             raise RuntimeError(
                 "账号更新行数异常。"
@@ -1549,6 +1565,14 @@ def reset_account_password(
             ),
         )
 
+        if v155_session_registry_enforced():
+            revoke_all_registry_sessions_in_transaction(
+                conn,
+                user_id=int(target_user_id),
+                actor_user_id=int(actor_user_id),
+                reason='password_reset',
+            )
+
         if cursor.rowcount != 1:
             raise RuntimeError(
                 "密码重置行数异常。"
@@ -1731,6 +1755,14 @@ def invalidate_account_sessions(
                 int(target_user_id),
             ),
         )
+
+        if v155_session_registry_enforced():
+            revoke_all_registry_sessions_in_transaction(
+                conn,
+                user_id=int(target_user_id),
+                actor_user_id=int(actor_user_id),
+                reason='account_session_invalidation',
+            )
 
         if cursor.rowcount != 1:
             raise RuntimeError(

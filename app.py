@@ -10528,12 +10528,37 @@ def v155_security_logs():
     )
 
 
+
 def _v158_open_auth_connection():
+    from services.v158_auth_config import (
+        v155_session_registry_enforced,
+    )
+
     conn = sqlite3.connect(
         DB_FILE
     )
     conn.row_factory = sqlite3.Row
+
+    if v155_session_registry_enforced():
+        conn.execute(
+            "PRAGMA foreign_keys=ON"
+        )
+
+        foreign_keys = int(
+            conn.execute(
+                "PRAGMA foreign_keys"
+            ).fetchone()[0]
+        )
+
+        if foreign_keys != 1:
+            conn.close()
+            raise sqlite3.OperationalError(
+                "session registry requires "
+                "foreign_keys=ON"
+            )
+
     return conn
+
 
 
 def _v158_request_ip() -> str:
@@ -10560,7 +10585,22 @@ def _v158_request_ip() -> str:
     "/login",
     methods=["GET", "POST"],
 )
+
 def v158_login():
+    from services.v158_auth_config import (
+        v155_session_registry_enforced,
+    )
+    from services.v158_auth_service import (
+        V155_SESSION_ID,
+        clear_auth_session,
+    )
+    from services.v155_session_registry_service import (
+        SessionLimitExceeded,
+        SessionRegistryError,
+        create_registered_session,
+        validate_registered_session,
+    )
+
     next_path = safe_next_path(
         request.values.get("next"),
         default="/",
@@ -10569,12 +10609,81 @@ def v158_login():
     conn = _v158_open_auth_connection()
 
     try:
+        enforcement_enabled = (
+            v155_session_registry_enforced()
+        )
+
         current_session = (
             validate_auth_session(
                 conn,
                 session,
             )
         )
+
+        if (
+            current_session["ok"]
+            and enforcement_enabled
+        ):
+            try:
+                current_user = (
+                    current_session["user"]
+                    or {}
+                )
+
+                registry_result = (
+                    validate_registered_session(
+                        conn,
+                        raw_session_id=str(
+                            session.get(
+                                V155_SESSION_ID
+                            )
+                            or ""
+                        ),
+                        user_id=int(
+                            current_user["id"]
+                        ),
+                        current_session_version=int(
+                            current_user.get(
+                                "session_version"
+                            )
+                            or 1
+                        ),
+                    )
+                )
+
+            except (
+                sqlite3.Error,
+                SessionRegistryError,
+                TypeError,
+                ValueError,
+                KeyError,
+            ):
+                registry_result = None
+
+            if (
+                registry_result is None
+                or not registry_result.valid
+            ):
+                clear_auth_session(
+                    session
+                )
+
+                current_session = {
+                    "ok": False,
+                    "reason": (
+                        "registry_service_error"
+                        if registry_result
+                        is None
+                        else (
+                            "registry_"
+                            + str(
+                                registry_result.reason
+                                or "invalid"
+                            )
+                        )
+                    ),
+                    "user": None,
+                }
 
         if current_session["ok"]:
             return redirect(
@@ -10615,6 +10724,17 @@ def v158_login():
                 )
 
             else:
+                request_ip = (
+                    _v158_request_ip()
+                )
+
+                request_user_agent = (
+                    request.headers.get(
+                        "User-Agent",
+                        "",
+                    )[:1000]
+                )
+
                 result = (
                     authenticate_credentials(
                         conn,
@@ -10623,14 +10743,9 @@ def v158_login():
                             "password",
                             "",
                         ),
-                        ip_address=(
-                            _v158_request_ip()
-                        ),
+                        ip_address=request_ip,
                         user_agent=(
-                            request.headers.get(
-                                "User-Agent",
-                                "",
-                            )[:1000]
+                            request_user_agent
                         ),
                         request_path=(
                             request.path
@@ -10639,29 +10754,170 @@ def v158_login():
                 )
 
                 if result["ok"]:
-                    session.clear()
+                    registry_session = None
+                    registry_error = ""
 
-                    establish_auth_session(
-                        session,
-                        user=result["user"],
-                    )
+                    if enforcement_enabled:
+                        try:
+                            authenticated_user = (
+                                result["user"]
+                                or {}
+                            )
 
-                    issue_csrf_token(
-                        session,
-                        force=True,
-                    )
+                            registry_session = (
+                                create_registered_session(
+                                    conn,
+                                    user_id=int(
+                                        authenticated_user[
+                                            "id"
+                                        ]
+                                    ),
+                                    session_version=int(
+                                        authenticated_user.get(
+                                            "session_version"
+                                        )
+                                        or 1
+                                    ),
+                                    expires_at=(
+                                        datetime.now()
+                                        .astimezone()
+                                        + app.permanent_session_lifetime
+                                    ),
+                                    login_ip=(
+                                        request_ip
+                                    ),
+                                    user_agent=(
+                                        request_user_agent
+                                    ),
+                                    device_label="",
+                                )
+                            )
 
-                    response = redirect(
-                        next_path
-                    )
+                        except SessionLimitExceeded:
+                            registry_error = (
+                                "当前账号已达到允许的"
+                                "同时在线设备数量上限。"
+                            )
 
-                    response.delete_cookie(
-                        "v155_security_admin"
-                    )
+                            rejection_reason = (
+                                "concurrent_session_limit"
+                            )
 
-                    return response
+                        except (
+                            sqlite3.Error,
+                            SessionRegistryError,
+                            TypeError,
+                            ValueError,
+                            KeyError,
+                        ):
+                            registry_error = (
+                                "会话服务暂时不可用，"
+                                "请稍后重试。"
+                            )
 
-                error = result["message"]
+                            rejection_reason = (
+                                "registry_session_error"
+                            )
+
+                        if registry_error:
+                            try:
+                                if conn.in_transaction:
+                                    conn.rollback()
+
+                                authenticated_user = (
+                                    result["user"]
+                                    or {}
+                                )
+
+                                conn.execute(
+                                    "BEGIN IMMEDIATE"
+                                )
+
+                                record_login_event(
+                                    conn,
+                                    user_id=int(
+                                        authenticated_user[
+                                            "id"
+                                        ]
+                                    ),
+                                    username_snapshot=str(
+                                        authenticated_user.get(
+                                            "username"
+                                        )
+                                        or username
+                                    )[:64],
+                                    event_type=(
+                                        "session_rejected"
+                                    ),
+                                    result_status="blocked",
+                                    reason_code=(
+                                        rejection_reason
+                                    ),
+                                    ip_address=(
+                                        request_ip
+                                    ),
+                                    user_agent=(
+                                        request_user_agent
+                                    ),
+                                    request_path=(
+                                        request.path
+                                    ),
+                                    session_version=int(
+                                        authenticated_user.get(
+                                            "session_version"
+                                        )
+                                        or 1
+                                    ),
+                                )
+
+                                conn.commit()
+
+                            except Exception:
+                                if conn.in_transaction:
+                                    conn.rollback()
+
+                            error = registry_error
+
+                    if (
+                        not error
+                        and (
+                            not enforcement_enabled
+                            or registry_session
+                            is not None
+                        )
+                    ):
+                        session.clear()
+
+                        establish_auth_session(
+                            session,
+                            user=result["user"],
+                        )
+
+                        if enforcement_enabled:
+                            session[
+                                V155_SESSION_ID
+                            ] = (
+                                registry_session
+                                .raw_session_id
+                            )
+
+                        issue_csrf_token(
+                            session,
+                            force=True,
+                        )
+
+                        response = redirect(
+                            next_path
+                        )
+
+                        response.delete_cookie(
+                            "v155_security_admin"
+                        )
+
+                        return response
+
+                if not error:
+                    error = result["message"]
 
         csrf_token = issue_csrf_token(
             session
@@ -10678,6 +10934,7 @@ def v158_login():
 
     finally:
         conn.close()
+
 
 
 @app.route(
@@ -10741,7 +10998,19 @@ def v155_security_ip_detail():
     "/logout",
     methods=["POST"],
 )
+
 def v158_logout():
+    from services.v158_auth_config import (
+        v155_session_registry_enforced,
+    )
+    from services.v158_auth_service import (
+        V155_SESSION_ID,
+    )
+    from services.v155_session_registry_service import (
+        SessionRegistryError,
+        mark_current_session_logged_out,
+    )
+
     if not validate_csrf_token(
         session,
         request.form.get(
@@ -10751,7 +11020,16 @@ def v158_logout():
     ):
         abort(400)
 
+    raw_registry_session_id = str(
+        session.get(
+            V155_SESSION_ID
+        )
+        or ""
+    )
+
     conn = _v158_open_auth_connection()
+
+    registry_logout_failed = False
 
     try:
         session_result = (
@@ -10763,6 +11041,35 @@ def v158_logout():
 
         if session_result["ok"]:
             user = session_result["user"]
+
+            if v155_session_registry_enforced():
+                try:
+                    changed = (
+                        mark_current_session_logged_out(
+                            conn,
+                            raw_session_id=(
+                                raw_registry_session_id
+                            ),
+                            user_id=int(
+                                user["id"]
+                            ),
+                        )
+                    )
+
+                    if not changed:
+                        registry_logout_failed = True
+
+                except (
+                    sqlite3.Error,
+                    SessionRegistryError,
+                    TypeError,
+                    ValueError,
+                    KeyError,
+                ):
+                    if conn.in_transaction:
+                        conn.rollback()
+
+                    registry_logout_failed = True
 
             try:
                 conn.execute(
@@ -10782,7 +11089,11 @@ def v158_logout():
                     ),
                     event_type="logout",
                     result_status="success",
-                    reason_code="user_logout",
+                    reason_code=(
+                        "user_logout_registry_failure"
+                        if registry_logout_failed
+                        else "user_logout"
+                    ),
                     ip_address=(
                         _v158_request_ip()
                     ),
@@ -10812,6 +11123,8 @@ def v158_logout():
     finally:
         conn.close()
 
+    # Local authentication is always cleared even
+    # if registry logout recording failed.
     session.clear()
 
     response = redirect(
@@ -10823,6 +11136,7 @@ def v158_logout():
     )
 
     return response
+
 
 
 # =========================
@@ -10920,7 +11234,21 @@ V158_SUPER_ADMIN_ONLY_PATHS = {
 
 
 @app.before_request
+
 def v158_authentication_before_request():
+    from services.v158_auth_config import (
+        v155_session_registry_enforced,
+    )
+    from services.v158_auth_service import (
+        V155_SESSION_ID,
+        clear_auth_session,
+    )
+    from services.v155_session_registry_service import (
+        SessionRegistryError,
+        touch_registered_session,
+        validate_registered_session,
+    )
+
     g.v158_current_user = None
 
     path = str(
@@ -10960,6 +11288,7 @@ def v158_authentication_before_request():
 
     try:
         conn = _v158_open_auth_connection()
+
     except sqlite3.Error:
         return (
             "认证服务暂时不可用。",
@@ -10974,7 +11303,78 @@ def v158_authentication_before_request():
                     session,
                 )
             )
-        except sqlite3.Error:
+
+            if (
+                auth_result["ok"]
+                and v155_session_registry_enforced()
+            ):
+                user = (
+                    auth_result["user"]
+                    or {}
+                )
+
+                registry_result = (
+                    validate_registered_session(
+                        conn,
+                        raw_session_id=str(
+                            session.get(
+                                V155_SESSION_ID
+                            )
+                            or ""
+                        ),
+                        user_id=int(
+                            user["id"]
+                        ),
+                        current_session_version=int(
+                            user.get(
+                                "session_version"
+                            )
+                            or 1
+                        ),
+                    )
+                )
+
+                if not registry_result.valid:
+                    clear_auth_session(
+                        session
+                    )
+
+                    auth_result = {
+                        "ok": False,
+                        "reason": (
+                            "registry_"
+                            + str(
+                                registry_result.reason
+                                or "invalid"
+                            )
+                        ),
+                        "user": None,
+                    }
+
+                else:
+                    touch_registered_session(
+                        conn,
+                        raw_session_id=str(
+                            session.get(
+                                V155_SESSION_ID
+                            )
+                            or ""
+                        ),
+                        user_id=int(
+                            user["id"]
+                        ),
+                        last_ip=(
+                            _v158_request_ip()
+                        ),
+                    )
+
+        except (
+            sqlite3.Error,
+            SessionRegistryError,
+            TypeError,
+            ValueError,
+            KeyError,
+        ):
             return (
                 "认证服务暂时不可用。",
                 503,
@@ -11112,6 +11512,7 @@ def v158_authentication_before_request():
 
     finally:
         conn.close()
+
 
 
 
@@ -11443,6 +11844,439 @@ def v158_security_accounts():
     finally:
         conn.close()
 
+
+
+@app.route(
+    "/security/sessions",
+    methods=["GET"],
+)
+def v155_security_sessions():
+    from services.v155_session_admin_service import (
+        build_session_admin_report,
+    )
+
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    try:
+        actor_user_id = int(
+            current_user.get(
+                "id"
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        abort(403)
+
+    if actor_user_id <= 0:
+        abort(403)
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        report = (
+            build_session_admin_report(
+                conn,
+                actor_user_id=(
+                    actor_user_id
+                ),
+            )
+        )
+
+        csrf_token = (
+            issue_csrf_token(
+                session
+            )
+        )
+
+        return render_template(
+            "security_sessions.html",
+            report=report,
+            csrf_token=csrf_token,
+            title="设备与会话管理",
+        )
+
+    finally:
+        conn.close()
+
+
+@app.route(
+    "/security/sessions/revoke",
+    methods=["POST"],
+)
+def v155_security_sessions_revoke():
+    from services.v155_session_admin_service import (
+        revoke_single_session,
+    )
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    try:
+        actor_user_id = int(
+            current_user.get(
+                "id"
+            )
+        )
+
+        target_user_id = int(
+            request.form.get(
+                "target_user_id",
+                "",
+            )
+        )
+
+        session_row_id = int(
+            request.form.get(
+                "session_row_id",
+                "",
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        abort(400)
+
+    if (
+        actor_user_id <= 0
+        or target_user_id <= 0
+        or session_row_id <= 0
+    ):
+        abort(400)
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        result = revoke_single_session(
+            conn,
+            actor_user_id=(
+                actor_user_id
+            ),
+            target_user_id=(
+                target_user_id
+            ),
+            session_row_id=(
+                session_row_id
+            ),
+            audit={
+                "request_method": (
+                    request.method
+                ),
+                "request_path": (
+                    request.path
+                ),
+                "ip_address": (
+                    _v158_request_ip()
+                ),
+                "user_agent": (
+                    request.headers.get(
+                        "User-Agent",
+                        "",
+                    )[:1000]
+                ),
+            },
+        )
+
+    finally:
+        conn.close()
+
+    category = (
+        "success"
+        if result.get("ok")
+        else (
+            "warning"
+            if result.get(
+                "result_status"
+            )
+            == "blocked"
+            else "error"
+        )
+    )
+
+    flash(
+        str(
+            result.get(
+                "message"
+            )
+            or "设备注销操作完成。"
+        ),
+        category,
+    )
+
+    return redirect(
+        url_for(
+            "v155_security_sessions"
+        )
+    )
+
+
+@app.route(
+    "/security/sessions/revoke-all",
+    methods=["POST"],
+)
+def v155_security_sessions_revoke_all():
+    from services.v155_session_admin_service import (
+        revoke_all_user_sessions,
+    )
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    try:
+        actor_user_id = int(
+            current_user.get(
+                "id"
+            )
+        )
+
+        target_user_id = int(
+            request.form.get(
+                "target_user_id",
+                "",
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        abort(400)
+
+    if (
+        actor_user_id <= 0
+        or target_user_id <= 0
+    ):
+        abort(400)
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        result = (
+            revoke_all_user_sessions(
+                conn,
+                actor_user_id=(
+                    actor_user_id
+                ),
+                target_user_id=(
+                    target_user_id
+                ),
+                audit={
+                    "request_method": (
+                        request.method
+                    ),
+                    "request_path": (
+                        request.path
+                    ),
+                    "ip_address": (
+                        _v158_request_ip()
+                    ),
+                    "user_agent": (
+                        request.headers.get(
+                            "User-Agent",
+                            "",
+                        )[:1000]
+                    ),
+                },
+            )
+        )
+
+    finally:
+        conn.close()
+
+    category = (
+        "success"
+        if result.get("ok")
+        else (
+            "warning"
+            if result.get(
+                "result_status"
+            )
+            == "blocked"
+            else "error"
+        )
+    )
+
+    flash(
+        str(
+            result.get(
+                "message"
+            )
+            or "全部会话注销操作完成。"
+        ),
+        category,
+    )
+
+    return redirect(
+        url_for(
+            "v155_security_sessions"
+        )
+    )
+
+
+@app.route(
+    "/security/sessions/policy",
+    methods=["POST"],
+)
+def v155_security_sessions_policy():
+    from services.v155_session_admin_service import (
+        set_session_policy,
+    )
+
+    if not validate_csrf_token(
+        session,
+        request.form.get(
+            "csrf_token",
+            "",
+        ),
+    ):
+        abort(400)
+
+    current_user = (
+        getattr(
+            g,
+            "v158_current_user",
+            None,
+        )
+        or {}
+    )
+
+    try:
+        actor_user_id = int(
+            current_user.get(
+                "id"
+            )
+        )
+
+        target_user_id = int(
+            request.form.get(
+                "target_user_id",
+                "",
+            )
+        )
+
+        max_active_sessions = int(
+            request.form.get(
+                "max_active_sessions",
+                "",
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        abort(400)
+
+    if (
+        actor_user_id <= 0
+        or target_user_id <= 0
+    ):
+        abort(400)
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        result = set_session_policy(
+            conn,
+            actor_user_id=(
+                actor_user_id
+            ),
+            target_user_id=(
+                target_user_id
+            ),
+            max_active_sessions=(
+                max_active_sessions
+            ),
+            audit={
+                "request_method": (
+                    request.method
+                ),
+                "request_path": (
+                    request.path
+                ),
+                "ip_address": (
+                    _v158_request_ip()
+                ),
+                "user_agent": (
+                    request.headers.get(
+                        "User-Agent",
+                        "",
+                    )[:1000]
+                ),
+            },
+        )
+
+    finally:
+        conn.close()
+
+    category = (
+        "success"
+        if result.get("ok")
+        else (
+            "warning"
+            if result.get(
+                "result_status"
+            )
+            == "blocked"
+            else "error"
+        )
+    )
+
+    flash(
+        str(
+            result.get(
+                "message"
+            )
+            or "设备数量上限更新完成。"
+        ),
+        category,
+    )
+
+    return redirect(
+        url_for(
+            "v155_security_sessions"
+        )
+    )
 
 @app.route(
     "/security/access-center",

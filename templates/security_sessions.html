@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>{{ title }}</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+            background: #f5f6f8;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1380px;
+            margin: 0 auto;
+        }
+
+        .header,
+        .panel {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+
+        .header-row,
+        .account-head,
+        .actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .state {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #eef2f7;
+        }
+
+        .state.ok {
+            background: #ecfdf5;
+        }
+
+        .state.warn {
+            background: #fff7ed;
+        }
+
+        .flash {
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: #f3f4f6;
+        }
+
+        .account {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 18px;
+            margin-top: 18px;
+        }
+
+        .account:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        input[type="number"] {
+            width: 76px;
+            padding: 7px;
+        }
+
+        button,
+        .link-button {
+            border: 0;
+            border-radius: 7px;
+            padding: 8px 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button {
+            background: #111827;
+            color: #fff;
+        }
+
+        button.danger {
+            background: #991b1b;
+        }
+
+        .link-button {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        form.inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .device {
+            max-width: 380px;
+            word-break: break-word;
+        }
+
+        .empty {
+            padding: 16px 0;
+            color: #6b7280;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding: 12px;
+            }
+
+            .table-wrap {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+
+    <div class="header">
+        <div class="header-row">
+            <div>
+                <h1>设备与会话管理</h1>
+                <div class="muted">
+                    查看账号登录设备、注销指定设备、
+                    注销全部会话以及设置同时在线设备上限。
+                </div>
+            </div>
+
+            <a
+                class="link-button"
+                href="{{ url_for('v158_security_accounts') }}"
+            >
+                返回账号管理
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="panel">
+        <h2>当前状态</h2>
+
+        <span
+            class="state {% if report.registry_schema_ready %}ok{% else %}warn{% endif %}"
+        >
+            数据表：
+            {% if report.registry_schema_ready %}
+                已就绪
+            {% else %}
+                未切换
+            {% endif %}
+        </span>
+
+        <span
+            class="state {% if report.registry_enforced %}ok{% else %}warn{% endif %}"
+        >
+            会话强制校验：
+            {% if report.registry_enforced %}
+                已启用
+            {% else %}
+                尚未启用
+            {% endif %}
+        </span>
+
+        {% if not report.write_ready %}
+            <p class="muted">
+                当前仍处于 A6 生产切换前状态。
+                页面允许安全查看账号信息，
+                会话写操作将在正式切换后开放。
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h2>账号与登录设备</h2>
+
+        {% for item in report.accounts %}
+            {% set user = item.user %}
+
+            <div class="account">
+                <div class="account-head">
+                    <div>
+                        <h3>
+                            {{ user.username }}
+                            {% if user.display_name %}
+                                · {{ user.display_name }}
+                            {% endif %}
+                        </h3>
+
+                        <div class="muted">
+                            角色：{{ user.role }}
+                            · 状态：{{ user.status }}
+                            · session_version：
+                            {{ user.session_version }}
+                            · 当前有效设备：
+                            {{ item.active_session_count }}
+                            /
+                            {{ item.max_active_sessions }}
+                        </div>
+                    </div>
+
+                    {% if report.write_ready %}
+                        <div class="actions">
+                            <form
+                                class="inline"
+                                method="post"
+                                action="{{ url_for('v155_security_sessions_policy') }}"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <label>
+                                    在线上限
+                                    <input
+                                        type="number"
+                                        name="max_active_sessions"
+                                        min="{{ report.min_max_active_sessions }}"
+                                        max="{{ report.max_max_active_sessions }}"
+                                        value="{{ item.max_active_sessions }}"
+                                        required
+                                    >
+                                </label>
+
+                                <button type="submit">
+                                    保存上限
+                                </button>
+                            </form>
+
+                            <form
+                                class="inline"
+                                method="post"
+                                action="{{ url_for('v155_security_sessions_revoke_all') }}"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="target_user_id"
+                                    value="{{ user.id }}"
+                                >
+
+                                <button
+                                    class="danger"
+                                    type="submit"
+                                >
+                                    注销全部设备
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if item.sessions %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>状态</th>
+                                    <th>登录时间</th>
+                                    <th>最后活动</th>
+                                    <th>到期时间</th>
+                                    <th>登录 IP</th>
+                                    <th>最近 IP</th>
+                                    <th>设备信息</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                            {% for device in item.sessions %}
+                                <tr>
+                                    <td>{{ device.id }}</td>
+                                    <td>{{ device.status }}</td>
+                                    <td>{{ device.created_at }}</td>
+                                    <td>{{ device.last_seen_at }}</td>
+                                    <td>{{ device.expires_at }}</td>
+                                    <td>{{ device.login_ip }}</td>
+                                    <td>{{ device.last_ip }}</td>
+                                    <td class="device">
+                                        {% if device.device_label %}
+                                            {{ device.device_label }}
+                                            <br>
+                                        {% endif %}
+                                        {{ device.user_agent }}
+                                    </td>
+
+                                    <td>
+                                        {% if report.write_ready and device.status == 'active' %}
+                                            <form
+                                                method="post"
+                                                action="{{ url_for('v155_security_sessions_revoke') }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="csrf_token"
+                                                    value="{{ csrf_token }}"
+                                                >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="target_user_id"
+                                                    value="{{ user.id }}"
+                                                >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="session_row_id"
+                                                    value="{{ device.id }}"
+                                                >
+
+                                                <button
+                                                    class="danger"
+                                                    type="submit"
+                                                >
+                                                    注销此设备
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span class="muted">
+                                                无可用操作
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                {% else %}
+                    <div class="empty">
+                        当前没有可显示的会话记录。
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+</body>
+</html>

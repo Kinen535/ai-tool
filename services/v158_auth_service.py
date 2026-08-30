@@ -617,3 +617,16 @@ def authenticate_credentials(
         if conn.in_transaction:
             conn.rollback()
         raise
+
+# V15.5-A6 raw registry session identifier.
+# SQLite must contain only its SHA-256 hash.
+V155_SESSION_ID = "v155_session_id"
+
+AUTH_SESSION_KEYS = tuple(
+    dict.fromkeys(
+        (
+            *tuple(AUTH_SESSION_KEYS),
+            V155_SESSION_ID,
+        )
+    )
+)

@@ -261,3 +261,28 @@ def build_v158_flask_session_config(
     }
 
     return config, source
+
+# V15.5-A6 session registry enforcement.
+# Default remains OFF until controlled A6-A6 cutover.
+V155_SESSION_REGISTRY_ENFORCEMENT_ENV = (
+    "V155_SESSION_REGISTRY_ENFORCEMENT"
+)
+
+
+def v155_session_registry_enforced() -> bool:
+    raw = os.environ.get(
+        V155_SESSION_REGISTRY_ENFORCEMENT_ENV,
+        "",
+    )
+
+    return (
+        str(raw)
+        .strip()
+        .lower()
+        in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+    )

@@ -609,6 +609,7 @@ def revoke_session_by_id(
         raise
 
 
+
 def revoke_all_registry_sessions(
     conn: sqlite3.Connection,
     *,
@@ -618,57 +619,31 @@ def revoke_all_registry_sessions(
     now=None,
 ) -> int:
     """
-    Registry-only revocation primitive.
+    Standalone registry-only revocation.
 
-    This function intentionally does NOT modify
-    v158_users.session_version.
-
-    Account-wide invalidation callers must preserve
-    the existing session_version bump separately.
+    This wrapper owns its transaction.
     """
     _begin_owned_write(conn)
 
     try:
-        cursor = conn.execute(
-            """
-            UPDATE v155_user_sessions
-            SET
-                status='revoked',
-                revoked_at=?,
-                revoke_reason=?,
-                revoked_by_user_id=?
-            WHERE user_id=?
-              AND status='active'
-            """,
-            (
-                _timestamp(now),
-                str(
-                    reason
-                    or "account_invalidation"
-                ),
-                (
-                    int(actor_user_id)
-                    if actor_user_id
-                    is not None
-                    else None
-                ),
-                int(user_id),
-            ),
-        )
-
-        count = int(
-            cursor.rowcount
+        count = (
+            revoke_all_registry_sessions_in_transaction(
+                conn,
+                user_id=user_id,
+                actor_user_id=actor_user_id,
+                reason=reason,
+                now=now,
+            )
         )
 
         conn.commit()
-
         return count
 
     except Exception:
         if conn.in_transaction:
             conn.rollback()
-
         raise
+
 
 
 def touch_registered_session(
@@ -815,3 +790,52 @@ def list_user_sessions(
         )
         for row in rows
     ]
+
+def revoke_all_registry_sessions_in_transaction(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    actor_user_id: Optional[int],
+    reason: str,
+    now=None,
+) -> int:
+    """
+    Caller-owned transaction primitive.
+
+    No BEGIN, COMMIT, or ROLLBACK is performed here.
+    """
+    if not conn.in_transaction:
+        raise TransactionOwnershipError(
+            "caller-owned transaction required"
+        )
+
+    _require_foreign_keys(conn)
+
+    cursor = conn.execute(
+        """
+        UPDATE v155_user_sessions
+        SET
+            status='revoked',
+            revoked_at=?,
+            revoke_reason=?,
+            revoked_by_user_id=?
+        WHERE user_id=?
+          AND status='active'
+        """,
+        (
+            _timestamp(now),
+            str(
+                reason
+                or "account_invalidation"
+            ),
+            (
+                int(actor_user_id)
+                if actor_user_id
+                is not None
+                else None
+            ),
+            int(user_id),
+        ),
+    )
+
+    return int(cursor.rowcount)
