@@ -277,9 +277,9 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
 
                     <td>
                         {% if permission.override_effect == 'grant' %}
-                            🟢 Grant
+                            🟢 授予
                         {% elif permission.override_effect == 'deny' %}
-                            🔴 Deny
+                            🔴 禁止
                         {% else %}
                             —
                         {% endif %}
@@ -301,7 +301,7 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
-                                style="display:inline-block;margin:2px;"
+                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
                                     type="hidden"
@@ -328,15 +328,37 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                                     name="effect"
                                     value="grant"
                                 >
-                                <button type="submit">
-                                    Grant
-                                </button>
+                                <button
+    type="submit"
+    title="授予该成员此权限"
+    aria-label="授予权限"
+    style="
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:72px;
+        min-height:36px;
+        padding:7px 14px;
+        border:1px solid #16a34a;
+        border-radius:8px;
+        background:#16a34a;
+        color:#ffffff;
+        font-weight:700;
+        line-height:1;
+        cursor:pointer;
+        pointer-events:auto;
+        position:relative;
+        z-index:5;
+    "
+>
+    授予
+</button>
                             </form>
 
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
-                                style="display:inline-block;margin:2px;"
+                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
                                     type="hidden"
@@ -363,9 +385,31 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                                     name="effect"
                                     value="deny"
                                 >
-                                <button type="submit">
-                                    Deny
-                                </button>
+                                <button
+    type="submit"
+    title="禁止该成员使用此权限"
+    aria-label="禁止权限"
+    style="
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:72px;
+        min-height:36px;
+        padding:7px 14px;
+        border:1px solid #dc2626;
+        border-radius:8px;
+        background:#dc2626;
+        color:#ffffff;
+        font-weight:700;
+        line-height:1;
+        cursor:pointer;
+        pointer-events:auto;
+        position:relative;
+        z-index:5;
+    "
+>
+    禁止
+</button>
                             </form>
                         {% endif %}
 
@@ -373,7 +417,7 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
-                                style="display:inline-block;margin:2px;"
+                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
                                     type="hidden"
@@ -395,9 +439,31 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                                     name="permission_key"
                                     value="{{ permission.permission_key }}"
                                 >
-                                <button type="submit">
-                                    清除覆盖
-                                </button>
+                                <button
+    type="submit"
+    title="清除该成员对此权限的单独覆盖"
+    aria-label="清除权限覆盖"
+    style="
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:88px;
+        min-height:36px;
+        padding:7px 14px;
+        border:1px solid #64748b;
+        border-radius:8px;
+        background:#ffffff;
+        color:#475569;
+        font-weight:700;
+        line-height:1;
+        cursor:pointer;
+        pointer-events:auto;
+        position:relative;
+        z-index:5;
+    "
+>
+    清除覆盖
+</button>
                             </form>
                         {% elif
                             not permission.grantable
