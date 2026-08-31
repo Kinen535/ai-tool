@@ -158,6 +158,15 @@ def main() -> int:
         required=True,
     )
 
+    parser.add_argument(
+        "--allow-production",
+        action="store_true",
+        help=(
+            "explicitly authorize migration "
+            "of the production database"
+        ),
+    )
+
     args = parser.parse_args()
 
     db_path = (
@@ -166,10 +175,13 @@ def main() -> int:
         .resolve()
     )
 
-    if db_path == PRODUCTION_DB:
+    if (
+        db_path == PRODUCTION_DB
+        and not args.allow_production
+    ):
         parser.error(
             "production database execution "
-            "is not authorized during A6-A3"
+            "requires explicit --allow-production"
         )
 
     db_path.parent.mkdir(
