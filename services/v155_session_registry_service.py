@@ -506,6 +506,63 @@ def validate_registered_session(
     )
 
 
+def mark_current_session_expired(
+    conn: sqlite3.Connection,
+    *,
+    raw_session_id: str,
+    user_id: int,
+    now=None,
+) -> bool:
+    """
+    Terminalize the caller's matching active registry
+    session after authentication idle timeout.
+
+    This owns its write transaction and never changes
+    session_version or deletes registry history.
+    """
+    session_hash = (
+        hash_session_identifier(
+            raw_session_id
+        )
+    )
+
+    _begin_owned_write(conn)
+
+    try:
+        cursor = conn.execute(
+            """
+            UPDATE v155_user_sessions
+            SET
+                status='expired',
+                revoked_at=?,
+                revoke_reason='idle_timeout',
+                revoked_by_user_id=NULL
+            WHERE session_key_hash=?
+              AND user_id=?
+              AND status='active'
+            """,
+            (
+                _timestamp(now),
+                session_hash,
+                int(user_id),
+            ),
+        )
+
+        changed = (
+            cursor.rowcount > 0
+        )
+
+        conn.commit()
+
+        return changed
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+
+
 def mark_current_session_logged_out(
     conn: sqlite3.Connection,
     *,

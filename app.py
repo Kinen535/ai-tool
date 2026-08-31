@@ -11245,6 +11245,7 @@ def v158_authentication_before_request():
     )
     from services.v155_session_registry_service import (
         SessionRegistryError,
+        mark_current_session_expired,
         touch_registered_session,
         validate_registered_session,
     )
@@ -11284,6 +11285,13 @@ def v158_authentication_before_request():
         session.get(
             SESSION_VERSION
         )
+    )
+
+    previous_registry_session_id = str(
+        session.get(
+            V155_SESSION_ID
+        )
+        or ""
     )
 
     try:
@@ -11381,6 +11389,41 @@ def v158_authentication_before_request():
             )
 
         if not auth_result["ok"]:
+            if (
+                had_auth_session
+                and v155_session_registry_enforced()
+                and str(
+                    auth_result.get(
+                        "reason"
+                    )
+                    or ""
+                )
+                == "idle_timeout"
+                and previous_registry_session_id
+            ):
+                try:
+                    idle_user_id = int(
+                        previous_user_id
+                    )
+
+                    if idle_user_id > 0:
+                        mark_current_session_expired(
+                            conn,
+                            raw_session_id=(
+                                previous_registry_session_id
+                            ),
+                            user_id=idle_user_id,
+                        )
+
+                except (
+                    sqlite3.Error,
+                    SessionRegistryError,
+                    TypeError,
+                    ValueError,
+                ):
+                    if conn.in_transaction:
+                        conn.rollback()
+
             if had_auth_session:
                 try:
                     try:

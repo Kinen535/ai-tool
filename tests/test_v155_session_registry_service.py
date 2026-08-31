@@ -715,3 +715,140 @@ def test_session_listing_contains_metadata_but_not_raw_secret(
         created.raw_session_id
         not in repr(row)
     )
+
+
+
+def test_idle_timeout_terminalization_marks_expired_and_is_idempotent(
+    conn,
+):
+    from services.v155_session_registry_service import (
+        mark_current_session_expired,
+    )
+
+    first = create_one(conn)
+
+    before_version = int(
+        conn.execute(
+            """
+            SELECT session_version
+            FROM v155_user_sessions
+            WHERE id=?
+            """,
+            (
+                first.session_row_id,
+            ),
+        ).fetchone()[0]
+    )
+
+    changed = (
+        mark_current_session_expired(
+            conn,
+            raw_session_id=(
+                first.raw_session_id
+            ),
+            user_id=1,
+        )
+    )
+
+    assert changed is True
+
+    row = conn.execute(
+        """
+        SELECT
+            status,
+            session_version,
+            revoked_at,
+            revoke_reason,
+            revoked_by_user_id
+        FROM v155_user_sessions
+        WHERE id=?
+        """,
+        (
+            first.session_row_id,
+        ),
+    ).fetchone()
+
+    assert row[0] == "expired"
+    assert int(row[1]) == before_version
+    assert row[2]
+    assert row[3] == "idle_timeout"
+    assert row[4] is None
+
+    changed_again = (
+        mark_current_session_expired(
+            conn,
+            raw_session_id=(
+                first.raw_session_id
+            ),
+            user_id=1,
+        )
+    )
+
+    assert changed_again is False
+
+    row_again = conn.execute(
+        """
+        SELECT
+            status,
+            session_version,
+            revoke_reason,
+            revoked_by_user_id
+        FROM v155_user_sessions
+        WHERE id=?
+        """,
+        (
+            first.session_row_id,
+        ),
+    ).fetchone()
+
+    assert tuple(row_again) == (
+        "expired",
+        before_version,
+        "idle_timeout",
+        None,
+    )
+
+
+def test_idle_timeout_expired_row_releases_concurrent_capacity(
+    conn,
+):
+    from services.v155_session_registry_service import (
+        mark_current_session_expired,
+    )
+
+    first = create_one(conn)
+
+    assert (
+        mark_current_session_expired(
+            conn,
+            raw_session_id=(
+                first.raw_session_id
+            ),
+            user_id=1,
+        )
+        is True
+    )
+
+    second = create_one(conn)
+    third = create_one(conn)
+
+    assert second.max_active_sessions == 2
+    assert third.max_active_sessions == 2
+
+    active_count = int(
+        conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM v155_user_sessions
+            WHERE user_id=1
+              AND status='active'
+            """
+        ).fetchone()[0]
+    )
+
+    assert active_count == 2
+
+    with pytest.raises(
+        SessionLimitExceeded
+    ):
+        create_one(conn)
