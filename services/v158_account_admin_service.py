@@ -601,6 +601,152 @@ def _error_result(
     }
 
 
+def _list_account_memberships(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT
+            wm.id AS membership_id,
+            wm.workspace_id AS workspace_id,
+            w.workspace_name AS workspace_name,
+            wm.status AS membership_status,
+            r.id AS workspace_role_id,
+            r.role_key AS workspace_role_key,
+            r.role_name AS workspace_role_name,
+            r.status AS workspace_role_status
+        FROM v155_workspace_members AS wm
+        LEFT JOIN v155_workspaces AS w
+          ON w.id=wm.workspace_id
+        LEFT JOIN v155_roles AS r
+          ON r.id=wm.role_id
+         AND r.workspace_id=wm.workspace_id
+        WHERE wm.user_id=?
+        """,
+        (
+            int(user_id),
+        ),
+    ).fetchall()
+
+    memberships = [
+        {
+            "membership_id": int(
+                row["membership_id"]
+            ),
+            "workspace_id": int(
+                row["workspace_id"]
+            ),
+            "workspace_name": (
+                row["workspace_name"]
+            ),
+            "membership_status": (
+                row["membership_status"]
+            ),
+            "workspace_role_id": (
+                int(
+                    row["workspace_role_id"]
+                )
+                if (
+                    row["workspace_role_id"]
+                    is not None
+                )
+                else None
+            ),
+            "workspace_role_key": (
+                row["workspace_role_key"]
+            ),
+            "workspace_role_name": (
+                row["workspace_role_name"]
+            ),
+            "workspace_role_status": (
+                row["workspace_role_status"]
+            ),
+        }
+        for row in rows
+    ]
+
+    memberships.sort(
+        key=lambda item: (
+            str(
+                item.get(
+                    "workspace_name"
+                )
+                or ""
+            ).casefold(),
+            int(
+                item[
+                    "membership_id"
+                ]
+            ),
+        )
+    )
+
+    return memberships
+
+
+def _list_account_recent_actions(
+    conn: sqlite3.Connection,
+    *,
+    target_user_id: int,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    limit = max(
+        1,
+        min(
+            int(limit),
+            50,
+        ),
+    )
+
+    target_id = str(
+        int(
+            target_user_id
+        )
+    )
+
+    rows = conn.execute(
+        """
+        SELECT
+            id,
+            user_id,
+            username_snapshot,
+            role_snapshot,
+            action_key,
+            action_label,
+            target_type,
+            target_id,
+            target_label,
+            result_status,
+            reason,
+            request_method,
+            request_path,
+            ip_address,
+            created_at
+        FROM v158_action_logs
+        WHERE
+            target_type='user'
+            AND target_id=?
+            AND (
+                action_key LIKE 'account_%'
+                OR action_key='bootstrap_super_admin'
+            )
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (
+            target_id,
+            limit,
+        ),
+    ).fetchall()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
+
 def list_accounts(
     conn: sqlite3.Connection,
     *,
@@ -673,6 +819,24 @@ def list_accounts(
 
         user["is_locked"] = int(
             row["is_locked"] or 0
+        )
+
+        user["memberships"] = (
+            _list_account_memberships(
+                conn,
+                user_id=int(
+                    user["id"]
+                ),
+            )
+        )
+
+        user["recent_actions"] = (
+            _list_account_recent_actions(
+                conn,
+                target_user_id=int(
+                    user["id"]
+                ),
+            )
         )
 
         result.append(

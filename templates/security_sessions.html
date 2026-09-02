@@ -224,9 +224,8 @@
 
         {% if not report.write_ready %}
             <p class="muted">
-                当前仍处于 A6 生产切换前状态。
-                页面允许安全查看账号信息，
-                会话写操作将在正式切换后开放。
+                当前会话管理写入能力暂未就绪。
+                页面仍可安全查看账号与设备信息。
             </p>
         {% endif %}
     </div>
@@ -237,7 +236,7 @@
         {% for item in report.accounts %}
             {% set user = item.user %}
 
-            <div class="account">
+            <div class="account" id="account-{{ user.id }}">
                 <div class="account-head">
                     <div>
                         <h3>

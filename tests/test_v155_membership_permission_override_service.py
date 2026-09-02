@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import os
+import ast
+import copy
 import sqlite3
 from pathlib import Path
 
@@ -18,53 +19,452 @@ PLATFORM_ONLY = {
 }
 
 
-def _backup_database(
-    source: Path,
-    destination: Path,
-) -> None:
-    src = sqlite3.connect(
-        str(source),
-        timeout=15,
+INTEGRATION_TEST_PATH = (
+    Path(__file__)
+    .with_name(
+        "test_v155_access_center_permission_override_integration.py"
+    )
+)
+
+
+def _load_integration_seed_contract():
+    source = INTEGRATION_TEST_PATH.read_text(
+        encoding="utf-8",
+        errors="strict",
     )
 
+    tree = ast.parse(
+        source,
+        filename=str(INTEGRATION_TEST_PATH),
+    )
+
+    values = {}
+
+    for node in tree.body:
+        names = []
+
+        if isinstance(node, ast.Assign):
+            names = [
+                target.id
+                for target in node.targets
+                if isinstance(target, ast.Name)
+            ]
+
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name):
+                names = [
+                    node.target.id
+                ]
+
+        for name in {
+            "SCHEMA_SQL",
+            "SEED",
+        }:
+            if name in names:
+                values[name] = ast.literal_eval(
+                    node.value
+                )
+
+    schema_sql = values.get(
+        "SCHEMA_SQL"
+    )
+
+    seed = values.get(
+        "SEED"
+    )
+
+    assert isinstance(
+        schema_sql,
+        str,
+    )
+
+    assert isinstance(
+        seed,
+        dict,
+    )
+
+    assert (
+        "CREATE TABLE battles"
+        not in schema_sql
+    )
+
+    test_only_battles_schema = """
+CREATE TABLE battles (
+    id INTEGER PRIMARY KEY,
+    battle_name TEXT
+);
+"""
+
+    schema_sql = (
+        test_only_battles_schema
+        + "\n"
+        + schema_sql
+    )
+
+    return (
+        schema_sql,
+        copy.deepcopy(seed),
+    )
+
+
+def _append_test_peer_viewer(seed):
+    users = list(
+        seed.get(
+            "v158_users",
+            [],
+        )
+    )
+
+    memberships = list(
+        seed.get(
+            "v155_workspace_members",
+            [],
+        )
+    )
+
+    roles = list(
+        seed.get(
+            "v155_roles",
+            [],
+        )
+    )
+
+    viewer_roles = sorted(
+        (
+            row
+            for row in roles
+            if (
+                str(
+                    row.get(
+                        "role_key",
+                        "",
+                    )
+                )
+                == "viewer"
+                and
+                str(
+                    row.get(
+                        "status",
+                        "",
+                    )
+                )
+                == "active"
+            )
+        ),
+        key=lambda row: int(
+            row["id"]
+        ),
+    )
+
+    assert viewer_roles
+
+    viewer_role = viewer_roles[0]
+
+    viewer_workspace_id = int(
+        viewer_role[
+            "workspace_id"
+        ]
+    )
+
+    existing_viewer_memberships = sorted(
+        (
+            row
+            for row in memberships
+            if (
+                int(
+                    row[
+                        "role_id"
+                    ]
+                )
+                == int(
+                    viewer_role[
+                        "id"
+                    ]
+                )
+                and
+                int(
+                    row[
+                        "workspace_id"
+                    ]
+                )
+                == viewer_workspace_id
+                and
+                str(
+                    row.get(
+                        "status",
+                        "",
+                    )
+                )
+                == "active"
+                and
+                int(
+                    row.get(
+                        "is_default",
+                        0,
+                    )
+                )
+                == 1
+            )
+        ),
+        key=lambda row: int(
+            row["id"]
+        ),
+    )
+
+    assert existing_viewer_memberships
+
+    existing_membership = (
+        existing_viewer_memberships[0]
+    )
+
+    existing_user_id = int(
+        existing_membership[
+            "user_id"
+        ]
+    )
+
+    existing_user = next(
+        row
+        for row in users
+        if (
+            int(
+                row[
+                    "id"
+                ]
+            )
+            == existing_user_id
+        )
+    )
+
+    new_user = copy.deepcopy(
+        existing_user
+    )
+
+    new_user_id = (
+        max(
+            int(
+                row[
+                    "id"
+                ]
+            )
+            for row in users
+        )
+        + 1
+    )
+
+    new_user[
+        "id"
+    ] = new_user_id
+
+    new_user[
+        "username"
+    ] = "test_peer_viewer"
+
+    new_user[
+        "display_name"
+    ] = "Test Peer Viewer"
+
+    new_user[
+        "role"
+    ] = "viewer"
+
+    new_user[
+        "status"
+    ] = "active"
+
+    new_user[
+        "failed_login_count"
+    ] = 0
+
+    new_user[
+        "locked_until"
+    ] = None
+
+    new_user[
+        "must_change_password"
+    ] = 0
+
+    new_user[
+        "session_version"
+    ] = 1
+
+    assert (
+        str(
+            new_user[
+                "username"
+            ]
+        ).casefold()
+        not in {
+            str(
+                row[
+                    "username"
+                ]
+            ).casefold()
+            for row in users
+        }
+    )
+
+    new_membership = copy.deepcopy(
+        existing_membership
+    )
+
+    new_membership_id = (
+        max(
+            int(
+                row[
+                    "id"
+                ]
+            )
+            for row in memberships
+        )
+        + 1
+    )
+
+    new_membership[
+        "id"
+    ] = new_membership_id
+
+    new_membership[
+        "workspace_id"
+    ] = viewer_workspace_id
+
+    new_membership[
+        "user_id"
+    ] = new_user_id
+
+    new_membership[
+        "role_id"
+    ] = int(
+        viewer_role[
+            "id"
+        ]
+    )
+
+    new_membership[
+        "status"
+    ] = "active"
+
+    new_membership[
+        "is_default"
+    ] = 1
+
+    users.append(
+        new_user
+    )
+
+    memberships.append(
+        new_membership
+    )
+
+    seed[
+        "v158_users"
+    ] = users
+
+    seed[
+        "v155_workspace_members"
+    ] = memberships
+
+    return seed
+
+
+def _build_test_database(
+    path,
+    schema_sql,
+    seed,
+):
+    conn = sqlite3.connect(
+        str(path)
+    )
+
+    conn.row_factory = sqlite3.Row
+
     try:
-        dst = sqlite3.connect(
-            str(destination),
-            timeout=15,
+        conn.execute(
+            "PRAGMA foreign_keys=OFF"
         )
 
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
+        conn.executescript(
+            schema_sql
+        )
+
+        for table, rows in seed.items():
+            if not rows:
+                continue
+
+            columns = list(
+                rows[0].keys()
+            )
+
+            column_sql = ",".join(
+                f'"{column}"'
+                for column in columns
+            )
+
+            placeholders = ",".join(
+                "?"
+                for _ in columns
+            )
+
+            values = [
+                tuple(
+                    row.get(
+                        column
+                    )
+                    for column in columns
+                )
+                for row in rows
+            ]
+
+            conn.executemany(
+                f'INSERT INTO "{table}" '
+                f'({column_sql}) VALUES ({placeholders})',
+                values,
+            )
+
+        conn.commit()
+
+        conn.execute(
+            "PRAGMA foreign_keys=ON"
+        )
+
+        assert (
+            conn.execute(
+                "PRAGMA quick_check"
+            ).fetchone()[0]
+            == "ok"
+        )
+
+        assert (
+            conn.execute(
+                "PRAGMA foreign_key_check"
+            ).fetchall()
+            == []
+        )
 
     finally:
-        src.close()
+        conn.close()
 
 
 @pytest.fixture
 def conn(tmp_path):
-    seed_value = os.environ.get(
-        "V155_OVERRIDE_TEST_SEED_DB",
-        "",
-    )
-
-    assert seed_value, (
-        "V155_OVERRIDE_TEST_SEED_DB is required"
-    )
-
-    seed = Path(seed_value).resolve()
-
-    assert seed.is_file()
-
     test_db = (
         tmp_path
         / "override_test.sqlite3"
     )
 
-    _backup_database(
+    (
+        schema_sql,
         seed,
+    ) = _load_integration_seed_contract()
+
+    seed = _append_test_peer_viewer(
+        seed
+    )
+
+    _build_test_database(
         test_db,
+        schema_sql,
+        seed,
     )
 
     db = sqlite3.connect(
@@ -73,6 +473,7 @@ def conn(tmp_path):
     )
 
     db.row_factory = sqlite3.Row
+
     db.execute(
         "PRAGMA foreign_keys=ON"
     )
@@ -104,9 +505,18 @@ def conn(tmp_path):
 
             for cleanup_path in (
                 test_db,
-                Path(str(test_db) + "-journal"),
-                Path(str(test_db) + "-wal"),
-                Path(str(test_db) + "-shm"),
+                Path(
+                    str(test_db)
+                    + "-journal"
+                ),
+                Path(
+                    str(test_db)
+                    + "-wal"
+                ),
+                Path(
+                    str(test_db)
+                    + "-shm"
+                ),
             ):
                 cleanup_path.unlink(
                     missing_ok=True

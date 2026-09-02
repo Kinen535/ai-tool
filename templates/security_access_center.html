@@ -9,7 +9,7 @@
 <p style="color:#64748b;line-height:1.7;">
 查看当前系统账号、角色、工作区以及权限结构。
 <br>
-当前版本为只读审计视图，用于管理员权限审计。
+当前页面用于管理员查看并管理账号、角色、工作区以及成员级权限覆盖。
 </p>
 
 
@@ -233,10 +233,10 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                 <tr>
                     <th>模块</th>
                     <th>权限</th>
-                    <th>角色基线</th>
+                    <th>角色基线权限</th>
                     <th>可覆盖</th>
                     <th>当前覆盖</th>
-                    <th>最终有效</th>
+                    <th>最终有效权限</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -277,9 +277,9 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
 
                     <td>
                         {% if permission.override_effect == 'grant' %}
-                            🟢 授予
+                            🟢 单独授予
                         {% elif permission.override_effect == 'deny' %}
-                            🔴 禁止
+                            🔴 单独禁止
                         {% else %}
                             —
                         {% endif %}

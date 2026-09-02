@@ -822,6 +822,131 @@
                             {% endif %}
                         </td>
                     </tr>
+                    <tr class="v158-account-detail-row">
+                        <td colspan="11">
+                            <div style="
+                                display:grid;
+                                grid-template-columns:
+                                    minmax(260px, 1.2fr)
+                                    minmax(220px, 0.9fr)
+                                    minmax(300px, 1.3fr);
+                                gap:16px;
+                                padding:14px 8px;
+                            ">
+                                <div>
+                                    <strong>
+                                        Workspace / 权限
+                                    </strong>
+
+                                    {% if user.memberships %}
+                                        <div style="margin-top:8px;">
+                                            {% for membership in user.memberships %}
+                                            <div style="
+                                                padding:8px 0;
+                                                border-bottom:1px solid #e5e7eb;
+                                            ">
+                                                <div>
+                                                    <strong>
+                                                        {{ membership.workspace_name or "未命名 Workspace" }}
+                                                    </strong>
+                                                </div>
+
+                                                <div
+                                                    class="v158-account-muted"
+                                                    style="margin-top:4px;"
+                                                >
+                                                    成员状态：
+                                                    {{ membership.membership_status or "—" }}
+                                                    · Workspace 角色：
+                                                    {{ membership.workspace_role_name or "—" }}
+                                                </div>
+
+                                                <div style="margin-top:6px;">
+                                                    <a
+                                                        href="{{ url_for(
+                                                            'v155_security_access_center',
+                                                            membership_id=membership.membership_id
+                                                        ) }}"
+                                                    >
+                                                        查看 / 配置该 Workspace 权限
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div
+                                            class="v158-account-muted"
+                                            style="margin-top:8px;"
+                                        >
+                                            当前账号尚未加入任何 Workspace
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <strong>
+                                        设备与会话
+                                    </strong>
+
+                                    <div style="margin-top:8px;">
+                                        <a
+                                            href="{{ url_for(
+                                                'v155_security_sessions'
+                                            ) }}#account-{{ user.id }}"
+                                        >
+                                            查看该账号设备 / 会话
+                                        </a>
+                                    </div>
+
+                                    <div
+                                        class="v158-account-muted"
+                                        style="margin-top:8px;"
+                                    >
+                                        会话版本：
+                                        {{ user.session_version }}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <strong>
+                                        最近账号操作
+                                    </strong>
+
+                                    {% if user.recent_actions %}
+                                        <div style="margin-top:8px;">
+                                            {% for action in user.recent_actions %}
+                                            <div style="
+                                                padding:6px 0;
+                                                border-bottom:1px solid #e5e7eb;
+                                            ">
+                                                <div>
+                                                    {{ action.action_label or action.action_key }}
+                                                </div>
+
+                                                <div
+                                                    class="v158-account-muted"
+                                                    style="margin-top:3px;"
+                                                >
+                                                    {{ action.created_at or "—" }}
+                                                    ·
+                                                    {{ action.result_status or "—" }}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div
+                                            class="v158-account-muted"
+                                            style="margin-top:8px;"
+                                        >
+                                            暂无该账号的近期操作记录。
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
