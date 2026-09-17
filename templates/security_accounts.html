@@ -358,9 +358,8 @@
     </div>
 
     <div class="v158-account-notice">
-        当前已开放创建账号功能。
-        修改权限、停用账号、解除锁定、重置密码和强制注销，
-        仍将在后续阶段逐项接入和验收。
+        当前已开放账号创建、资料与角色状态管理、权限配置、
+        设备与会话管理、登录锁定处理、密码重置和强制注销。
         首次登录强制改密流程尚未开放，因此本阶段创建的账号
         暂不标记为“登录后须修改密码”。
     </div>
@@ -910,8 +909,43 @@
 
                                 <div>
                                     <strong>
-                                        设备与会话
+                                        子账号配置摘要
                                     </strong>
+
+                                    <div
+                                        class="v158-account-muted"
+                                        style="
+                                            margin-top:8px;
+                                            line-height:1.9;
+                                        "
+                                    >
+                                        工作区数量：
+                                        <strong>
+                                            {{ user.configuration_summary.membership_count }}
+                                        </strong>
+                                        个
+                                        <br>
+
+                                        个性权限覆盖：
+                                        <strong>
+                                            {{ user.configuration_summary.permission_override_count }}
+                                        </strong>
+                                        项
+                                        <br>
+
+                                        最大在线设备：
+                                        <strong>
+                                            {{ user.configuration_summary.max_active_sessions }}
+                                        </strong>
+                                        台
+                                        <br>
+
+                                        当前在线设备：
+                                        <strong>
+                                            {{ user.configuration_summary.active_session_count }}
+                                        </strong>
+                                        台
+                                    </div>
 
                                     <div style="margin-top:8px;">
                                         <a

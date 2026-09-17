@@ -5,6 +5,8 @@ from services.v158_auth_config import (
 )
 
 from services.v155_session_registry_service import (
+    DEFAULT_MAX_ACTIVE_SESSIONS,
+    get_max_active_sessions,
     revoke_all_registry_sessions_in_transaction,
 )
 
@@ -686,6 +688,134 @@ def _list_account_memberships(
     return memberships
 
 
+
+def _account_admin_table_exists(
+    conn: sqlite3.Connection,
+    table_name: str,
+) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type='table'
+          AND name=?
+        LIMIT 1
+        """,
+        (
+            str(table_name),
+        ),
+    ).fetchone()
+
+    return row is not None
+
+
+def _build_account_configuration_summary(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    memberships: list[dict[str, Any]],
+) -> dict[str, int]:
+    user_id = int(
+        user_id
+    )
+
+    membership_ids = [
+        int(
+            membership["membership_id"]
+        )
+        for membership in memberships
+        if (
+            membership.get(
+                "membership_id"
+            )
+            is not None
+        )
+    ]
+
+    permission_override_count = 0
+
+    if (
+        membership_ids
+        and _account_admin_table_exists(
+            conn,
+            "v155_membership_permission_overrides",
+        )
+    ):
+        placeholders = ",".join(
+            "?"
+            for _ in membership_ids
+        )
+
+        row = conn.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM v155_membership_permission_overrides
+            WHERE membership_id IN ({placeholders})
+            """,
+            tuple(
+                membership_ids
+            ),
+        ).fetchone()
+
+        permission_override_count = int(
+            row[0] or 0
+        )
+
+    max_active_sessions = int(
+        DEFAULT_MAX_ACTIVE_SESSIONS
+    )
+
+    if _account_admin_table_exists(
+        conn,
+        "v155_user_session_policies",
+    ):
+        max_active_sessions = int(
+            get_max_active_sessions(
+                conn,
+                user_id,
+            )
+        )
+
+    active_session_count = 0
+
+    if _account_admin_table_exists(
+        conn,
+        "v155_user_sessions",
+    ):
+        row = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM v155_user_sessions
+            WHERE user_id=?
+              AND status='active'
+              AND datetime(expires_at)
+                    > datetime('now')
+            """,
+            (
+                user_id,
+            ),
+        ).fetchone()
+
+        active_session_count = int(
+            row[0] or 0
+        )
+
+    return {
+        "membership_count": len(
+            memberships
+        ),
+        "permission_override_count": (
+            permission_override_count
+        ),
+        "max_active_sessions": (
+            max_active_sessions
+        ),
+        "active_session_count": (
+            active_session_count
+        ),
+    }
+
+
 def _list_account_recent_actions(
     conn: sqlite3.Connection,
     *,
@@ -821,12 +951,26 @@ def list_accounts(
             row["is_locked"] or 0
         )
 
-        user["memberships"] = (
+        memberships = (
             _list_account_memberships(
                 conn,
                 user_id=int(
                     user["id"]
                 ),
+            )
+        )
+
+        user["memberships"] = (
+            memberships
+        )
+
+        user["configuration_summary"] = (
+            _build_account_configuration_summary(
+                conn,
+                user_id=int(
+                    user["id"]
+                ),
+                memberships=memberships,
             )
         )
 

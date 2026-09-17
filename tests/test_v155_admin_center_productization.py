@@ -231,3 +231,97 @@ def test_security_console_keeps_account_and_operational_security_entries():
         signal in template
         for signal in operational_signals
     )
+
+
+
+def test_account_service_exposes_unified_configuration_summary_contract():
+    source = _text(ACCOUNT_SERVICE)
+
+    required = {
+        "configuration_summary",
+        "membership_count",
+        "permission_override_count",
+        "max_active_sessions",
+        "active_session_count",
+        "v155_membership_permission_overrides",
+        "v155_user_session_policies",
+        "v155_user_sessions",
+        "DEFAULT_MAX_ACTIVE_SESSIONS",
+        "get_max_active_sessions",
+    }
+
+    missing = sorted(
+        marker
+        for marker in required
+        if marker not in source
+    )
+
+    assert not missing, (
+        "missing account configuration "
+        f"summary markers: {missing}"
+    )
+
+
+def test_account_summary_keeps_safe_session_dependency_direction():
+    source = _text(ACCOUNT_SERVICE)
+
+    assert (
+        "v155_session_admin_service"
+        not in source
+    )
+
+    assert (
+        "v155_session_registry_service"
+        in source
+    )
+
+    assert (
+        "status='active'"
+        in source
+    )
+
+    assert (
+        "datetime(expires_at)"
+        in source
+    )
+
+
+def test_account_page_renders_subaccount_configuration_summary():
+    template = _text(ACCOUNT_TEMPLATE)
+
+    required = {
+        "子账号配置摘要",
+        "工作区数量",
+        "个性权限覆盖",
+        "最大在线设备",
+        "当前在线设备",
+        "user.configuration_summary.membership_count",
+        "user.configuration_summary.permission_override_count",
+        "user.configuration_summary.max_active_sessions",
+        "user.configuration_summary.active_session_count",
+    }
+
+    missing = sorted(
+        marker
+        for marker in required
+        if marker not in template
+    )
+
+    assert not missing, (
+        "missing subaccount configuration "
+        f"UI markers: {missing}"
+    )
+
+
+def test_account_page_removes_obsolete_pending_capability_copy():
+    template = _text(ACCOUNT_TEMPLATE)
+
+    assert (
+        "仍将在后续阶段逐项接入和验收。"
+        not in template
+    )
+
+    assert (
+        "首次登录强制改密流程尚未开放"
+        in template
+    )
