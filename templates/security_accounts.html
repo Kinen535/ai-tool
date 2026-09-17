@@ -27,6 +27,30 @@
         line-height: 1.7;
     }
 
+    .v158-account-session-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.2;
+        text-decoration: none;
+        transition:
+            background 0.15s ease,
+            border-color 0.15s ease;
+    }
+
+    .v158-account-session-link:hover {
+        background: #dbeafe;
+        border-color: #93c5fd;
+        text-decoration: none;
+    }
+
     .v158-account-back {
         flex-shrink: 0;
         display: inline-flex;
@@ -891,11 +915,12 @@
 
                                     <div style="margin-top:8px;">
                                         <a
+                                            class="v158-account-session-link"
                                             href="{{ url_for(
                                                 'v155_security_sessions'
                                             ) }}#account-{{ user.id }}"
                                         >
-                                            查看该账号设备 / 会话
+                                            查看设备与会话 →
                                         </a>
                                     </div>
 
