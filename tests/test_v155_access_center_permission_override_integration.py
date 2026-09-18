@@ -1634,3 +1634,29 @@ def test_audit_failure_rolls_route_mutation_back(
         db,
         permission_key,
     ) is None
+
+def test_permission_mutation_forms_require_confirmation_ux():
+    from pathlib import Path
+
+    template = Path(
+        "templates/security_access_center.html"
+    ).read_text(encoding="utf-8")
+
+    expected_confirmations = (
+        "确认单独授予该成员此权限？操作后将以成员级覆盖为准。",
+        "确认单独禁止该成员使用此权限？操作后将以成员级覆盖为准。",
+        "确认清除该成员对此权限的单独覆盖？清除后将恢复角色基线结果。",
+    )
+
+    for message in expected_confirmations:
+        assert (
+            f'onsubmit="return confirm(\'{message}\');"'
+            in template
+        )
+
+    assert (
+        template.count(
+            'onsubmit="return confirm('
+        )
+        == 3
+    )

@@ -301,6 +301,7 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
+                                onsubmit="return confirm('确认单独授予该成员此权限？操作后将以成员级覆盖为准。');"
                                 style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
@@ -358,6 +359,7 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
+                                onsubmit="return confirm('确认单独禁止该成员使用此权限？操作后将以成员级覆盖为准。');"
                                 style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
@@ -417,6 +419,7 @@ box-shadow:0 4px 12px rgba(0,0,0,.08);
                             <form
                                 method="post"
                                 action="{{ url_for('v155_security_access_center') }}"
+                                onsubmit="return confirm('确认清除该成员对此权限的单独覆盖？清除后将恢复角色基线结果。');"
                                 style="display:inline-block;margin:3px;position:relative;z-index:4;"
                             >
                                 <input
