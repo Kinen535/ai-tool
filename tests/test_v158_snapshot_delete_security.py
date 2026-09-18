@@ -177,6 +177,13 @@ def call_snapshot_delete(
             "role": role,
         }
 
+        app_module.g.v155_access_context = {
+            "workspace_id": 1,
+            "battle_ids": (7, 8),
+            "current_battle_id": 7,
+            "permissions": (),
+        }
+
         return app_module.snapshot_delete(
             snapshot_id
         )

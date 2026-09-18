@@ -213,6 +213,13 @@ def call_edit(
             "role": role,
         }
 
+        app_module.g.v155_access_context = {
+            "workspace_id": 1,
+            "battle_ids": (1, 2),
+            "current_battle_id": 1,
+            "permissions": (),
+        }
+
         return app_module.identity_edit(
             "成员甲"
         )

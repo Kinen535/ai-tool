@@ -68,6 +68,30 @@ def temporary_database(
             """
         )
 
+        conn.execute(
+            """
+            CREATE TABLE v155_workspace_battles (
+                workspace_id INTEGER NOT NULL,
+                battle_id INTEGER NOT NULL,
+                is_current INTEGER NOT NULL
+                    DEFAULT 0
+                    CHECK (is_current IN (0, 1)),
+                status TEXT NOT NULL
+                    DEFAULT 'active'
+                    CHECK (
+                        status IN (
+                            'active',
+                            'archived'
+                        )
+                    ),
+                PRIMARY KEY (
+                    workspace_id,
+                    battle_id
+                )
+            )
+            """
+        )
+
         for table_name in BUSINESS_TABLES:
             if table_name == "member_battle_profiles":
                 conn.execute(
@@ -115,6 +139,38 @@ def temporary_database(
                     3,
                     "待删除战场",
                     0,
+                ),
+            ],
+        )
+
+        conn.executemany(
+            """
+            INSERT INTO v155_workspace_battles (
+                workspace_id,
+                battle_id,
+                is_current,
+                status
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (
+                    1,
+                    1,
+                    1,
+                    "active",
+                ),
+                (
+                    1,
+                    2,
+                    0,
+                    "active",
+                ),
+                (
+                    1,
+                    3,
+                    0,
+                    "active",
                 ),
             ],
         )
@@ -233,6 +289,13 @@ def call_delete(
             "role": role,
         }
 
+        app_module.g.v155_access_context = {
+            "workspace_id": 1,
+            "battle_ids": (1, 2, 3),
+            "current_battle_id": 1,
+            "permissions": (),
+        }
+
         return app_module.battle_delete(
             battle_id
         )
@@ -267,6 +330,13 @@ def call_select(
             "id": 12,
             "username": "battle-manager",
             "role": role,
+        }
+
+        app_module.g.v155_access_context = {
+            "workspace_id": 1,
+            "battle_ids": (1, 2, 3),
+            "current_battle_id": 1,
+            "permissions": (),
         }
 
         return app_module.battle_select(
@@ -356,19 +426,12 @@ def test_select_role_and_csrf_guards_do_not_write():
 
 
 def test_delete_business_blocks_are_audited():
-    response = call_delete(
-        battle_id=99,
-    )
+    with pytest.raises(Forbidden):
+        call_delete(
+            battle_id=99,
+        )
 
-    assert response.status_code == 302
-
-    first_audit = latest_audit()
-
-    assert first_audit["action_key"] == "battle_delete"
-    assert first_audit["result_status"] == "blocked"
-    assert first_audit["reason"] == "battle_not_found"
-    assert first_audit["battle_id"] is None
-    assert first_audit["target_id"] == "99"
+    assert audit_count() == 0
 
     response = call_delete(
         battle_id=1,
@@ -376,7 +439,8 @@ def test_delete_business_blocks_are_audited():
 
     assert response.status_code == 302
 
-    second_audit = latest_audit()
+    audit = latest_audit()
+
     current = fetch_one(
         """
         SELECT *
@@ -387,27 +451,24 @@ def test_delete_business_blocks_are_audited():
 
     assert current is not None
     assert current["is_current"] == 1
-    assert second_audit["action_key"] == "battle_delete"
-    assert second_audit["result_status"] == "blocked"
-    assert second_audit["reason"] == "current_battle_protected"
-    assert second_audit["battle_id"] == 1
-    assert audit_count() == 2
+
+    assert audit["action_key"] == "battle_delete"
+    assert audit["result_status"] == "blocked"
+    assert (
+        audit["reason"]
+        == "workspace_current_battle_protected"
+    )
+    assert audit["battle_id"] == 1
+    assert audit_count() == 1
 
 
 def test_select_business_blocks_are_audited():
-    response = call_select(
-        battle_id=99,
-    )
+    with pytest.raises(Forbidden):
+        call_select(
+            battle_id=99,
+        )
 
-    assert response.status_code == 302
-
-    first_audit = latest_audit()
-
-    assert first_audit["action_key"] == "battle_select"
-    assert first_audit["result_status"] == "blocked"
-    assert first_audit["reason"] == "battle_not_found"
-    assert first_audit["battle_id"] is None
-    assert first_audit["target_id"] == "99"
+    assert audit_count() == 0
 
     response = call_select(
         battle_id=1,
@@ -415,7 +476,8 @@ def test_select_business_blocks_are_audited():
 
     assert response.status_code == 302
 
-    second_audit = latest_audit()
+    audit = latest_audit()
+
     current = fetch_one(
         """
         SELECT id
@@ -425,11 +487,11 @@ def test_select_business_blocks_are_audited():
     )
 
     assert current["id"] == 1
-    assert second_audit["action_key"] == "battle_select"
-    assert second_audit["result_status"] == "blocked"
-    assert second_audit["reason"] == "already_current"
-    assert second_audit["battle_id"] == 1
-    assert audit_count() == 2
+    assert audit["action_key"] == "battle_select"
+    assert audit["result_status"] == "blocked"
+    assert audit["reason"] == "already_current"
+    assert audit["battle_id"] == 1
+    assert audit_count() == 1
 
 
 def test_delete_cleans_business_data_and_preserves_audit_history():
