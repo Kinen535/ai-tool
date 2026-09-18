@@ -648,3 +648,29 @@ def test_non_super_admin_cannot_change_policy(
     )
 
     assert count == 0
+
+
+def test_session_destructive_actions_require_confirmation_ux():
+    with open(
+        "templates/security_sessions.html",
+        encoding="utf-8",
+    ) as handle:
+        template = handle.read()
+
+    expected_confirmations = (
+        "确认注销这个登录设备？该设备的当前会话将立即失效；如果这是你正在使用的设备，本次登录也会失效。",
+        "确认注销该账号的全部设备？该账号现有登录会全部失效；如果包含你当前正在使用的设备，本次登录也会失效。",
+    )
+
+    for message in expected_confirmations:
+        assert (
+            f'onsubmit="return confirm(\'{message}\');"'
+            in template
+        )
+
+    assert (
+        template.count(
+            'onsubmit="return confirm('
+        )
+        == 2
+    )
