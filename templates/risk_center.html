@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">
+⚠️ 风险中心
+</h1>
+
+<div class="radar-grid">
+
+<div class="radar-card">
+    <div class="radar-title">
+        🚨 建议清理
+    </div>
+
+    <div class="radar-number">
+        {{ high_risk|length }}
+    </div>
+
+    <div class="radar-pct">
+        高风险成员
+    </div>
+</div>
+
+<div class="radar-card">
+    <div class="radar-title">
+        👀 重点观察
+    </div>
+
+    <div class="radar-number">
+        {{ warning_risk|length }}
+    </div>
+
+    <div class="radar-pct">
+        预警成员
+    </div>
+</div>
+
+<div class="radar-card">
+    <div class="radar-title">
+        🛡️ 保护名单
+    </div>
+
+    <div class="radar-number">
+        {{ protected|length }}
+    </div>
+
+    <div class="radar-pct">
+        特殊账号
+    </div>
+</div>
+
+<div class="radar-card">
+    <div class="radar-title">
+        📊 风险覆盖率
+    </div>
+
+    <div class="radar-number">
+        {{ risk_rate }}%
+    </div>
+
+    <div class="radar-pct">
+        联盟风险占比
+    </div>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>📊 风险来源分析</h3>
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+
+        <div>活跃不足</div>
+
+        <h2>{{ risk_stats["活跃不足"] }}</h2>
+
+        <div style="
+            margin-top:10px;
+            font-size:12px;
+            color:#666;
+            line-height:1.6;
+        ">
+
+        {% for name in risk_members_by_reason["活跃不足"] %}
+
+            <div>{{ name }}</div>
+
+        {% endfor %}
+
+        {% if risk_stats["活跃不足"] > 5 %}
+        <div style="margin-top:8px;">
+            <a href="/risk?reason=活跃不足">
+                查看全部 →
+            </a>
+        </div>
+        {% endif %}
+
+        </div>
+
+    </div>
+
+    <div class="stat-card">
+
+        <div>长期低贡献</div>
+
+        <h2>{{ risk_stats["长期低贡献"] }}</h2>
+
+        <div style="
+            margin-top:10px;
+            font-size:12px;
+            color:#666;
+            line-height:1.6;
+        ">
+
+        {% for name in risk_members_by_reason["长期低贡献"] %}
+
+            <div>{{ name }}</div>
+
+        {% endfor %}
+
+        </div>
+
+        {% if risk_stats["长期低贡献"] > 5 %}
+        <div style="margin-top:8px;">
+            <a href="/risk?reason=长期低贡献">
+                查看全部 →
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="stat-card">
+
+        <div>持续下滑</div>
+
+        <h2>{{ risk_stats["持续下滑"] }}</h2>
+
+        <div style="
+            margin-top:10px;
+            font-size:12px;
+            color:#666;
+            line-height:1.6;
+        ">
+
+        {% for name in risk_members_by_reason["持续下滑"] %}
+
+            <div>{{ name }}</div>
+
+        {% endfor %}
+
+        </div>
+
+        {% if risk_stats["持续下滑"] > 5 %}
+        <div style="margin-top:8px;">
+            <a href="/risk?reason=持续下滑">
+                查看全部 →
+        </a>
+    </div>
+    {% endif %}
+
+    </div>
+
+    <div class="stat-card">
+
+        <div>连续停滞</div>
+
+        <h2>{{ risk_stats["连续停滞"] }}</h2>
+
+        <div style="
+            margin-top:10px;
+            font-size:12px;
+            color:#666;
+            line-height:1.6;
+        ">
+
+        {% for name in risk_members_by_reason["连续停滞"] %}
+
+            <div>{{ name }}</div>
+
+        {% endfor %}
+
+        </div>
+
+        {% if risk_stats["连续停滞"] > 5 %}
+        <div style="margin-top:8px;">
+            <a href="/risk?reason=连续停滞">
+                查看全部 →
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- 风险驾驶舱 -->
+
+<div class="dashboard-grid">
+
+    <div class="card">
+
+        <h3>🚨 建议清理</h3>
+
+        {% for m in cleanup_members %}
+
+        <div style="padding:8px 0;border-bottom:1px solid #eee;">
+
+            <a href="/identity/view/{{ m['member_name'] }}?from=risk">
+                {{ m["member_name"] }}
+            </a>
+
+            <span style="float:right;">
+
+            {% for reason in m["risk_reason"].split("｜") %}
+
+            <span style="
+            display:inline-block;
+            padding:2px 8px;
+            margin-left:4px;
+            border-radius:12px;
+            font-size:12px;
+            background:#fee2e2;
+            color:#dc2626;
+            ">
+            {{ reason }}
+            </span>
+
+            {% endfor %}
+
+            </span>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    <div class="card">
+
+        <h3>👀 重点观察</h3>
+
+        {% for m in observe_members %}
+
+        <div style="padding:8px 0;border-bottom:1px solid #eee;">
+
+            <a href="/identity/view/{{ m['member_name'] }}?from=risk">
+                {{ m["member_name"] }}
+            </a>
+
+            <span style="float:right;color:#f59e0b;">
+                观察
+            </span>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    <div class="card">
+
+        <h3>🛡️ 保护名单</h3>
+
+        {% for m in protected_members %}
+
+        <div style="padding:8px 0;border-bottom:1px solid #eee;">
+
+            <a href="/identity/view/{{ m['member_name'] }}?from=risk">
+                {{ m["member_name"] }}
+            </a>
+
+            <span style="float:right;color:#22c55e;">
+                保护
+            </span>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+</div>
+
+{% endblock %}
