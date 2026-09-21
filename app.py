@@ -5370,6 +5370,370 @@ def compare():
         scope_member_options=scope_member_options,
     )
 
+# === V15.5-A7-A10 GROUP TRENDS AGGREGATION HELPERS ===
+
+def build_group_options(records):
+    """返回当前战场历史中出现过的非空团名。"""
+
+    groups = set()
+
+    for row in records:
+        try:
+            raw_group = row.get(
+                "group_name"
+            )
+        except AttributeError:
+            try:
+                raw_group = row[
+                    "group_name"
+                ]
+            except (
+                KeyError,
+                TypeError,
+                IndexError,
+            ):
+                raw_group = None
+
+        group_name = str(
+            raw_group or ""
+        ).strip()
+
+        if group_name:
+            groups.add(
+                group_name
+            )
+
+    return sorted(
+        groups
+    )
+
+
+def build_group_trend_rows(
+    records,
+    group_name,
+    *,
+    min_paired_members=5,
+    min_baseline_coverage=0.90,
+):
+    """
+    按 T1 历史团归属计算相邻快照的团级有符号增量。
+
+    同一 battle/snapshot/member 出现重复记录时，
+    由调用方限定 battle 后，本函数按最大 id 保留最新记录。
+    """
+
+    selected_group = str(
+        group_name or ""
+    ).strip()
+
+    if not selected_group:
+        return []
+
+    def read_value(
+        row,
+        key,
+        default=None,
+    ):
+        try:
+            return row.get(
+                key,
+                default,
+            )
+        except AttributeError:
+            try:
+                return row[key]
+            except (
+                KeyError,
+                TypeError,
+                IndexError,
+            ):
+                return default
+
+    def numeric(
+        value,
+    ):
+        if value is None:
+            return 0.0
+
+        try:
+            result = float(
+                value
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0.0
+
+        if result != result:
+            return 0.0
+
+        return result
+
+    deduplicated = {}
+
+    for sequence, row in enumerate(
+        records
+    ):
+        member = str(
+            read_value(
+                row,
+                "member",
+                "",
+            )
+            or ""
+        ).strip()
+
+        snapshot_raw = read_value(
+            row,
+            "snapshot_time",
+        )
+
+        if (
+            not member
+            or snapshot_raw is None
+        ):
+            continue
+
+        snapshot_time = str(
+            snapshot_raw
+        )
+
+        raw_id = read_value(
+            row,
+            "id",
+            sequence,
+        )
+
+        try:
+            row_id = int(
+                raw_id
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            row_id = sequence
+
+        key = (
+            snapshot_time,
+            member,
+        )
+
+        current = deduplicated.get(
+            key
+        )
+
+        if (
+            current is None
+            or row_id >= current[0]
+        ):
+            deduplicated[key] = (
+                row_id,
+                row,
+            )
+
+    snapshots = {}
+
+    for (
+        snapshot_time,
+        member,
+    ), (
+        _row_id,
+        row,
+    ) in deduplicated.items():
+
+        snapshots.setdefault(
+            snapshot_time,
+            {},
+        )[member] = row
+
+    ordered_times = sorted(
+        snapshots
+    )
+
+    result = []
+
+    metric_fields = (
+        "battle_total",
+        "assist_total",
+        "donate_total",
+        "power_value",
+    )
+
+    output_names = {
+        "battle_total":
+            "battle_delta",
+        "assist_total":
+            "assist_delta",
+        "donate_total":
+            "donate_delta",
+        "power_value":
+            "power_delta",
+    }
+
+    for index in range(
+        1,
+        len(ordered_times),
+    ):
+        prev_time = ordered_times[
+            index - 1
+        ]
+
+        curr_time = ordered_times[
+            index
+        ]
+
+        prev_rows = snapshots[
+            prev_time
+        ]
+
+        curr_rows = snapshots[
+            curr_time
+        ]
+
+        candidates = []
+
+        for member, row in (
+            curr_rows.items()
+        ):
+            current_group = str(
+                read_value(
+                    row,
+                    "group_name",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if (
+                current_group
+                == selected_group
+            ):
+                candidates.append(
+                    (
+                        member,
+                        row,
+                    )
+                )
+
+        if not candidates:
+            continue
+
+        candidate_members = len(
+            candidates
+        )
+
+        paired_members = 0
+
+        totals = {
+            field: 0.0
+            for field in metric_fields
+        }
+
+        for member, current_row in (
+            candidates
+        ):
+            previous_row = (
+                prev_rows.get(
+                    member
+                )
+            )
+
+            if previous_row is None:
+                continue
+
+            paired_members += 1
+
+            for field in metric_fields:
+                totals[field] += (
+                    numeric(
+                        read_value(
+                            current_row,
+                            field,
+                            0,
+                        )
+                    )
+                    - numeric(
+                        read_value(
+                            previous_row,
+                            field,
+                            0,
+                        )
+                    )
+                )
+
+        missing_baseline_members = (
+            candidate_members
+            - paired_members
+        )
+
+        coverage = (
+            paired_members
+            / candidate_members
+            if candidate_members
+            else 0.0
+        )
+
+        is_valid = (
+            paired_members
+            >= min_paired_members
+            and coverage
+            >= min_baseline_coverage
+        )
+
+        row_result = {
+            "prev_snapshot":
+                prev_time,
+            "snapshot_time":
+                curr_time,
+            "group_name":
+                selected_group,
+            "candidate_members":
+                candidate_members,
+            "paired_members":
+                paired_members,
+            "missing_baseline_members":
+                missing_baseline_members,
+            "coverage":
+                coverage,
+            "is_valid":
+                is_valid,
+        }
+
+        for field in metric_fields:
+            base_name = (
+                output_names[field]
+            )
+
+            total = totals[
+                field
+            ]
+
+            average = (
+                total
+                / paired_members
+                if paired_members
+                else None
+            )
+
+            row_result[
+                base_name
+                + "_total"
+            ] = total
+
+            row_result[
+                base_name
+                + "_avg"
+            ] = average
+
+        result.append(
+            row_result
+        )
+
+    return result
+
+
 @app.route("/trends")
 def trends():
 
@@ -5379,6 +5743,18 @@ def trends():
         )
     except WorkspaceDataBoundaryError:
         return "Forbidden", 403
+
+    # === V15.5-A7-A12 GROUP MODE ROUTE INTEGRATION ===
+    mode = request.args.get(
+        "mode",
+        "member",
+    ).strip().lower()
+
+    if mode not in (
+        "member",
+        "group",
+    ):
+        mode = "member"
 
     member_keyword = request.args.get("member_keyword", "").strip()
     group_keyword = request.args.get("group_keyword", "").strip()
@@ -5404,6 +5780,112 @@ def trends():
         )
 
     battle_id = battle_row["id"]
+
+    if mode == "group":
+
+        group_history_rows = conn.execute(
+            """
+            SELECT
+                id,
+                snapshot_time,
+                member,
+                group_name,
+                battle_total,
+                assist_total,
+                donate_total,
+                power_value
+            FROM player_records
+            WHERE battle_id = ?
+              AND COALESCE(is_deleted, 0) = 0
+              AND COALESCE(member, '') <> ''
+              AND COALESCE(snapshot_time, '') <> ''
+            ORDER BY
+                snapshot_time ASC,
+                id ASC
+            """,
+            (
+                battle_id,
+            ),
+        ).fetchall()
+
+        group_history_records = [
+            dict(row)
+            for row in group_history_rows
+        ]
+
+        group_options = build_group_options(
+            group_history_records
+        )
+
+        if (
+            group_keyword
+            and group_keyword
+            not in group_options
+        ):
+            flash(
+                "无效的团趋势筛选条件",
+                "warning",
+            )
+
+            group_keyword = ""
+
+        group_trend_rows = []
+
+        if group_keyword:
+            group_trend_rows = (
+                build_group_trend_rows(
+                    group_history_records,
+                    group_keyword,
+                    min_paired_members=5,
+                    min_baseline_coverage=0.90,
+                )
+            )
+
+        valid_interval_count = sum(
+            1
+            for row in group_trend_rows
+            if row.get("is_valid")
+        )
+
+        if group_keyword:
+            ai_result = {
+                "level":
+                    "团级历史趋势已完成分析",
+                "score":
+                    valid_interval_count,
+                "summary":
+                    (
+                        f"当前团共生成 "
+                        f"{len(group_trend_rows)} "
+                        f"个历史区间，其中 "
+                        f"{valid_interval_count} "
+                        f"个区间满足质量阈值"
+                    ),
+            }
+        else:
+            ai_result = {
+                "level":
+                    "等待团级查询",
+                "score":
+                    0,
+                "summary":
+                    "请选择一个历史分组后查看团级趋势",
+            }
+
+        conn.close()
+
+        return render_template(
+            "trends.html",
+            history_data=[],
+            trend_rows=[],
+            member_keyword="",
+            group_keyword=group_keyword,
+            mode=mode,
+            group_options=group_options,
+            group_trend_rows=group_trend_rows,
+            ai_result=ai_result,
+        )
+
     print("🔥 当前趋势战场ID =", battle_id)
 
     # =========================

@@ -210,10 +210,33 @@
         </div>
 
         <p class="panel-subtitle">
-            当前阶段建议优先使用成员关键词查询。团级趋势属于后续聚合分析模块，会单独升级。
+            支持成员趋势与团级趋势。团级趋势按历史快照区间归属计算，并显示成员配对与基线覆盖质量。
         </p>
 
         <form method="get">
+
+            <!-- V15.5-A7-A14 GROUP MODE TEMPLATE INTEGRATION -->
+
+            <div class="row-gap"
+                 style="margin-bottom:16px;">
+
+                <label style="margin-right:18px;">
+                    <input type="radio"
+                           name="mode"
+                           value="member"
+                           {% if (mode|default('member')) != 'group' %}checked{% endif %}>
+                    成员趋势
+                </label>
+
+                <label>
+                    <input type="radio"
+                           name="mode"
+                           value="group"
+                           {% if (mode|default('member')) == 'group' %}checked{% endif %}>
+                    团级趋势
+                </label>
+
+            </div>
 
             <div class="two-col top-align">
 
@@ -228,13 +251,41 @@
                 </div>
 
                 <div>
+
+                    {% if (mode|default('member')) == 'group' %}
+
+                    <label>历史分组</label>
+
+                    <select class="input"
+                            name="group_keyword">
+
+                        <option value="">
+                            请选择历史分组
+                        </option>
+
+                        {% for group in group_options|default([]) %}
+
+                        <option value="{{ group }}"
+                                {% if group == group_keyword %}selected{% endif %}>
+                            {{ group }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    {% else %}
+
                     <label>团关键词</label>
 
                     <input class="input"
                            type="text"
                            name="group_keyword"
                            value="{{ group_keyword|default('') }}"
-                           placeholder="后续版本接入团级聚合分析">
+                           placeholder="可按分组辅助筛选成员">
+
+                    {% endif %}
+
                 </div>
 
             </div>
@@ -258,6 +309,213 @@
         </form>
 
     </div>
+
+    {% if (mode|default('member')) == 'group' %}
+
+    <div class="panel-card">
+
+        <div class="panel-title">
+            团级趋势分析
+        </div>
+
+        <p class="panel-subtitle">
+            按相邻历史快照计算团级有符号增量；
+            区间归属以结束快照 T1 的分组为准。
+            有效区间要求至少 5 名配对成员且基线覆盖率不低于 90%。
+        </p>
+
+        {% if not group_keyword %}
+
+        <div class="muted">
+            请选择一个历史分组后查看团级趋势。
+        </div>
+
+        {% elif group_trend_rows|default([]) %}
+
+        {% set valid_group_rows =
+            group_trend_rows
+            | selectattr('is_valid')
+            | list %}
+
+        <div class="grid-4">
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    当前分组
+                </div>
+                <div class="stat-value">
+                    {{ group_keyword }}
+                </div>
+                <div class="muted">
+                    单团趋势模式
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    历史区间
+                </div>
+                <div class="stat-value">
+                    {{ group_trend_rows|length }}
+                </div>
+                <div class="muted">
+                    相邻快照区间
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    有效区间
+                </div>
+                <div class="stat-value">
+                    {{ valid_group_rows|length }}
+                </div>
+                <div class="muted">
+                    满足质量阈值
+                </div>
+            </div>
+
+            <div class="mini-card">
+                <div class="mini-title">
+                    质量阈值
+                </div>
+                <div class="stat-value">
+                    5 / 90%
+                </div>
+                <div class="muted">
+                    配对成员 / 基线覆盖率
+                </div>
+            </div>
+
+        </div>
+
+        <div style="
+            overflow-x:auto;
+            margin-top:18px;
+        ">
+
+            <table style="
+                width:100%;
+                border-collapse:collapse;
+                min-width:1180px;
+            ">
+
+                <thead>
+                    <tr>
+                        <th>区间结束</th>
+                        <th>质量</th>
+                        <th>成员覆盖</th>
+                        <th>战功</th>
+                        <th>助攻</th>
+                        <th>捐献</th>
+                        <th>势力</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in group_trend_rows %}
+
+                    <tr>
+
+                        <td>
+                            {{ row.snapshot_time }}
+                        </td>
+
+                        <td>
+                            {% if row.is_valid %}
+                            有效
+                            {% else %}
+                            低质量
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            配对 {{ row.paired_members }}
+                            /
+                            候选 {{ row.candidate_members }}
+
+                            <br>
+
+                            缺基线
+                            {{ row.missing_baseline_members }}
+
+                            <br>
+
+                            覆盖率
+                            {{ (row.coverage * 100)|round(1) }}%
+                        </td>
+
+                        {% if row.is_valid %}
+
+                        <td>
+                            总量：
+                            {{ row.battle_delta_total|round(0)|int }}
+                            <br>
+                            人均：
+                            {{ row.battle_delta_avg|round(1) }}
+                        </td>
+
+                        <td>
+                            总量：
+                            {{ row.assist_delta_total|round(0)|int }}
+                            <br>
+                            人均：
+                            {{ row.assist_delta_avg|round(1) }}
+                        </td>
+
+                        <td>
+                            总量：
+                            {{ row.donate_delta_total|round(0)|int }}
+                            <br>
+                            人均：
+                            {{ row.donate_delta_avg|round(1) }}
+                        </td>
+
+                        <td>
+                            总量：
+                            {{ row.power_delta_total|round(0)|int }}
+                            <br>
+                            人均：
+                            {{ row.power_delta_avg|round(1) }}
+                        </td>
+
+                        {% else %}
+
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+
+                        {% endif %}
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="muted"
+             style="margin-top:12px;">
+            低质量区间仅保留覆盖信息，
+            不以 0 伪装成有效趋势数据。
+        </div>
+
+        {% else %}
+
+        <div class="muted">
+            当前分组暂无可计算的历史趋势区间。
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
 
     <!-- =======================================================
          Overview
