@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1 style="margin-bottom:20px;">
+        🤖 AI日报
+    </h1>
+
+    <!-- 战场概况 -->
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:16px;
+        margin-bottom:30px;
+    ">
+
+        <div class="stat-card">
+            <h2>{{ member_count }}</h2>
+            <div>成员总数</div>
+        </div>
+
+        <div class="stat-card">
+            <h2>{{ train_count }}</h2>
+            <div>重点培养</div>
+        </div>
+
+        <div class="stat-card">
+            <h2>{{ watch_count }}</h2>
+            <div>重点观察</div>
+        </div>
+
+        <div class="stat-card">
+            <h2>{{ clean_count }}</h2>
+            <div>建议清理</div>
+        </div>
+
+    </div>
+
+    <hr style="margin:30px 0;">
+
+    <!-- 重点培养 -->
+
+    <h2>🌱 重点培养名单</h2>
+
+    <div class="card" style="
+        background:white;
+        border-radius:12px;
+        padding:20px;
+        margin-bottom:30px;
+    ">
+
+        {% if train_members %}
+
+            {% for m in train_members %}
+
+               <div style="
+                   padding:10px 0;
+                   border-bottom:1px solid #eee;
+                ">
+
+                   <div style="
+                       font-weight:bold;
+                       font-size:15px;
+                    ">
+                       {{ m.member_name }}
+                   </div>
+
+                   <div style="
+                       font-size:12px;
+                       color:#666;
+                       margin-top:4px;
+                    ">
+                       身份值 {{ m.identity_score }}
+                       ｜活跃度 {{ m.av }}
+                       ｜稳定度 {{ m.bs }}
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div style="
+                color:#999;
+                padding:15px 0;
+            ">
+                暂无重点培养成员
+            </div>
+
+        {% endif %}
+
+    </div>
+
+    <hr style="margin:30px 0;">
+
+    <!-- 重点观察 -->
+
+    <h2>👀 重点观察名单</h2>
+
+    <div class="card" style="
+        background:white;
+        border-radius:12px;
+        padding:20px;
+        margin-bottom:30px;
+    ">
+
+        {% if watch_members %}
+
+            {% for m in watch_members %}
+
+                <div style="
+                    padding:10px 0;
+                    border-bottom:1px solid #eee;
+                ">
+
+                <div>
+                    <b>{{ m.member_name }}</b>
+                </div>
+
+                <div style="
+                    font-size:12px;
+                    color:#d97706;
+                    margin-top:4px;
+                ">
+                    {{ m.risk_reason }}
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+        {% else %}
+
+            <div style="
+                color:#999;
+                padding:15px 0;
+            ">
+                暂无重点观察成员
+            </div>
+
+        {% endif %}
+
+    </div>
+
+    <hr style="margin:30px 0;">
+
+    <!-- 建议清理 -->
+
+    <h2>🚨 建议清理名单</h2>
+
+    <div class="card" style="
+        background:white;
+        border-radius:12px;
+        padding:20px;
+        margin-bottom:30px;
+    ">
+
+        {% if clean_members %}
+
+            {% for m in clean_members %}
+
+                <div style="
+                    padding:10px 0;
+                    border-bottom:1px solid #eee;
+                ">
+
+                    <div>
+                        <b>{{ m.member_name }}</b>
+                    </div>
+
+                    <div style="
+                        font-size:12px;
+                        color:#dc2626;
+                        margin-top:4px;
+                    ">
+                        {{ m.risk_reason }}
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div style="
+                color:#999;
+                padding:15px 0;
+            ">
+                暂无建议清理成员
+            </div>
+
+        {% endif %}
+
+    </div>
+
+    <hr style="margin:30px 0;">
+
+    <!-- AI总结 -->
+
+   <h2>📝 AI管理建议</h2>
+
+   <div class="card" style="
+       background:white;
+       border-radius:12px;
+       padding:20px;
+       margin-bottom:30px;
+    ">
+
+       <div style="
+           line-height:1.8;
+            white-space:pre-line;
+        ">
+           {{ summary }}
+       </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
