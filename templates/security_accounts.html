@@ -4,168 +4,358 @@
 
 <style>
     .v158-account-page {
-        max-width: 1500px;
+        max-width: 1420px;
         margin: 0 auto;
         padding: 24px;
+        color: #0f172a;
+    }
+
+    .v158-account-header,
+    .v158-account-section-head,
+    .v158-account-card-head,
+    .v158-account-summary-main,
+    .v158-account-summary-side {
+        display: flex;
+        align-items: center;
     }
 
     .v158-account-header {
-        display: flex;
-        align-items: flex-start;
         justify-content: space-between;
         gap: 18px;
         margin-bottom: 18px;
     }
 
-    .v158-account-header h1 {
-        margin: 0 0 8px;
+    .v158-account-header h1,
+    .v158-account-section-head h2,
+    .v158-account-detail-block h3 {
+        margin: 0;
     }
 
     .v158-account-header p {
-        margin: 0;
+        margin: 7px 0 0;
         color: #64748b;
-        line-height: 1.7;
+        line-height: 1.6;
     }
 
-    .v158-account-session-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 7px 12px;
-        border: 1px solid #bfdbfe;
-        border-radius: 8px;
-        background: #eff6ff;
-        color: #1d4ed8;
-        font-size: 13px;
-        font-weight: 600;
-        line-height: 1.2;
-        text-decoration: none;
-        transition:
-            background 0.15s ease,
-            border-color 0.15s ease;
-    }
-
-    .v158-account-session-link:hover {
-        background: #dbeafe;
-        border-color: #93c5fd;
-        text-decoration: none;
-    }
-
-    .v158-account-back {
+    .v158-account-header-actions {
+        display: flex;
         flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        padding: 9px 14px;
-        border-radius: 10px;
-        background: #eff6ff;
-        color: #2563eb;
-        text-decoration: none;
-        font-weight: 700;
+        gap: 10px;
     }
 
-    .v158-account-notice {
-        margin-bottom: 18px;
-        padding: 16px 18px;
-        border-left: 6px solid #7c3aed;
-        border-radius: 14px;
-        background: #f5f3ff;
-        color: #475569;
-        line-height: 1.7;
+    .v158-account-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 13px;
+        border: 1px solid #dbe3ef;
+        border-radius: 10px;
+        background: #fff;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 750;
+        text-decoration: none;
+    }
+
+    .v158-account-link:hover {
+        border-color: #a5b4fc;
+        background: #f8fafc;
+        color: #4338ca;
+        text-decoration: none;
     }
 
     .v158-account-stats {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 14px;
+        gap: 12px;
         margin-bottom: 18px;
     }
 
     .v158-account-stat {
-        padding: 18px;
-        border-radius: 16px;
-        background: white;
-        text-align: center;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+        padding: 15px 16px;
+        border: 1px solid #e7edf5;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, .04);
     }
 
-    .v158-account-stat div {
+    .v158-account-stat span {
         color: #64748b;
+        font-size: 13px;
     }
 
     .v158-account-stat strong {
         display: block;
-        margin-top: 8px;
-        font-size: 28px;
-        color: #0f172a;
+        margin-top: 7px;
+        font-size: 25px;
+        line-height: 1;
     }
 
-    .v158-account-panel {
+    .v158-account-panel,
+    .v158-account-create,
+    .v158-account-card,
+    .v158-account-audit {
+        border: 1px solid #e7edf5;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 7px 22px rgba(15, 23, 42, .045);
+    }
+
+    .v158-account-create,
+    .v158-account-audit {
         margin-bottom: 18px;
-        padding: 22px;
-        border-radius: 18px;
-        background: white;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+        overflow: hidden;
     }
 
-    .v158-account-panel h2 {
-        margin: 0 0 14px;
+    .v158-account-create > summary,
+    .v158-account-audit > summary,
+    .v158-account-details > summary {
+        list-style: none;
+        cursor: pointer;
     }
 
-    .v158-account-table-wrap {
-        overflow-x: auto;
+    .v158-account-create > summary::-webkit-details-marker,
+    .v158-account-audit > summary::-webkit-details-marker,
+    .v158-account-details > summary::-webkit-details-marker {
+        display: none;
     }
 
-    .v158-account-table {
-        width: 100%;
-        min-width: 1180px;
-        border-collapse: collapse;
+    .v158-account-create > summary,
+    .v158-account-audit > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 17px 20px;
+        font-weight: 800;
     }
 
-    .v158-account-table th {
-        padding: 11px 10px;
-        background: #f8fafc;
-        color: #475569;
-        text-align: left;
-        white-space: nowrap;
+    .v158-account-summary-main {
+        gap: 10px;
     }
 
-    .v158-account-table td {
-        padding: 12px 10px;
-        border-bottom: 1px solid #e5e7eb;
+    .v158-account-summary-main small,
+    .v158-account-section-head p {
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .v158-account-summary-side {
+        gap: 8px;
+        color: #4f46e5;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .v158-account-summary-side::after {
+        content: "＋";
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    details[open] > summary .v158-account-summary-side::after {
+        content: "－";
+    }
+
+    .v158-account-create-body,
+    .v158-account-audit-body {
+        padding: 0 20px 20px;
+        border-top: 1px solid #edf2f7;
+    }
+
+    .v158-account-create-form {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding-top: 18px;
+    }
+
+    .v158-account-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .v158-account-field label {
         color: #334155;
-        vertical-align: top;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .v158-account-field input,
+    .v158-account-field select,
+    .v158-account-form input,
+    .v158-account-form select {
+        width: 100%;
+        min-height: 42px;
+        box-sizing: border-box;
+        padding: 9px 11px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: #fff;
+        color: #0f172a;
+        font: inherit;
+    }
+
+    .v158-account-field input:focus,
+    .v158-account-field select:focus,
+    .v158-account-form input:focus,
+    .v158-account-form select:focus {
+        border-color: #6366f1;
+        outline: 3px solid rgba(99, 102, 241, .12);
+    }
+
+    .v158-account-field small,
+    .v158-account-note,
+    .v158-account-muted {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .v158-account-create-wide {
+        grid-column: span 2;
+    }
+
+    .v158-account-create-actions {
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .v158-account-button {
+        min-height: 40px;
+        padding: 9px 15px;
+        border: 0;
+        border-radius: 9px;
+        background: #4f46e5;
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .v158-account-button:hover {
+        background: #4338ca;
+    }
+
+    .v158-account-button-secondary {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+
+    .v158-account-button-secondary:hover {
+        background: #c7d2fe;
+    }
+
+    .v158-account-button-warning {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .v158-account-button-warning:hover {
+        background: #ffedd5;
+    }
+
+    .v158-account-flash {
+        margin-bottom: 14px;
+        padding: 12px 15px;
+        border-radius: 11px;
+        font-weight: 700;
+        line-height: 1.55;
+    }
+
+    .v158-flash-success {
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .v158-flash-warning {
+        background: #fff7ed;
+        color: #9a3412;
+    }
+
+    .v158-flash-error {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .v158-account-section-head {
+        justify-content: space-between;
+        gap: 16px;
+        margin: 22px 0 12px;
+    }
+
+    .v158-account-section-head p {
+        margin: 5px 0 0;
+        font-size: 13px;
+    }
+
+    .v158-account-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .v158-account-card {
+        display: grid;
+        grid-template-columns:
+            minmax(330px, .9fr)
+            minmax(650px, 2.15fr)
+            minmax(220px, .6fr);
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .v158-account-card-head {
+        justify-content: space-between;
+        gap: 18px;
+        min-width: 0;
+        padding: 17px 18px;
+    }
+
+    .v158-account-identity {
+        min-width: 0;
+    }
+
+    .v158-account-identity-line {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
     .v158-account-username {
-        font-weight: 800;
-        color: #0f172a;
+        font-size: 17px;
+        font-weight: 850;
     }
 
-    .v158-account-self {
-        display: inline-block;
-        margin-left: 6px;
-        padding: 2px 7px;
-        border-radius: 999px;
-        background: #ede9fe;
-        color: #6d28d9;
-        font-size: 12px;
-        font-weight: 700;
+    .v158-account-display-name {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 13px;
     }
 
-    .v158-account-role,
-    .v158-account-status,
-    .v158-account-lock,
-    .v158-account-result {
+    .v158-account-badges {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .v158-account-badge {
         display: inline-flex;
         align-items: center;
-        padding: 4px 9px;
+        min-height: 25px;
+        padding: 0 9px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 800;
         white-space: nowrap;
     }
 
-    .v158-role-super {
+    .v158-role-super,
+    .v158-account-self {
         background: #ede9fe;
         color: #6d28d9;
     }
@@ -175,7 +365,8 @@
         color: #1d4ed8;
     }
 
-    .v158-role-viewer {
+    .v158-role-viewer,
+    .v158-lock-no {
         background: #f1f5f9;
         color: #475569;
     }
@@ -190,183 +381,319 @@
         color: #b91c1c;
     }
 
-    .v158-lock-yes {
+    .v158-lock-yes,
+    .v158-password-change {
         background: #ffedd5;
         color: #c2410c;
     }
 
-    .v158-lock-no {
-        background: #f1f5f9;
-        color: #64748b;
+    .v158-account-glance {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        min-width: 0;
+        gap: 1px;
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid #edf2f7;
+        border-radius: 11px;
+        background: #edf2f7;
     }
 
-    .v158-result-success {
-        background: #dcfce7;
-        color: #15803d;
+    .v158-account-glance-item {
+        min-width: 0;
+        padding: 10px 12px;
+        background: #f8fafc;
     }
 
-    .v158-result-blocked {
-        background: #ffedd5;
-        color: #c2410c;
-    }
-
-    .v158-result-failure {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-
-    .v158-account-muted {
+    .v158-account-glance-item span {
+        display: block;
+        margin-bottom: 4px;
         color: #94a3b8;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .v158-account-glance-item strong {
+        display: block;
+        overflow: hidden;
+        color: #334155;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .v158-account-details {
+        min-width: 0;
+        border-left: 1px solid #edf2f7;
+    }
+
+    .v158-account-details[open] {
+        grid-column: 1 / -1;
+        border-top: 1px solid #edf2f7;
+        border-left: 0;
+    }
+
+    .v158-account-details > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 18px;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .v158-account-details > summary::after {
+        content: "展开";
+        color: #4f46e5;
+        font-size: 12px;
+    }
+
+    .v158-account-details[open] > summary::after {
+        content: "收起";
+    }
+
+    .v158-account-details[open] > summary {
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .v158-account-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0 18px 18px;
+    }
+
+    .v158-account-detail-block {
+        padding: 15px;
+        border: 1px solid #edf2f7;
+        border-radius: 12px;
+        background: #fbfdff;
+    }
+
+    .v158-account-detail-block h3 {
+        margin-bottom: 11px;
+        font-size: 14px;
+    }
+
+    .v158-account-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .v158-account-form .v158-account-button {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .v158-account-security-actions {
+        display: grid;
+        gap: 9px;
+    }
+
+    .v158-account-security-actions form {
+        display: flex;
+        gap: 8px;
+    }
+
+    .v158-account-security-actions input[type="password"] {
+        flex: 1;
+    }
+
+    .v158-account-membership,
+    .v158-account-action-item {
+        padding: 9px 0;
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .v158-account-membership:last-child,
+    .v158-account-action-item:last-child {
+        border-bottom: 0;
+    }
+
+    .v158-account-membership-line,
+    .v158-account-action-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .v158-account-inline-link {
+        color: #4f46e5;
+        font-size: 12px;
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .v158-account-config-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .v158-account-config-item {
+        padding: 10px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        text-align: center;
+    }
+
+    .v158-account-config-item span {
+        display: block;
+        color: #64748b;
+        font-size: 11px;
+    }
+
+    .v158-account-config-item strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 18px;
     }
 
     .v158-account-empty {
-        padding: 18px;
-        border-radius: 12px;
+        padding: 24px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
         background: #f8fafc;
         color: #64748b;
+        text-align: center;
     }
 
-    .v158-account-flash {
-        margin-bottom: 14px;
-        padding: 13px 16px;
-        border-radius: 12px;
-        font-weight: 700;
-        line-height: 1.6;
+    .v158-account-table-wrap {
+        overflow-x: auto;
     }
 
-    .v158-flash-success {
-        border-left: 5px solid #16a34a;
-        background: #f0fdf4;
-        color: #166534;
-    }
-
-    .v158-flash-warning {
-        border-left: 5px solid #f97316;
-        background: #fff7ed;
-        color: #9a3412;
-    }
-
-    .v158-flash-error {
-        border-left: 5px solid #dc2626;
-        background: #fef2f2;
-        color: #991b1b;
-    }
-
-    .v158-account-create-form {
-        display: grid;
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-        gap: 16px;
-    }
-
-    .v158-account-field {
-        display: flex;
-        flex-direction: column;
-        gap: 7px;
-    }
-
-    .v158-account-field label {
-        color: #334155;
-        font-weight: 800;
-    }
-
-    .v158-account-field input,
-    .v158-account-field select {
+    .v158-account-table {
         width: 100%;
-        box-sizing: border-box;
-        min-height: 44px;
-        padding: 10px 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 10px;
-        background: white;
-        color: #0f172a;
-        font: inherit;
+        min-width: 900px;
+        border-collapse: collapse;
     }
 
-    .v158-account-field input:focus,
-    .v158-account-field select:focus {
-        border-color: #7c3aed;
-        outline: 3px solid rgba(124, 58, 237, .12);
+    .v158-account-table th,
+    .v158-account-table td {
+        padding: 10px;
+        border-bottom: 1px solid #edf2f7;
+        text-align: left;
+        vertical-align: top;
     }
 
-    .v158-account-field small {
+    .v158-account-table th {
+        background: #f8fafc;
         color: #64748b;
-        line-height: 1.6;
+        font-size: 12px;
+        white-space: nowrap;
     }
 
-    .v158-account-form-wide {
-        grid-column: 1 / -1;
+    .v158-account-result-success {
+        color: #15803d;
     }
 
-    .v158-account-create-button {
-        min-height: 44px;
-        padding: 10px 18px;
-        border: 0;
-        border-radius: 10px;
-        background: #7c3aed;
-        color: white;
-        font: inherit;
-        font-weight: 800;
-        cursor: pointer;
+    .v158-account-result-blocked {
+        color: #c2410c;
     }
 
-    .v158-account-create-button:hover {
-        background: #6d28d9;
+    .v158-account-result-failure {
+        color: #b91c1c;
     }
 
     @media (max-width: 1100px) {
-        .v158-account-stats {
+        .v158-account-card {
+            display: block;
+        }
+
+        .v158-account-stats,
+        .v158-account-glance {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-    }
 
-    @media (max-width: 700px) {
-        .v158-account-page {
-            padding: 16px;
+        .v158-account-glance {
+            margin: 0 18px 15px;
         }
 
-        .v158-account-header {
-            flex-direction: column;
-        }
-
-        .v158-account-stats {
-            grid-template-columns: 1fr;
+        .v158-account-details {
+            border-top: 1px solid #edf2f7;
+            border-left: 0;
         }
 
         .v158-account-create-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .v158-account-glance-item:last-child {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .v158-account-page {
+            padding: 15px;
+        }
+
+        .v158-account-header,
+        .v158-account-card-head,
+        .v158-account-membership-line,
+        .v158-account-action-line {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .v158-account-header-actions,
+        .v158-account-link {
+            width: 100%;
+        }
+
+        .v158-account-badges {
+            justify-content: flex-start;
+        }
+
+        .v158-account-stats,
+        .v158-account-create-form,
+        .v158-account-glance,
+        .v158-account-detail-grid,
+        .v158-account-form,
+        .v158-account-config-grid {
             grid-template-columns: 1fr;
+        }
+
+        .v158-account-create-wide,
+        .v158-account-glance-item:last-child {
+            grid-column: auto;
+        }
+
+        .v158-account-security-actions form {
+            align-items: stretch;
+            flex-direction: column;
         }
     }
 </style>
 
 <div class="v158-account-page">
-    <div class="v158-account-header">
+    <header class="v158-account-header">
         <div>
-            <h1>👥 系统账号管理</h1>
-
-            <p>
-                查看账号角色、启用状态、登录锁定、最后登录信息和账号操作审计。
-            </p>
+            <h1>系统账号管理</h1>
+            <p>集中管理账号状态、访问权限与登录安全。</p>
         </div>
 
-        <a
-            class="v158-account-back"
-            href="{{ url_for('v155_security_console') }}"
-        >
-            ← 返回安全后台
-        </a>
-    </div>
+        <div class="v158-account-header-actions">
+            <a
+                class="v158-account-link"
+                href="{{ url_for('v155_security_sessions') }}"
+            >
+                设备与会话
+            </a>
+            <a
+                class="v158-account-link"
+                href="{{ url_for('v155_security_console') }}"
+            >
+                返回安全后台
+            </a>
+        </div>
+    </header>
 
-    <div class="v158-account-notice">
-        当前已开放账号创建、资料与角色状态管理、权限配置、
-        设备与会话管理、登录锁定处理、密码重置和强制注销。
-        首次登录强制改密流程尚未开放，因此本阶段创建的账号
-        暂不标记为“登录后须修改密码”。
-    </div>
-
-    {% with messages = get_flashed_messages(
-        with_categories=true
-    ) %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
         <div class="
             v158-account-flash
@@ -383,700 +710,456 @@
         {% endfor %}
     {% endwith %}
 
-    <div class="v158-account-panel">
-        <h2>① 创建系统账号</h2>
-
-        <form
-            method="post"
-            action="{{ url_for('v158_security_accounts') }}"
-            class="v158-account-create-form"
-            autocomplete="off"
-        >
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token }}"
-            >
-
-            <input
-                type="hidden"
-                name="action"
-                value="create_account"
-            >
-
-            <div class="v158-account-field">
-                <label for="v158-create-username">
-                    登录账号
-                </label>
-
-                <input
-                    id="v158-create-username"
-                    type="text"
-                    name="username"
-                    minlength="3"
-                    maxlength="64"
-                    pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}"
-                    required
-                    autocomplete="off"
-                    placeholder="例如：alliance_manager"
-                >
-
-                <small>
-                    3至64位，以字母或数字开头；
-                    只允许字母、数字、点、下划线和连字符。
-                </small>
-            </div>
-
-            <div class="v158-account-field">
-                <label for="v158-create-display-name">
-                    显示名称
-                </label>
-
-                <input
-                    id="v158-create-display-name"
-                    type="text"
-                    name="display_name"
-                    maxlength="100"
-                    required
-                    autocomplete="off"
-                    placeholder="例如：同盟管理组"
-                >
-            </div>
-
-            <div class="v158-account-field">
-                <label for="v158-create-role">
-                    账号角色
-                </label>
-
-                <select
-                    id="v158-create-role"
-                    name="role"
-                    required
-                >
-                    <option value="viewer">
-                        只读用户
-                    </option>
-
-                    <option value="manager">
-                        管理员
-                    </option>
-
-                    <option value="super_admin">
-                        超级管理员
-                    </option>
-                </select>
-
-                <small>
-                    只有超级管理员可以进入安全后台。
-                </small>
-            </div>
-
-            <div class="v158-account-field">
-                <label for="v158-create-status">
-                    初始状态
-                </label>
-
-                <select
-                    id="v158-create-status"
-                    name="status"
-                    required
-                >
-                    <option value="active">
-                        启用
-                    </option>
-
-                    <option value="disabled">
-                        停用
-                    </option>
-                </select>
-
-                <small>
-                    停用账号无法登录系统。
-                </small>
-            </div>
-
-            <div class="
-                v158-account-field
-                v158-account-form-wide
-            ">
-                <label for="v158-create-password">
-                    初始密码
-                </label>
-
-                <input
-                    id="v158-create-password"
-                    type="password"
-                    name="password"
-                    minlength="12"
-                    maxlength="128"
-                    required
-                    autocomplete="new-password"
-                    placeholder="至少12位，组合大小写、数字和符号"
-                >
-
-                <small>
-                    至少12个字符，并至少包含大写字母、
-                    小写字母、数字、特殊字符中的三类；
-                    不能包含完整登录账号。
-                    密码不会在页面或审计日志中显示。
-                </small>
-            </div>
-
-            <div class="v158-account-form-wide">
-                <button
-                    type="submit"
-                    class="v158-account-create-button"
-                >
-                    创建账号
-                </button>
-            </div>
-        </form>
-    </div>
-
     <div class="v158-account-stats">
         <div class="v158-account-stat">
-            <div>账号总数</div>
+            <span>账号总数</span>
             <strong>{{ report.stats.total_users }}</strong>
         </div>
-
         <div class="v158-account-stat">
-            <div>启用账号</div>
+            <span>启用账号</span>
             <strong>{{ report.stats.active_users }}</strong>
         </div>
-
         <div class="v158-account-stat">
-            <div>停用账号</div>
+            <span>停用账号</span>
             <strong>{{ report.stats.disabled_users }}</strong>
         </div>
-
         <div class="v158-account-stat">
-            <div>启用超级管理员</div>
+            <span>超级管理员</span>
             <strong>{{ report.stats.active_super_admins }}</strong>
         </div>
-
         <div class="v158-account-stat">
-            <div>当前锁定账号</div>
+            <span>锁定账号</span>
             <strong>{{ report.stats.locked_users }}</strong>
         </div>
     </div>
 
-    <div class="v158-account-panel">
-        <h2>② 账号列表</h2>
+    <details class="v158-account-create">
+        <summary>
+            <span class="v158-account-summary-main">
+                创建系统账号
+                <small>需要时展开填写</small>
+            </span>
+            <span class="v158-account-summary-side">展开</span>
+        </summary>
+
+        <div class="v158-account-create-body">
+            <form
+                method="post"
+                action="{{ url_for('v158_security_accounts') }}"
+                class="v158-account-create-form"
+                autocomplete="off"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="create_account">
+
+                <div class="v158-account-field">
+                    <label for="v158-create-username">登录账号</label>
+                    <input
+                        id="v158-create-username"
+                        type="text"
+                        name="username"
+                        minlength="3"
+                        maxlength="64"
+                        pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}"
+                        required
+                        autocomplete="off"
+                        placeholder="例如：alliance_manager"
+                    >
+                </div>
+
+                <div class="v158-account-field">
+                    <label for="v158-create-display-name">显示名称</label>
+                    <input
+                        id="v158-create-display-name"
+                        type="text"
+                        name="display_name"
+                        maxlength="100"
+                        required
+                        autocomplete="off"
+                        placeholder="例如：同盟管理组"
+                    >
+                </div>
+
+                <div class="v158-account-field">
+                    <label for="v158-create-role">账号角色</label>
+                    <select id="v158-create-role" name="role" required>
+                        <option value="viewer">只读用户</option>
+                        <option value="manager">管理员</option>
+                        <option value="super_admin">超级管理员</option>
+                    </select>
+                </div>
+
+                <div class="v158-account-field">
+                    <label for="v158-create-status">初始状态</label>
+                    <select id="v158-create-status" name="status" required>
+                        <option value="active">启用</option>
+                        <option value="disabled">停用</option>
+                    </select>
+                </div>
+
+                <div class="v158-account-field v158-account-create-wide">
+                    <label for="v158-create-password">初始密码</label>
+                    <input
+                        id="v158-create-password"
+                        type="password"
+                        name="password"
+                        minlength="12"
+                        maxlength="128"
+                        required
+                        autocomplete="new-password"
+                        placeholder="至少12位，组合大小写、数字和符号"
+                    >
+                    <small>至少包含大写、小写、数字和特殊字符中的三类。</small>
+                </div>
+
+                <div class="v158-account-create-actions">
+                    <button type="submit" class="v158-account-button">
+                        创建账号
+                    </button>
+                </div>
+
+                <div class="v158-account-note">
+                    创建后可在账号卡片中配置权限、设备和登录状态。
+                </div>
+            </form>
+        </div>
+    </details>
+
+    <section>
+        <div class="v158-account-section-head">
+            <div>
+                <h2>账号列表</h2>
+                <p>默认显示关键信息，管理操作按账号展开。</p>
+            </div>
+        </div>
 
         {% if report.users %}
-        <div class="v158-account-table-wrap">
-            <table class="v158-account-table">
-                <thead>
-                    <tr>
-                        <th>账号</th>
-                        <th>显示名称</th>
-                        <th>角色</th>
-                        <th>状态</th>
-                        <th>登录锁定</th>
-                        <th>失败次数</th>
-                        <th>最后登录</th>
-                        <th>最后登录 IP</th>
-                        <th>密码状态</th>
-                        <th>会话版本</th>
-                        <th>账号操作</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for user in report.users %}
-                    <tr>
-                        <td>
+        <div class="v158-account-list">
+            {% for user in report.users %}
+            <article class="v158-account-card">
+                <div class="v158-account-card-head">
+                    <div class="v158-account-identity">
+                        <div class="v158-account-identity-line">
                             <span class="v158-account-username">
                                 {{ user.username }}
                             </span>
-
                             {% if (
                                 g.v158_current_user
-                                and user.id
-                                    == g.v158_current_user.get("id")
+                                and user.id == g.v158_current_user.get("id")
                             ) %}
-                            <span class="v158-account-self">
+                            <span class="v158-account-badge v158-account-self">
                                 当前账号
                             </span>
                             {% endif %}
-                        </td>
+                        </div>
+                        <div class="v158-account-display-name">
+                            {{ user.display_name }}
+                        </div>
+                    </div>
 
-                        <td>{{ user.display_name }}</td>
-
-                        <td>
-                            <span class="
-                                v158-account-role
-                                {% if user.role == 'super_admin' %}
-                                    v158-role-super
-                                {% elif user.role == 'manager' %}
-                                    v158-role-manager
-                                {% else %}
-                                    v158-role-viewer
-                                {% endif %}
-                            ">
-                                {{ user.role_label }}
-                            </span>
-                        </td>
-
-                        <td>
-                            <span class="
-                                v158-account-status
-                                {% if user.status == 'active' %}
-                                    v158-status-active
-                                {% else %}
-                                    v158-status-disabled
-                                {% endif %}
-                            ">
-                                {{ user.status_label }}
-                            </span>
-                        </td>
-
-                        <td>
-                            {% if user.is_locked %}
-                            <span class="v158-account-lock v158-lock-yes">
-                                已锁定
-                            </span>
-
-                            <div
-                                class="v158-account-muted"
-                                style="margin-top:5px;"
-                            >
-                                至 {{ user.locked_until }}
-                            </div>
+                    <div class="v158-account-badges">
+                        <span class="
+                            v158-account-badge
+                            {% if user.role == 'super_admin' %}
+                                v158-role-super
+                            {% elif user.role == 'manager' %}
+                                v158-role-manager
                             {% else %}
-                            <span class="v158-account-lock v158-lock-no">
-                                未锁定
-                            </span>
+                                v158-role-viewer
                             {% endif %}
-                        </td>
-
-                        <td>{{ user.failed_login_count }}</td>
-
-                        <td>
-                            {{ user.last_login_at or "从未登录" }}
-                        </td>
-
-                        <td>
-                            {{ user.last_login_ip or "—" }}
-                        </td>
-
-                        <td>
-                            {% if user.must_change_password %}
-                                <strong style="color:#c2410c;">
-                                    登录后须修改
-                                </strong>
+                        ">
+                            {{ user.role_label }}
+                        </span>
+                        <span class="
+                            v158-account-badge
+                            {% if user.status == 'active' %}
+                                v158-status-active
                             {% else %}
-                                <span style="color:#15803d;">
-                                    正常
-                                </span>
+                                v158-status-disabled
                             {% endif %}
+                        ">
+                            {{ user.status_label }}
+                        </span>
+                        {% if user.is_locked %}
+                        <span class="v158-account-badge v158-lock-yes">
+                            已锁定
+                        </span>
+                        {% else %}
+                        <span class="v158-account-badge v158-lock-no">
+                            未锁定
+                        </span>
+                        {% endif %}
+                        {% if user.must_change_password %}
+                        <span class="v158-account-badge v158-password-change">
+                            须修改密码
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
 
-                            <div
-                                class="v158-account-muted"
-                                style="margin-top:5px;"
-                            >
-                                {{ user.password_changed_at or "—" }}
-                            </div>
-                        </td>
+                <div class="v158-account-glance">
+                    <div class="v158-account-glance-item">
+                        <span>最后登录</span>
+                        <strong>{{ user.last_login_at or "从未登录" }}</strong>
+                    </div>
+                    <div class="v158-account-glance-item">
+                        <span>最后登录 IP</span>
+                        <strong>{{ user.last_login_ip or "—" }}</strong>
+                    </div>
+                    <div class="v158-account-glance-item">
+                        <span>失败次数</span>
+                        <strong>{{ user.failed_login_count }}</strong>
+                    </div>
+                    <div class="v158-account-glance-item">
+                        <span>在线设备</span>
+                        <strong>
+                            {{ user.configuration_summary.active_session_count }}
+                            / {{ user.configuration_summary.max_active_sessions }}
+                        </strong>
+                    </div>
+                    <div class="v158-account-glance-item">
+                        <span>密码更新时间</span>
+                        <strong>{{ user.password_changed_at or "—" }}</strong>
+                    </div>
+                </div>
 
-                        <td>{{ user.session_version }}</td>
+                <details class="v158-account-details">
+                    <summary>权限、设备与账号管理</summary>
 
-                        <td>
+                    <div class="v158-account-detail-grid">
+                        <section class="v158-account-detail-block">
+                            <h3>账号资料</h3>
                             {% if (
                                 g.v158_current_user
-                                and user.id
-                                    == g.v158_current_user.get("id")
+                                and user.id == g.v158_current_user.get("id")
                             ) %}
-                            <span class="v158-account-self">
-                                当前账号不可在此管理
-                            </span>
+                            <div class="v158-account-note">
+                                当前登录账号不可在这里修改角色或状态。
+                            </div>
                             {% else %}
                             <form
                                 method="post"
                                 action="{{ url_for('v158_security_accounts') }}"
+                                class="v158-account-form"
                                 autocomplete="off"
                             >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="update_account_access"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
-
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="action" value="update_account_access">
+                                <input type="hidden" name="target_user_id" value="{{ user.id }}">
                                 <input
                                     type="text"
                                     name="display_name"
                                     value="{{ user.display_name }}"
                                     maxlength="100"
                                     required
+                                    aria-label="显示名称"
                                 >
-
-                                <select name="role" required>
-                                    <option value="viewer"
-                                        {% if user.role == 'viewer' %}selected{% endif %}>
-                                        只读用户
-                                    </option>
-                                    <option value="manager"
-                                        {% if user.role == 'manager' %}selected{% endif %}>
-                                        管理员
-                                    </option>
-                                    <option value="super_admin"
-                                        {% if user.role == 'super_admin' %}selected{% endif %}>
-                                        超级管理员
-                                    </option>
+                                <select name="role" required aria-label="账号角色">
+                                    <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>只读用户</option>
+                                    <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>管理员</option>
+                                    <option value="super_admin" {% if user.role == 'super_admin' %}selected{% endif %}>超级管理员</option>
                                 </select>
-
-                                <select name="status" required>
-                                    <option value="active"
-                                        {% if user.status == 'active' %}selected{% endif %}>
-                                        启用
-                                    </option>
-                                    <option value="disabled"
-                                        {% if user.status == 'disabled' %}selected{% endif %}>
-                                        停用
-                                    </option>
+                                <select name="status" required aria-label="账号状态">
+                                    <option value="active" {% if user.status == 'active' %}selected{% endif %}>启用</option>
+                                    <option value="disabled" {% if user.status == 'disabled' %}selected{% endif %}>停用</option>
                                 </select>
-
-                                <button type="submit">
+                                <button type="submit" class="v158-account-button">
                                     保存账号资料
                                 </button>
                             </form>
-
-                            {% if user.is_locked %}
-                            <form
-                                method="post"
-                                action="{{ url_for('v158_security_accounts') }}"
-                                style="margin-top:8px;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="unlock_account"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
-
-                                <button type="submit">
-                                    解除登录锁定
-                                </button>
-                            </form>
                             {% endif %}
+                        </section>
 
-                            <form
-                                method="post"
-                                action="{{ url_for('v158_security_accounts') }}"
-                                autocomplete="off"
-                                style="margin-top:8px;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
+                        <section class="v158-account-detail-block">
+                            <h3>登录安全</h3>
+                            {% if (
+                                g.v158_current_user
+                                and user.id == g.v158_current_user.get("id")
+                            ) %}
+                            <div class="v158-account-note">
+                                当前登录账号的安全操作请使用个人账号设置。
+                            </div>
+                            {% else %}
+                            <div class="v158-account-security-actions">
+                                {% if user.is_locked %}
+                                <form method="post" action="{{ url_for('v158_security_accounts') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="action" value="unlock_account">
+                                    <input type="hidden" name="target_user_id" value="{{ user.id }}">
+                                    <button type="submit" class="v158-account-button v158-account-button-secondary">
+                                        解除登录锁定
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <form
+                                    method="post"
+                                    action="{{ url_for('v158_security_accounts') }}"
+                                    autocomplete="off"
+                                    onsubmit="return confirm('确定重置该账号密码？');"
                                 >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="reset_account_password"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
-
-                                <input
-                                    type="password"
-                                    name="password"
-                                    minlength="12"
-                                    maxlength="128"
-                                    required
-                                    autocomplete="new-password"
-                                    placeholder="输入新的管理员设定密码"
-                                >
-
-                                <button type="submit">
-                                    重置账号密码
-                                </button>
-                            </form>
-
-                            <form
-                                method="post"
-                                action="{{ url_for('v158_security_accounts') }}"
-                                style="margin-top:8px;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="invalidate_account_sessions"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
-
-                                <button type="submit">
-                                    强制注销全部会话
-                                </button>
-                            </form>
-
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr class="v158-account-detail-row">
-                        <td colspan="11">
-                            <div style="
-                                display:grid;
-                                grid-template-columns:
-                                    minmax(260px, 1.2fr)
-                                    minmax(220px, 0.9fr)
-                                    minmax(300px, 1.3fr);
-                                gap:16px;
-                                padding:14px 8px;
-                            ">
-                                <div>
-                                    <strong>
-                                        Workspace / 权限
-                                    </strong>
-
-                                    {% if user.memberships %}
-                                        <div style="margin-top:8px;">
-                                            {% for membership in user.memberships %}
-                                            <div style="
-                                                padding:8px 0;
-                                                border-bottom:1px solid #e5e7eb;
-                                            ">
-                                                <div>
-                                                    <strong>
-                                                        {{ membership.workspace_name or "未命名 Workspace" }}
-                                                    </strong>
-                                                </div>
-
-                                                <div
-                                                    class="v158-account-muted"
-                                                    style="margin-top:4px;"
-                                                >
-                                                    成员状态：
-                                                    {{ membership.membership_status or "—" }}
-                                                    · Workspace 角色：
-                                                    {{ membership.workspace_role_name or "—" }}
-                                                </div>
-
-                                                <div style="margin-top:6px;">
-                                                    <a
-                                                        href="{{ url_for(
-                                                            'v155_security_access_center',
-                                                            membership_id=membership.membership_id
-                                                        ) }}"
-                                                    >
-                                                        查看 / 配置该 Workspace 权限
-                                                    </a>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <div
-                                            class="v158-account-muted"
-                                            style="margin-top:8px;"
-                                        >
-                                            当前账号尚未加入任何 Workspace
-                                        </div>
-                                    {% endif %}
-                                </div>
-
-                                <div>
-                                    <strong>
-                                        子账号配置摘要
-                                    </strong>
-
-                                    <div
-                                        class="v158-account-muted"
-                                        style="
-                                            margin-top:8px;
-                                            line-height:1.9;
-                                        "
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="action" value="reset_account_password">
+                                    <input type="hidden" name="target_user_id" value="{{ user.id }}">
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        minlength="12"
+                                        maxlength="128"
+                                        required
+                                        autocomplete="new-password"
+                                        placeholder="输入新密码"
+                                        aria-label="新密码"
                                     >
-                                        工作区数量：
-                                        <strong>
-                                            {{ user.configuration_summary.membership_count }}
-                                        </strong>
-                                        个
-                                        <br>
+                                    <button type="submit" class="v158-account-button v158-account-button-warning">
+                                        重置密码
+                                    </button>
+                                </form>
 
-                                        个性权限覆盖：
-                                        <strong>
-                                            {{ user.configuration_summary.permission_override_count }}
-                                        </strong>
-                                        项
-                                        <br>
+                                <form
+                                    method="post"
+                                    action="{{ url_for('v158_security_accounts') }}"
+                                    onsubmit="return confirm('确定注销该账号的全部会话？');"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="action" value="invalidate_account_sessions">
+                                    <input type="hidden" name="target_user_id" value="{{ user.id }}">
+                                    <button type="submit" class="v158-account-button v158-account-button-warning">
+                                        注销全部会话
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </section>
 
-                                        最大在线设备：
-                                        <strong>
-                                            {{ user.configuration_summary.max_active_sessions }}
-                                        </strong>
-                                        台
-                                        <br>
-
-                                        当前在线设备：
-                                        <strong>
-                                            {{ user.configuration_summary.active_session_count }}
-                                        </strong>
-                                        台
-                                    </div>
-
-                                    <div style="margin-top:8px;">
+                        <section class="v158-account-detail-block">
+                            <h3>Workspace 与权限</h3>
+                            {% if user.memberships %}
+                                {% for membership in user.memberships %}
+                                <div class="v158-account-membership">
+                                    <div class="v158-account-membership-line">
+                                        <div>
+                                            <strong>{{ membership.workspace_name or "未命名 Workspace" }}</strong>
+                                            <div class="v158-account-muted">
+                                                {{ membership.membership_status or "—" }} · {{ membership.workspace_role_name or "—" }}
+                                            </div>
+                                        </div>
                                         <a
-                                            class="v158-account-session-link"
-                                            href="{{ url_for(
-                                                'v155_security_sessions'
-                                            ) }}#account-{{ user.id }}"
+                                            class="v158-account-inline-link"
+                                            href="{{ url_for('v155_security_access_center', membership_id=membership.membership_id) }}"
                                         >
-                                            查看设备与会话 →
+                                            配置权限
                                         </a>
                                     </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="v158-account-note">尚未加入 Workspace。</div>
+                            {% endif %}
+                        </section>
 
-                                    <div
-                                        class="v158-account-muted"
-                                        style="margin-top:8px;"
-                                    >
-                                        会话版本：
-                                        {{ user.session_version }}
+                        <section class="v158-account-detail-block">
+                            <h3>配置摘要</h3>
+                            <div class="v158-account-config-grid">
+                                <div class="v158-account-config-item">
+                                    <span>工作区</span>
+                                    <strong>{{ user.configuration_summary.membership_count }}</strong>
+                                </div>
+                                <div class="v158-account-config-item">
+                                    <span>权限覆盖</span>
+                                    <strong>{{ user.configuration_summary.permission_override_count }}</strong>
+                                </div>
+                                <div class="v158-account-config-item">
+                                    <span>设备上限</span>
+                                    <strong>{{ user.configuration_summary.max_active_sessions }}</strong>
+                                </div>
+                                <div class="v158-account-config-item">
+                                    <span>会话版本</span>
+                                    <strong>{{ user.session_version }}</strong>
+                                </div>
+                            </div>
+                            <div style="margin-top:11px;">
+                                <a
+                                    class="v158-account-inline-link"
+                                    href="{{ url_for('v155_security_sessions') }}#account-{{ user.id }}"
+                                >
+                                    查看设备与会话 →
+                                </a>
+                            </div>
+                        </section>
+
+                        <section class="v158-account-detail-block" style="grid-column:1 / -1;">
+                            <h3>最近账号操作</h3>
+                            {% if user.recent_actions %}
+                                {% for action in user.recent_actions %}
+                                <div class="v158-account-action-item">
+                                    <div class="v158-account-action-line">
+                                        <strong>{{ action.action_label or action.action_key }}</strong>
+                                        <span class="v158-account-muted">
+                                            {{ action.created_at or "—" }} · {{ action.result_status or "—" }}
+                                        </span>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <strong>
-                                        最近账号操作
-                                    </strong>
-
-                                    {% if user.recent_actions %}
-                                        <div style="margin-top:8px;">
-                                            {% for action in user.recent_actions %}
-                                            <div style="
-                                                padding:6px 0;
-                                                border-bottom:1px solid #e5e7eb;
-                                            ">
-                                                <div>
-                                                    {{ action.action_label or action.action_key }}
-                                                </div>
-
-                                                <div
-                                                    class="v158-account-muted"
-                                                    style="margin-top:3px;"
-                                                >
-                                                    {{ action.created_at or "—" }}
-                                                    ·
-                                                    {{ action.result_status or "—" }}
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <div
-                                            class="v158-account-muted"
-                                            style="margin-top:8px;"
-                                        >
-                                            暂无该账号的近期操作记录。
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                {% endfor %}
+                            {% else %}
+                            <div class="v158-account-note">暂无近期操作记录。</div>
+                            {% endif %}
+                        </section>
+                    </div>
+                </details>
+            </article>
+            {% endfor %}
         </div>
         {% else %}
-        <div class="v158-account-empty">
-            当前没有系统账号。
-        </div>
+        <div class="v158-account-empty">当前没有系统账号。</div>
         {% endif %}
-    </div>
+    </section>
 
-    <div class="v158-account-panel">
-        <h2>③ 最近账号操作</h2>
+    <details class="v158-account-audit">
+        <summary>
+            <span class="v158-account-summary-main">
+                最近账号操作
+                <small>系统级审计记录</small>
+            </span>
+            <span class="v158-account-summary-side">展开</span>
+        </summary>
 
-        {% if report.recent_actions %}
-        <div class="v158-account-table-wrap">
-            <table
-                class="v158-account-table"
-                style="min-width:1000px;"
-            >
-                <thead>
-                    <tr>
-                        <th>时间</th>
-                        <th>操作账号</th>
-                        <th>动作</th>
-                        <th>目标账号</th>
-                        <th>结果</th>
-                        <th>原因</th>
-                        <th>来源 IP</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for action in report.recent_actions %}
-                    <tr>
-                        <td>{{ action.created_at }}</td>
-
-                        <td>
-                            {{ action.username_snapshot or "system" }}
-
-                            {% if action.role_snapshot %}
-                            <div class="v158-account-muted">
-                                {{ report.role_labels.get(
-                                    action.role_snapshot,
-                                    action.role_snapshot
-                                ) }}
-                            </div>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <strong>{{ action.action_label }}</strong>
-
-                            <div class="v158-account-muted">
-                                {{ action.action_key }}
-                            </div>
-                        </td>
-
-                        <td>
-                            {{ action.target_label or action.target_id }}
-                        </td>
-
-                        <td>
-                            <span class="
-                                v158-account-result
+        <div class="v158-account-audit-body">
+            {% if report.recent_actions %}
+            <div class="v158-account-table-wrap">
+                <table class="v158-account-table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>操作账号</th>
+                            <th>动作</th>
+                            <th>目标账号</th>
+                            <th>结果</th>
+                            <th>原因</th>
+                            <th>来源 IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for action in report.recent_actions %}
+                        <tr>
+                            <td>{{ action.created_at }}</td>
+                            <td>
+                                {{ action.username_snapshot or "system" }}
+                                {% if action.role_snapshot %}
+                                <div class="v158-account-muted">
+                                    {{ report.role_labels.get(action.role_snapshot, action.role_snapshot) }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ action.action_label }}</td>
+                            <td>{{ action.target_label or action.target_id }}</td>
+                            <td class="
                                 {% if action.result_status == 'success' %}
-                                    v158-result-success
+                                    v158-account-result-success
                                 {% elif action.result_status == 'blocked' %}
-                                    v158-result-blocked
+                                    v158-account-result-blocked
                                 {% else %}
-                                    v158-result-failure
+                                    v158-account-result-failure
                                 {% endif %}
                             ">
                                 {% if action.result_status == "success" %}
@@ -1086,25 +1169,19 @@
                                 {% else %}
                                     失败
                                 {% endif %}
-                            </span>
-                        </td>
-
-                        <td style="max-width:420px;">
-                            {{ action.reason or "—" }}
-                        </td>
-
-                        <td>{{ action.ip_address or "—" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td>{{ action.reason or "—" }}</td>
+                            <td>{{ action.ip_address or "—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="v158-account-empty">暂无账号管理操作记录。</div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="v158-account-empty">
-            暂无账号管理操作记录。
-        </div>
-        {% endif %}
-    </div>
+    </details>
 </div>
 
 {% endblock %}
