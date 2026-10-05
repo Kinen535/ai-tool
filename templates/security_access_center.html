@@ -1,661 +1,355 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<div style="padding:24px;">
-
-<h1>🔐 权限中心</h1>
-
-<p style="color:#64748b;line-height:1.7;">
-查看当前系统账号、角色、工作区以及权限结构。
-<br>
-当前页面用于管理员查看并管理账号、角色、工作区以及成员级权限覆盖。
-</p>
-
-
-<h2>📊 总览</h2>
-
-<div style="
-display:grid;
-grid-template-columns:repeat(5,1fr);
-gap:15px;
-margin-bottom:25px;
-">
-
-{% for key,value in report.stats.items() %}
-
-<div style="
-background:white;
-padding:18px;
-border-radius:14px;
-box-shadow:0 4px 12px rgba(0,0,0,.08);
-">
-
-<div style="color:#64748b;">
-{% if key == 'user_count' %}
-系统账号
-{% elif key == 'role_count' %}
-角色数量
-{% elif key == 'permission_count' %}
-权限数量
-{% elif key == 'workspace_count' %}
-工作区数量
-{% elif key == 'battle_count' %}
-绑定战场
-{% else %}
-{{ key }}
-{% endif %}
-</div>
-
-<h2>{{ value }}</h2>
-
-</div>
-
+{% set users = report.get('users', []) %}
+{% set roles = report.get('roles', []) %}
+{% set role_permissions = report.get('role_permissions', []) %}
+{% set workspaces = report.get('workspaces', []) %}
+{% set stats = report.get('stats', {}) %}
+{% set permissions = selected_override_state.get('permissions', []) if selected_override_state else [] %}
+{% set inactive_keys = ['battle.delete', 'member.manage', 'report.export', 'staff.manage'] %}
+{% set platform_keys = ['account.manage', 'security.manage'] %}
+{% set picked = namespace(row={}) %}
+{% for user in users %}
+  {% if user.membership_id == selected_membership_id %}
+    {% set picked.row = user %}
+  {% endif %}
 {% endfor %}
 
-</div>
+<style>
+  .ac-shell{max-width:1500px;margin:0 auto;padding:24px 28px 64px;color:#162036}
+  .ac-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:18px}
+  .ac-hero h1{margin:0 0 6px;font-size:32px;line-height:1.2;letter-spacing:-.02em}
+  .ac-hero p{margin:0;color:#64748b;font-size:15px}
+  .ac-link{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border:1px solid #dbe3ef;border-radius:10px;background:#fff;color:#3648d8;text-decoration:none;font-weight:700;white-space:nowrap}
+  .ac-link:hover{background:#f6f7ff}
+  .ac-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+  .ac-stat{padding:15px 17px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+  .ac-stat span{display:block;color:#718096;font-size:12px;margin-bottom:5px}
+  .ac-stat strong{font-size:22px;line-height:1}
+  .ac-stat em{font-style:normal;color:#64748b;font-size:12px;margin-left:5px}
+  .ac-panel{border:1px solid #e1e7f0;border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);padding:20px;margin-bottom:16px}
+  .ac-panel-title{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .ac-panel-title h2{font-size:20px;margin:0 0 4px}
+  .ac-panel-title p{margin:0;color:#718096;font-size:13px}
+  .ac-picker{display:grid;grid-template-columns:minmax(280px,1fr) auto;gap:10px;align-items:end}
+  .ac-field label{display:block;font-size:13px;font-weight:800;margin-bottom:7px}
+  .ac-field select,.ac-search{width:100%;height:42px;border:1px solid #cfd8e6;border-radius:10px;background:#fff;padding:0 12px;color:#162036;font-size:14px}
+  .ac-button{border:0;border-radius:10px;min-height:40px;padding:0 15px;font-weight:800;cursor:pointer}
+  .ac-button-primary{background:#4f46e5;color:#fff}
+  .ac-button-primary:hover{background:#4338ca}
+  .ac-button-grant{background:#e9f9ef;color:#087a36}
+  .ac-button-deny{background:#fff0f0;color:#c51b2a}
+  .ac-button-clear{background:#eef2f7;color:#45546b}
+  .ac-member{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:16px;padding:16px;border-radius:14px;background:linear-gradient(135deg,#f7f8ff,#f2f7ff);border:1px solid #dfe5f5}
+  .ac-member-main{min-width:0}
+  .ac-member-name{font-size:20px;font-weight:900;margin-bottom:5px}
+  .ac-member-meta{color:#62708a;font-size:13px}
+  .ac-counts{display:grid;grid-template-columns:repeat(4,minmax(82px,1fr));gap:8px;min-width:430px}
+  .ac-count{padding:10px 12px;border-radius:11px;background:#fff;text-align:center;border:1px solid #e6ebf3}
+  .ac-count span{display:block;color:#7a879c;font-size:11px;margin-bottom:3px}
+  .ac-count strong{font-size:18px}
+  .ac-tools{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:10px;margin-top:16px}
+  .ac-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ac-filter button{height:36px;padding:0 12px;border-radius:9px;border:1px solid #dbe3ef;background:#fff;color:#536076;font-weight:700;cursor:pointer}
+  .ac-filter button.is-active{border-color:#4f46e5;background:#eef0ff;color:#3730a3}
+  .ac-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;color:#66758c;font-size:12px}
+  .ac-badge{display:inline-flex;align-items:center;gap:5px;min-height:25px;padding:0 9px;border-radius:999px;background:#eef2f7;color:#526074;font-size:12px;font-weight:750}
+  .ac-badge-role{background:#eaf2ff;color:#245ca5}
+  .ac-badge-grant{background:#e8faef;color:#08783a}
+  .ac-badge-deny{background:#fff0f1;color:#bd1f2d}
+  .ac-badge-effective{background:#ecfdf5;color:#047857}
+  .ac-badge-off{background:#f1f5f9;color:#778397}
+  .ac-groups{display:grid;gap:11px;margin-top:16px}
+  .ac-group{border:1px solid #dde5ef;border-radius:14px;background:#fff;overflow:hidden}
+  .ac-group[open]{box-shadow:0 8px 24px rgba(15,23,42,.05)}
+  .ac-group summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 17px;cursor:pointer;background:#fbfcfe;user-select:none}
+  .ac-group summary::-webkit-details-marker{display:none}
+  .ac-group summary::after{content:'展开';flex:0 0 auto;min-width:54px;padding:6px 10px;border:1px solid #dbe3ef;border-radius:8px;background:#fff;color:#4f46e5;font-size:12px;font-weight:850;text-align:center}
+  .ac-group[open]>summary::after{content:'收起'}
+  .ac-group-title{font-weight:900}
+  .ac-group-sub{display:block;margin-top:3px;color:#758198;font-size:12px;font-weight:500}
+  .ac-group-metrics{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .ac-group-body{border-top:1px solid #e7ecf3}
+  .ac-permission{display:grid;grid-template-columns:minmax(240px,1.4fr) minmax(245px,1fr) auto;gap:14px;align-items:center;padding:13px 17px;border-bottom:1px solid #edf1f6}
+  .ac-permission:last-child{border-bottom:0}
+  .ac-permission-name{font-weight:850;margin-bottom:3px}
+  .ac-key{color:#93a0b3;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .ac-state{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .ac-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .ac-actions form{margin:0}
+  .ac-actions .ac-button{min-height:34px;padding:0 11px;font-size:12px}
+  .ac-readonly{color:#7a8799;font-size:12px;font-weight:700;white-space:nowrap}
+  .ac-empty{padding:28px;text-align:center;color:#7a8799}
+  .ac-notice{border:1px solid #f0d8a4;border-radius:14px;background:#fffaf0;margin-top:12px;overflow:hidden}
+  .ac-notice summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;padding:14px 16px;font-weight:850;color:#8a5b00;user-select:none}
+  .ac-notice summary::-webkit-details-marker{display:none}
+  .ac-notice summary::after{content:'展开查看';flex:0 0 auto;min-width:70px;padding:6px 10px;border:1px solid #efce89;border-radius:8px;background:#fff;color:#8a5b00;font-size:12px;font-weight:850;text-align:center}
+  .ac-notice[open]>summary::after{content:'收起'}
+  .ac-notice-body{padding:0 16px 16px;color:#745f34;font-size:13px;line-height:1.7}
+  .ac-notice-list{display:grid;gap:8px;margin-top:10px}
+  .ac-notice-item{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #f2e3c4}
+  .ac-advanced{border:1px solid #dfe6ef;border-radius:14px;background:#fff;margin-top:12px;overflow:hidden}
+  .ac-advanced>summary{cursor:pointer;padding:15px 17px;font-weight:900}
+  .ac-advanced-body{padding:0 17px 17px}
+  .ac-table-wrap{overflow:auto;border:1px solid #e3e8f0;border-radius:12px}
+  .ac-table{width:100%;border-collapse:collapse;min-width:680px}
+  .ac-table th,.ac-table td{padding:11px 12px;text-align:left;border-bottom:1px solid #edf1f5;font-size:13px}
+  .ac-table th{color:#637189;background:#f8fafc;font-size:12px}
+  .ac-role-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .ac-role-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fbfcfe}
+  .ac-role-card h3{margin:0 0 3px;font-size:16px}
+  .ac-role-card p{margin:0 0 9px;color:#7a8799;font-size:12px}
+  .ac-role-card details summary{cursor:pointer;color:#4f46e5;font-size:12px;font-weight:800}
+  .ac-role-permissions{margin:9px 0 0;padding-left:18px;color:#526074;font-size:12px;line-height:1.8}
+  @media(max-width:1050px){.ac-status{grid-template-columns:repeat(2,1fr)}.ac-member{align-items:flex-start;flex-direction:column}.ac-counts{min-width:0;width:100%}.ac-permission{grid-template-columns:1fr}.ac-actions{justify-content:flex-start}.ac-role-grid{grid-template-columns:1fr}}
+  @media(max-width:720px){.ac-shell{padding:18px 14px 48px}.ac-hero{flex-direction:column}.ac-picker,.ac-tools{grid-template-columns:1fr}.ac-counts{grid-template-columns:repeat(2,1fr)}.ac-status{grid-template-columns:1fr 1fr}.ac-panel{padding:15px}.ac-group summary{align-items:flex-start;flex-direction:column}.ac-group-metrics{justify-content:flex-start}}
+</style>
 
+{% macro action_form(permission, effect, label, css_class) -%}
+<form method="post" action="{{ url_for('v155_security_access_center') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="set_membership_permission_override">
+  <input type="hidden" name="target_membership_id" value="{{ selected_membership_id }}">
+  <input type="hidden" name="permission_key" value="{{ permission.permission_key }}">
+  <input type="hidden" name="effect" value="{{ effect }}">
+  <button class="ac-button {{ css_class }}" type="submit">{{ label }}</button>
+</form>
+{%- endmacro %}
 
-<h2>👤 用户权限</h2>
+{% macro clear_form(permission) -%}
+<form method="post" action="{{ url_for('v155_security_access_center') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="clear_membership_permission_override">
+  <input type="hidden" name="target_membership_id" value="{{ selected_membership_id }}">
+  <input type="hidden" name="permission_key" value="{{ permission.permission_key }}">
+  <button class="ac-button ac-button-clear" type="submit">跟随角色</button>
+</form>
+{%- endmacro %}
 
-<table width="100%" cellpadding="10">
+{% macro permission_group(group_id, title, subtitle, modules, exact_keys=[], excluded_keys=[], default_open=false) -%}
+  {% set group = namespace(rows=[], effective=0, adjusted=0, grantable=0) %}
+  {% for permission in permissions %}
+    {% set match = (permission.permission_key in exact_keys) if exact_keys else (permission.module_key in modules) %}
+    {% if match and permission.permission_key not in excluded_keys %}
+      {% set group.rows = group.rows + [permission] %}
+      {% if permission.effective %}{% set group.effective = group.effective + 1 %}{% endif %}
+      {% if permission.override_effect %}{% set group.adjusted = group.adjusted + 1 %}{% endif %}
+      {% if permission.grantable %}{% set group.grantable = group.grantable + 1 %}{% endif %}
+    {% endif %}
+  {% endfor %}
+  {% if group.rows %}
+  <details class="ac-group" data-permission-group="{{ group_id }}" {% if default_open or group.adjusted %}open{% endif %}>
+    <summary>
+      <span><span class="ac-group-title">{{ title }}</span><span class="ac-group-sub">{{ subtitle }}</span></span>
+      <span class="ac-group-metrics">
+        <span class="ac-badge ac-badge-effective">有效 {{ group.effective }}/{{ group.rows|length }}</span>
+        {% if group.adjusted %}<span class="ac-badge ac-badge-grant">单独调整 {{ group.adjusted }}</span>{% endif %}
+        <span class="ac-badge">可调整 {{ group.grantable }}</span>
+      </span>
+    </summary>
+    <div class="ac-group-body">
+      {% for permission in group.rows %}
+      <div class="ac-permission" data-permission-row data-key="{{ permission.permission_key }}" data-adjusted="{{ 1 if permission.override_effect else 0 }}" data-effective="{{ 1 if permission.effective else 0 }}">
+        <div>
+          <div class="ac-permission-name">{{ permission.permission_name }}</div>
+          <div class="ac-key">{{ permission.permission_key }}</div>
+        </div>
+        <div class="ac-state">
+          {% if permission.role_baseline %}<span class="ac-badge ac-badge-role">角色提供</span>{% endif %}
+          {% if permission.override_effect == 'grant' %}<span class="ac-badge ac-badge-grant">单独允许</span>{% elif permission.override_effect == 'deny' %}<span class="ac-badge ac-badge-deny">单独禁止</span>{% else %}<span class="ac-badge">跟随角色</span>{% endif %}
+          {% if permission.effective %}<span class="ac-badge ac-badge-effective">最终可用</span>{% else %}<span class="ac-badge ac-badge-off">最终不可用</span>{% endif %}
+        </div>
+        <div class="ac-actions">
+          {% if permission.platform_only %}
+            <span class="ac-readonly">平台级权限，不在成员层调整</span>
+          {% elif permission.grantable %}
+            {{ action_form(permission, 'grant', '允许', 'ac-button-grant') }}
+            {{ action_form(permission, 'deny', '禁止', 'ac-button-deny') }}
+            {% if permission.override_effect %}{{ clear_form(permission) }}{% endif %}
+          {% else %}
+            <span class="ac-readonly">不可单独调整</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+{%- endmacro %}
 
-<tr>
-<th>账号</th>
-<th>名称</th>
-<th>账号角色</th>
-<th>状态</th>
-<th>工作区</th>
-<th>工作区角色</th>
-</tr>
+<div class="ac-shell">
+  <header class="ac-hero">
+    <div>
+      <h1>权限中心</h1>
+      <p>选择成员，查看他在当前工作区最终能使用的页面和操作。</p>
+    </div>
+    <a class="ac-link" href="{{ url_for('v158_security_accounts') }}">返回账号管理</a>
+  </header>
 
+  <section class="ac-status" aria-label="权限概况">
+    <div class="ac-stat"><span>工作区成员</span><strong>{{ users|selectattr('membership_id')|list|length }}</strong></div>
+    <div class="ac-stat"><span>已接入运行时</span><strong>40</strong><em>项业务权限</em></div>
+    <div class="ac-stat"><span>平台级权限</span><strong>2</strong><em>项只读展示</em></div>
+    <div class="ac-stat"><span>待治理权限</span><strong>4</strong><em>项暂停调整</em></div>
+  </section>
 
-{% for user in report.users %}
-
-<tr>
-
-<td>{{ user.username }}</td>
-
-<td>{{ user.display_name }}</td>
-
-<td>
-{% if user.account_role == 'super_admin' %}
-🟣 超级管理员
-{% elif user.account_role == 'manager' %}
-🔵 管理员
-{% else %}
-⚪ 只读用户
-{% endif %}
-</td>
-
-<td>
-{% if user.status == 'active' %}
-🟢 启用
-{% else %}
-🔴 停用
-{% endif %}
-</td>
-
-<td>
-{{ user.workspace_name }}
-</td>
-
-<td>
-{{ user.workspace_role }}
-</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
-
-
-<!-- V15.5 P0-S17 membership permission override -->
-<h2 style="margin-top:30px;">
-    🧩 成员权限覆盖
-</h2>
-
-<p>
-    权限覆盖按工作区成员身份（membership）管理，
-    不会修改账号的全局角色。
-</p>
-
-<form
-    method="get"
-    action="{{ url_for('v155_security_access_center') }}"
-    style="margin:16px 0 22px 0;"
->
-    <label for="v155-membership-selector">
-        <strong>选择工作区成员：</strong>
-    </label>
-
-    <select
-        id="v155-membership-selector"
-        name="membership_id"
-        required
-        style="min-width:320px;padding:7px;"
-    >
-        <option value="">
-            请选择成员
-        </option>
-
-        {% for user in report.users %}
-            {% if
-                user.membership_id
-                and user.status == 'active'
-                and user.membership_status == 'active'
-                and user.workspace_status == 'active'
-                and user.workspace_role_status == 'active'
-                and user.role_workspace_id == user.workspace_id
-            %}
-            <option
-                value="{{ user.membership_id }}"
-                {% if selected_membership_id == user.membership_id %}
-                    selected
-                {% endif %}
-            >
-                {{ user.display_name or user.username }}
-                · {{ user.workspace_name }}
-                · {{ user.workspace_role }}
-                · membership #{{ user.membership_id }}
+  <section class="ac-panel">
+    <div class="ac-panel-title">
+      <div><h2>成员最终权限</h2><p>账号全局角色不会在这里改变；这里仅管理成员在当前工作区的权限覆盖。</p></div>
+    </div>
+    <form class="ac-picker" method="get" action="{{ url_for('v155_security_access_center') }}">
+      <div class="ac-field">
+        <label for="membership_id">选择工作区成员</label>
+        <select id="membership_id" name="membership_id" required>
+          <option value="">请选择成员</option>
+          {% for user in users %}
+            {% if user.membership_id %}
+            <option value="{{ user.membership_id }}" {% if user.membership_id == selected_membership_id %}selected{% endif %}>
+              {{ user.display_name or user.username }} · {{ user.workspace_name or '未命名工作区' }} · {{ user.workspace_role or '未分配角色' }}
             </option>
             {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <button class="ac-button ac-button-primary" type="submit">查看权限</button>
+    </form>
+
+    {% if selected_override_state and selected_override_state.get('ok') %}
+      {% set counters = namespace(adjusted=0) %}
+      {% for permission in permissions %}{% if permission.override_effect %}{% set counters.adjusted = counters.adjusted + 1 %}{% endif %}{% endfor %}
+      <div class="ac-member">
+        <div class="ac-member-main">
+          <div class="ac-member-name">{{ picked.row.get('display_name') or picked.row.get('username') or '当前成员' }}</div>
+          <div class="ac-member-meta">
+            {{ picked.row.get('workspace_name') or '未命名工作区' }} · {{ picked.row.get('workspace_role') or '未分配角色' }} · membership #{{ selected_membership_id }}
+          </div>
+        </div>
+        <div class="ac-counts">
+          <div class="ac-count"><span>角色基线</span><strong>{{ selected_override_state.get('role_baseline_permissions', [])|length }}</strong></div>
+          <div class="ac-count"><span>可覆盖</span><strong>{{ selected_override_state.get('grantable_permissions', [])|length }}</strong></div>
+          <div class="ac-count"><span>单独调整</span><strong>{{ counters.adjusted }}</strong></div>
+          <div class="ac-count"><span>最终有效</span><strong>{{ selected_override_state.get('effective_permissions', [])|length }}</strong></div>
+        </div>
+      </div>
+
+      <div class="ac-tools">
+        <input class="ac-search" id="permissionSearch" type="search" placeholder="搜索页面、功能或权限键">
+        <div class="ac-filter" role="group" aria-label="权限筛选">
+          <button type="button" class="is-active" data-permission-filter="all">全部</button>
+          <button type="button" data-permission-filter="effective">仅看可用</button>
+          <button type="button" data-permission-filter="adjusted">仅看单独调整</button>
+        </div>
+      </div>
+      <div class="ac-legend">
+        <span class="ac-badge ac-badge-role">角色提供</span>
+        <span class="ac-badge ac-badge-grant">单独允许</span>
+        <span class="ac-badge ac-badge-deny">单独禁止</span>
+        <span class="ac-badge ac-badge-effective">最终可用</span>
+      </div>
+
+      <div class="ac-groups" id="permissionGroups">
+        {{ permission_group('core', '核心入口与分析', '总览、对比、趋势、风险与规则', ['dashboard', 'compare', 'trend', 'risk', 'rules'], [], inactive_keys, true) }}
+        {{ permission_group('member', '成员与身份', '成员、身份、负责人映射', ['identity', 'member', 'leaders'], [], inactive_keys) }}
+        {{ permission_group('battle', '战场与数据', '战场、指挥与数据导入', ['battle', 'command', 'import'], [], inactive_keys) }}
+        {{ permission_group('reputation', '信誉档案', '信誉主体、事件、检索与管理', ['reputation'], [], inactive_keys) }}
+        {{ permission_group('staff', '幕僚与战略', '幕僚中心、任务与战略反馈', ['staff', 'strategic'], [], inactive_keys) }}
+        {{ permission_group('archive', '档案库', '敌军、友盟、分组与人物档案', ['archive'], [], inactive_keys) }}
+        {{ permission_group('platform', '平台级权限', '仅展示平台权限，成员层不能覆盖', [], platform_keys, [], false) }}
+      </div>
+
+      <details class="ac-notice">
+        <summary>待治理权限（4 项）—— 当前未接入任何生产页面</summary>
+        <div class="ac-notice-body">
+          这些键仍保留在数据库、角色和历史覆盖记录中，但当前运行时代码不读取它们。为避免产生“配置成功却没有效果”的误解，本页暂停调整，不删除历史数据。
+          <div class="ac-notice-list">
+          {% for permission in permissions %}
+            {% if permission.permission_key in inactive_keys %}
+            <div class="ac-notice-item">
+              <span><strong>{{ permission.permission_name }}</strong><br><span class="ac-key">{{ permission.permission_key }}</span></span>
+              <span class="ac-state">
+                {% if permission.role_baseline %}<span class="ac-badge ac-badge-role">角色中存在</span>{% endif %}
+                {% if permission.override_effect == 'deny' %}<span class="ac-badge ac-badge-deny">历史覆盖：禁止</span>{% elif permission.override_effect == 'grant' %}<span class="ac-badge ac-badge-grant">历史覆盖：允许</span>{% else %}<span class="ac-badge">无单独覆盖</span>{% endif %}
+                <span class="ac-badge ac-badge-off">运行时未接入</span>
+              </span>
+            </div>
+            {% endif %}
+          {% endfor %}
+          </div>
+        </div>
+      </details>
+    {% else %}
+      <div class="ac-empty">请选择一名工作区成员，页面将展示他的最终可用权限。</div>
+    {% endif %}
+  </section>
+
+  <details class="ac-advanced">
+    <summary>高级审计：角色、权限矩阵与工作区</summary>
+    <div class="ac-advanced-body">
+      <div class="ac-panel-title"><div><h2>角色权限矩阵</h2><p>用于审计角色基线；日常配置请使用上方成员最终权限。</p></div></div>
+      <div class="ac-role-grid">
+        {% for role in role_permissions %}
+        <article class="ac-role-card">
+          <h3>{{ role.role_name }}</h3>
+          <p>{{ role.role_key }} · {{ role.permissions|length }} 项</p>
+          <details>
+            <summary>展开权限清单</summary>
+            <ul class="ac-role-permissions">
+              {% for permission in role.permissions %}<li>{{ permission.permission_name }} <span class="ac-key">{{ permission.permission_key }}</span></li>{% endfor %}
+            </ul>
+          </details>
+        </article>
         {% endfor %}
-    </select>
+      </div>
 
-    <button
-        type="submit"
-        style="margin-left:8px;padding:7px 12px;"
-    >
-        查看权限
-    </button>
-</form>
-
-{% if selected_override_state %}
-    {% set membership = selected_override_state.membership %}
-
-    <div
-        style="
-            padding:12px;
-            margin-bottom:16px;
-            border:1px solid #ddd;
-            border-radius:8px;
-        "
-    >
-        <strong>
-            {{ membership.display_name or membership.username }}
-        </strong>
-
-        <span style="margin-left:12px;">
-            工作区：
-            {{ membership.workspace_name }}
-        </span>
-
-        <span style="margin-left:12px;">
-            角色：
-            {{ membership.role_name }}
-        </span>
-
-        <span style="margin-left:12px;">
-            membership #{{ membership.membership_id }}
-        </span>
-    </div>
-
-    <div style="margin-bottom:14px;">
-        <strong>角色基线：</strong>
-        {{ selected_override_state.role_baseline_permissions|length }}
-
-        <span style="margin-left:18px;">
-            <strong>工作区可覆盖：</strong>
-            {{ selected_override_state.grantable_permissions|length }}
-        </span>
-
-        <span style="margin-left:18px;">
-            <strong>已存覆盖：</strong>
-            {{ selected_override_state.stored_overrides|length }}
-        </span>
-
-        <span style="margin-left:18px;">
-            <strong>最终有效：</strong>
-            {{ selected_override_state.effective_permissions|length }}
-        </span>
-    </div>
-
-    <div style="overflow-x:auto;">
-        <table
-            width="100%"
-            cellpadding="9"
-            style="border-collapse:collapse;"
-        >
-            <thead>
-                <tr>
-                    <th>模块</th>
-                    <th>权限</th>
-                    <th>角色基线权限</th>
-                    <th>可覆盖</th>
-                    <th>当前覆盖</th>
-                    <th>最终有效权限</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for permission in selected_override_state.permissions %}
-                <tr>
-                    <td>
-                        {{ permission.module_key }}
-                    </td>
-
-                    <td>
-                        <strong>
-                            {{ permission.permission_name }}
-                        </strong>
-                        <div style="font-size:12px;color:#777;">
-                            {{ permission.permission_key }}
-                        </div>
-                    </td>
-
-                    <td>
-                        {% if permission.role_baseline %}
-                            ✅ 是
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if permission.platform_only %}
-                            🔒 平台权限
-                        {% elif permission.grantable %}
-                            ✅ 是
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if permission.override_effect == 'grant' %}
-                            🟢 单独授予
-                        {% elif permission.override_effect == 'deny' %}
-                            🔴 单独禁止
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if permission.effective %}
-                            ✅ 有效
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if
-                            permission.grantable
-                            and not permission.platform_only
-                        %}
-                            <form
-                                method="post"
-                                action="{{ url_for('v155_security_access_center') }}"
-                                onsubmit="return confirm('确认单独授予该成员此权限？操作后将以成员级覆盖为准。');"
-                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="set_membership_permission_override"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_membership_id"
-                                    value="{{ membership.membership_id }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="permission_key"
-                                    value="{{ permission.permission_key }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="effect"
-                                    value="grant"
-                                >
-                                <button
-    type="submit"
-    title="授予该成员此权限"
-    aria-label="授予权限"
-    style="
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-width:72px;
-        min-height:36px;
-        padding:7px 14px;
-        border:1px solid #16a34a;
-        border-radius:8px;
-        background:#16a34a;
-        color:#ffffff;
-        font-weight:700;
-        line-height:1;
-        cursor:pointer;
-        pointer-events:auto;
-        position:relative;
-        z-index:5;
-    "
->
-    授予
-</button>
-                            </form>
-
-                            <form
-                                method="post"
-                                action="{{ url_for('v155_security_access_center') }}"
-                                onsubmit="return confirm('确认单独禁止该成员使用此权限？操作后将以成员级覆盖为准。');"
-                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="set_membership_permission_override"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_membership_id"
-                                    value="{{ membership.membership_id }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="permission_key"
-                                    value="{{ permission.permission_key }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="effect"
-                                    value="deny"
-                                >
-                                <button
-    type="submit"
-    title="禁止该成员使用此权限"
-    aria-label="禁止权限"
-    style="
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-width:72px;
-        min-height:36px;
-        padding:7px 14px;
-        border:1px solid #dc2626;
-        border-radius:8px;
-        background:#dc2626;
-        color:#ffffff;
-        font-weight:700;
-        line-height:1;
-        cursor:pointer;
-        pointer-events:auto;
-        position:relative;
-        z-index:5;
-    "
->
-    禁止
-</button>
-                            </form>
-                        {% endif %}
-
-                        {% if permission.override_effect %}
-                            <form
-                                method="post"
-                                action="{{ url_for('v155_security_access_center') }}"
-                                onsubmit="return confirm('确认清除该成员对此权限的单独覆盖？清除后将恢复角色基线结果。');"
-                                style="display:inline-block;margin:3px;position:relative;z-index:4;"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="action"
-                                    value="clear_membership_permission_override"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="target_membership_id"
-                                    value="{{ membership.membership_id }}"
-                                >
-                                <input
-                                    type="hidden"
-                                    name="permission_key"
-                                    value="{{ permission.permission_key }}"
-                                >
-                                <button
-    type="submit"
-    title="清除该成员对此权限的单独覆盖"
-    aria-label="清除权限覆盖"
-    style="
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-width:88px;
-        min-height:36px;
-        padding:7px 14px;
-        border:1px solid #64748b;
-        border-radius:8px;
-        background:#ffffff;
-        color:#475569;
-        font-weight:700;
-        line-height:1;
-        cursor:pointer;
-        pointer-events:auto;
-        position:relative;
-        z-index:5;
-    "
->
-    清除覆盖
-</button>
-                            </form>
-                        {% elif
-                            not permission.grantable
-                            or permission.platform_only
-                        %}
-                            <span style="color:#888;">
-                                不可覆盖
-                            </span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+      <div class="ac-panel-title" style="margin-top:20px"><div><h2>工作区</h2><p>只读结构信息。</p></div></div>
+      <div class="ac-table-wrap">
+        <table class="ac-table">
+          <thead><tr><th>工作区键</th><th>名称</th><th>绑定战场</th></tr></thead>
+          <tbody>
+          {% for workspace in workspaces %}<tr><td>{{ workspace.workspace_key }}</td><td>{{ workspace.workspace_name }}</td><td>{{ workspace.battle_count }}</td></tr>{% endfor %}
+          </tbody>
         </table>
+      </div>
     </div>
-
-{% else %}
-    <div
-        style="
-            padding:14px;
-            border:1px dashed #bbb;
-            border-radius:8px;
-            color:#666;
-            margin-bottom:20px;
-        "
-    >
-        请选择一个有效的工作区成员，
-        查看并管理该 membership 的权限覆盖。
-    </div>
-{% endif %}
-
-<h2 style="margin-top:30px;">
-🎭 角色权限
-</h2>
-
-
-<table width="100%" cellpadding="10">
-
-<tr>
-<th>角色</th>
-<th>名称</th>
-<th>权限数量</th>
-</tr>
-
-
-{% for role in report.roles %}
-
-<tr>
-
-<td>
-{{ role.role_key }}
-</td>
-
-<td>
-{{ role.role_name }}
-</td>
-
-<td>
-{{ role.permission_count }}
-</td>
-
-</tr>
-
-{% endfor %}
-
-
-</table>
-
-
-
-<h2 style="margin-top:30px;">
-🎭 角色权限矩阵
-</h2>
-
-
-<div style="
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:18px;
-margin-bottom:30px;
-">
-
-
-{% for item in report.role_permissions %}
-
-<div style="
-background:white;
-padding:20px;
-border-radius:16px;
-box-shadow:0 4px 12px rgba(0,0,0,.08);
-">
-
-
-<h3 style="margin-top:0;">
-{{ item.role_name }}
-</h3>
-
-
-<div style="
-color:#64748b;
-margin-bottom:12px;
-">
-{{ item.role_key }}
+  </details>
 </div>
 
+<script>
+(() => {
+  const search = document.getElementById('permissionSearch');
+  const rows = Array.from(document.querySelectorAll('[data-permission-row]'));
+  const groups = Array.from(document.querySelectorAll('[data-permission-group]'));
+  const buttons = Array.from(document.querySelectorAll('[data-permission-filter]'));
+  const disclosures = Array.from(document.querySelectorAll('.ac-group > summary, .ac-notice > summary'));
+  let mode = 'all';
 
-<div style="
-margin-bottom:12px;
-font-weight:700;
-">
-权限数量：
-{{ item.permissions|length }}
-</div>
+  function applyFilter() {
+    const query = (search?.value || '').trim().toLowerCase();
+    rows.forEach((row) => {
+      const textMatch = !query || row.textContent.toLowerCase().includes(query);
+      const modeMatch = mode === 'all' || (mode === 'effective' && row.dataset.effective === '1') || (mode === 'adjusted' && row.dataset.adjusted === '1');
+      row.hidden = !(textMatch && modeMatch);
+    });
+    groups.forEach((group) => {
+      const visible = Array.from(group.querySelectorAll('[data-permission-row]')).some((row) => !row.hidden);
+      group.hidden = !visible;
+      if ((query || mode !== 'all') && visible) group.open = true;
+    });
+  }
 
+  disclosures.forEach((summary) => summary.addEventListener('click', (event) => {
+    event.preventDefault();
+    const details = summary.parentElement;
+    details.open = !details.open;
+  }));
 
-<div>
-
-{% for permission in item.permissions %}
-
-<div style="
-padding:6px 0;
-border-bottom:1px solid #f1f5f9;
-">
-
-<span>
-✅ {{ permission.permission_name }}
-</span>
-
-<br>
-
-<small style="color:#94a3b8;">
-{{ permission.module_key }}
-/
-{{ permission.permission_key }}
-</small>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-
-</div>
-
-{% endfor %}
-
-
-</div>
-
-
-
-<h2 style="margin-top:30px;">
-🏢 工作区
-</h2>
-
-
-<table width="100%" cellpadding="10">
-
-<tr>
-<th>工作区</th>
-<th>名称</th>
-<th>绑定战场</th>
-</tr>
-
-
-{% for workspace in report.workspaces %}
-
-<tr>
-
-<td>
-{{ workspace.workspace_key }}
-</td>
-
-<td>
-{{ workspace.workspace_name }}
-</td>
-
-<td>
-{{ workspace.battle_count }}
-</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
-
-</div>
-
+  search?.addEventListener('input', applyFilter);
+  buttons.forEach((button) => button.addEventListener('click', () => {
+    mode = button.dataset.permissionFilter;
+    buttons.forEach((item) => item.classList.toggle('is-active', item === button));
+    applyFilter();
+  }));
+})();
+</script>
 {% endblock %}
