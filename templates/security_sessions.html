@@ -9,408 +9,1052 @@
     <title>{{ title }}</title>
 
     <style>
+        :root {
+            color-scheme: light;
+            --page-bg: #f4f7fb;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --line: #e2e8f0;
+            --line-strong: #cbd5e1;
+            --text: #0f172a;
+            --muted: #64748b;
+            --blue: #2563eb;
+            --blue-soft: #eff6ff;
+            --green: #047857;
+            --green-soft: #ecfdf5;
+            --amber: #b45309;
+            --amber-soft: #fff7ed;
+            --red: #b91c1c;
+            --red-soft: #fef2f2;
+            --shadow: 0 14px 35px rgba(15, 23, 42, .07);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 24px;
+            padding: 28px;
             font-family:
                 -apple-system,
                 BlinkMacSystemFont,
                 "Segoe UI",
+                "Microsoft YaHei",
                 sans-serif;
-            background: #f5f6f8;
-            color: #1f2937;
-        }
-
-        .page {
-            max-width: 1380px;
-            margin: 0 auto;
-        }
-
-        .header,
-        .panel {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 18px;
-        }
-
-        .header-row,
-        .account-head,
-        .actions {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        h1,
-        h2,
-        h3 {
-            margin-top: 0;
-        }
-
-        .muted {
-            color: #6b7280;
-            font-size: 13px;
-        }
-
-        .state {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 999px;
-            font-size: 12px;
-            background: #eef2f7;
-        }
-
-        .state.ok {
-            background: #ecfdf5;
-        }
-
-        .state.warn {
-            background: #fff7ed;
-        }
-
-        .flash {
-            padding: 10px 14px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            background: #f3f4f6;
-        }
-
-        .account {
-            border-top: 1px solid #e5e7eb;
-            padding-top: 18px;
-            margin-top: 18px;
-        }
-
-        .account:first-child {
-            border-top: 0;
-            padding-top: 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-            font-size: 13px;
-        }
-
-        th,
-        td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 10px 8px;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        th {
-            background: #f9fafb;
-        }
-
-        input[type="number"] {
-            width: 76px;
-            padding: 7px;
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(37, 99, 235, .08),
+                    transparent 34rem
+                ),
+                var(--page-bg);
+            color: var(--text);
         }
 
         button,
-        .link-button {
-            border: 0;
-            border-radius: 7px;
-            padding: 8px 12px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
+        input {
+            font: inherit;
         }
 
-        button {
-            background: #111827;
-            color: #fff;
+        .page {
+            width: min(1480px, 100%);
+            margin: 0 auto;
         }
 
-        button.danger {
-            background: #991b1b;
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 22px;
+            padding: 24px 26px;
+            border: 1px solid rgba(191, 219, 254, .9);
+            border-radius: 20px;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, .98),
+                    rgba(239, 246, 255, .96)
+                );
+            box-shadow: var(--shadow);
         }
 
-        .link-button {
-            background: #e5e7eb;
-            color: #111827;
+        .page-kicker {
+            margin-bottom: 8px;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .14em;
+            text-transform: uppercase;
         }
 
-        form.inline {
+        .page-header h1 {
+            margin: 0;
+            font-size: clamp(25px, 3vw, 34px);
+            line-height: 1.2;
+        }
+
+        .page-description {
+            max-width: 760px;
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .back-link {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            min-height: 42px;
+            padding: 10px 15px;
+            border: 1px solid #bfdbfe;
+            border-radius: 11px;
+            background: #fff;
+            color: #1d4ed8;
+            font-size: 14px;
+            font-weight: 800;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .back-link:hover {
+            background: var(--blue-soft);
+        }
+
+        .flash-stack {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .flash {
+            padding: 12px 15px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+            line-height: 1.6;
+        }
+
+        .runtime-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 16px;
+            padding: 15px 18px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, .9);
+        }
+
+        .runtime-title {
+            font-weight: 900;
+        }
+
+        .runtime-states {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 9px;
+            flex-wrap: wrap;
+        }
+
+        .state {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 32px;
+            padding: 6px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface-soft);
+            color: #475569;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .state::before {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #94a3b8;
+            content: "";
+        }
+
+        .state.ok {
+            border-color: #a7f3d0;
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .state.ok::before {
+            background: #10b981;
+        }
+
+        .state.warn {
+            border-color: #fed7aa;
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .state.warn::before {
+            background: #f59e0b;
+        }
+
+        .runtime-warning {
+            margin: 10px 0 0;
+            color: var(--amber);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 28px 2px 14px;
+        }
+
+        .section-head h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .section-head p {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .account-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .account-card {
+            scroll-margin-top: 18px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--surface);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+        }
+
+        .account-card:target {
+            border-color: #60a5fa;
+            box-shadow:
+                0 0 0 4px rgba(96, 165, 250, .15),
+                var(--shadow);
+        }
+
+        .account-head {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) auto;
+            align-items: center;
+            gap: 18px;
+            padding: 19px 20px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(
+                    100deg,
+                    #ffffff,
+                    #f8fafc
+                );
+        }
+
+        .account-name-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .account-name {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.35;
+        }
+
+        .account-display-name {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .account-meta {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 9px;
+            flex-wrap: wrap;
+        }
+
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 27px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #eef2f7;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .meta-pill.primary {
+            background: var(--blue-soft);
+            color: #1d4ed8;
+        }
+
+        .meta-pill.active {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .meta-pill.inactive {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .session-count {
+            text-align: right;
+        }
+
+        .session-count strong {
+            display: block;
+            color: var(--blue);
+            font-size: 26px;
+            line-height: 1;
+        }
+
+        .session-count span {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .account-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 13px 20px;
+            border-bottom: 1px solid var(--line);
+            background: #fbfdff;
+        }
+
+        .policy-form,
+        .danger-form {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
             margin: 0;
         }
 
-        .device {
-            max-width: 380px;
-            word-break: break-word;
+        .policy-form label {
+            color: #475569;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        input[type="number"] {
+            width: 72px;
+            min-height: 36px;
+            padding: 7px 9px;
+            border: 1px solid var(--line-strong);
+            border-radius: 9px;
+            background: #fff;
+            color: var(--text);
+        }
+
+        button {
+            min-height: 36px;
+            padding: 8px 12px;
+            border: 0;
+            border-radius: 9px;
+            background: #0f172a;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e293b;
+        }
+
+        button.danger {
+            border: 1px solid #fecaca;
+            background: #fff;
+            color: var(--red);
+        }
+
+        button.danger:hover {
+            background: var(--red-soft);
+        }
+
+        .account-readonly {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--line);
+            background: var(--amber-soft);
+            color: var(--amber);
+            font-size: 13px;
+        }
+
+        .device-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
+            gap: 13px;
+            padding: 16px 20px 20px;
+        }
+
+        .device-card {
+            display: grid;
+            grid-template-rows: auto auto auto;
+            align-self: start;
+            min-width: 0;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, .035);
+        }
+
+        .device-card.active {
+            border-color: #a7f3d0;
+        }
+
+        .device-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 15px 11px;
+        }
+
+        .device-title {
+            min-width: 0;
+        }
+
+        .device-title strong {
+            display: block;
+            overflow: hidden;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.45;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .device-id {
+            display: block;
+            margin-top: 4px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .device-status {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .device-status::before {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #94a3b8;
+            content: "";
+        }
+
+        .device-status.active {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .device-status.active::before {
+            background: #10b981;
+        }
+
+        .device-glance {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+            padding: 0 15px 13px;
+        }
+
+        .glance-item {
+            min-width: 0;
+            padding: 10px 11px;
+            border-radius: 10px;
+            background: var(--surface-soft);
+        }
+
+        .glance-item span {
+            display: block;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .glance-item strong {
+            display: block;
+            overflow: hidden;
+            margin-top: 5px;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.45;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .device-details {
+            border-top: 1px solid var(--line);
+        }
+
+        .device-details summary {
+            padding: 10px 15px;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .device-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .device-details summary::after {
+            float: right;
+            color: #94a3b8;
+            content: "展开";
+        }
+
+        .device-details[open] summary::after {
+            content: "收起";
+        }
+
+        .technical-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px 14px;
+            padding: 2px 15px 14px;
+        }
+
+        .technical-item {
+            min-width: 0;
+        }
+
+        .technical-item.full {
+            grid-column: 1 / -1;
+        }
+
+        .technical-item span {
+            display: block;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .technical-item code,
+        .technical-item strong {
+            display: block;
+            margin-top: 4px;
+            color: #475569;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+        }
+
+        .device-action {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            min-height: 54px;
+            padding: 10px 15px;
+            border-top: 1px solid var(--line);
+            background: #fcfdff;
+        }
+
+        .device-action form {
+            margin: 0;
+        }
+
+        .device-action .muted {
+            color: #94a3b8;
+            font-size: 12px;
         }
 
         .empty {
-            padding: 16px 0;
-            color: #6b7280;
+            margin: 16px 20px 20px;
+            padding: 22px;
+            border: 1px dashed var(--line-strong);
+            border-radius: 13px;
+            background: var(--surface-soft);
+            color: var(--muted);
+            text-align: center;
         }
 
-        @media (max-width: 900px) {
+        .account-card.no-sessions .account-head {
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .account-card.no-sessions .empty {
+            margin: 0;
+            padding: 12px 20px 14px;
+            border: 0;
+            border-radius: 0;
+            background: #fbfdff;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .page-empty {
+            padding: 34px;
+            border: 1px dashed var(--line-strong);
+            border-radius: 16px;
+            background: #fff;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        @media (max-width: 1050px) {
+            .device-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
             body {
-                padding: 12px;
+                padding: 14px;
             }
 
-            .table-wrap {
-                overflow-x: auto;
+            .page-header,
+            .runtime-panel,
+            .section-head,
+            .account-controls {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .back-link {
+                align-self: flex-start;
+            }
+
+            .runtime-states {
+                justify-content: flex-start;
+            }
+
+            .account-head {
+                grid-template-columns: 1fr;
+            }
+
+            .session-count {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                text-align: left;
+            }
+
+            .policy-form,
+            .danger-form {
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            .device-list {
+                padding: 13px;
+            }
+
+            .device-glance,
+            .technical-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .technical-item.full {
+                grid-column: auto;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .page-header {
+                padding: 20px;
+            }
+
+            .account-head,
+            .account-controls {
+                padding-right: 15px;
+                padding-left: 15px;
+            }
+
+            .policy-form {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .policy-form input,
+            .policy-form button,
+            .danger-form button {
+                width: 100%;
             }
         }
     </style>
 </head>
 
 <body>
-<div class="page">
+<main class="page">
 
-    <div class="header">
-        <div class="header-row">
-            <div>
-                <h1>设备与会话管理</h1>
-                <div class="muted">
-                    查看账号登录设备、注销指定设备、
-                    注销全部会话以及设置同时在线设备上限。
-                </div>
+    <header class="page-header">
+        <div>
+            <div class="page-kicker">
+                Security · Sessions
+            </div>
+            <h1>设备与会话管理</h1>
+            <p class="page-description">
+                按账号查看登录设备、调整同时在线上限，
+                并在需要时注销指定设备或全部会话。
+            </p>
+        </div>
+
+        <a
+            class="back-link"
+            href="{{ url_for('v158_security_accounts') }}"
+        >
+            ← 返回账号管理
+        </a>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-stack">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <section class="runtime-panel">
+        <div>
+            <div class="runtime-title">
+                会话运行状态
             </div>
 
-            <a
-                class="link-button"
-                href="{{ url_for('v158_security_accounts') }}"
+            {% if not report.write_ready %}
+                <p class="runtime-warning">
+                    当前会话管理写入能力暂未就绪，
+                    页面仍可安全查看账号与设备信息。
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="runtime-states">
+            <span
+                class="state {% if report.registry_schema_ready %}ok{% else %}warn{% endif %}"
             >
-                返回账号管理
-            </a>
+                数据表：
+                {% if report.registry_schema_ready %}
+                    已就绪
+                {% else %}
+                    未切换
+                {% endif %}
+            </span>
+
+            <span
+                class="state {% if report.registry_enforced %}ok{% else %}warn{% endif %}"
+            >
+                强制校验：
+                {% if report.registry_enforced %}
+                    已启用
+                {% else %}
+                    尚未启用
+                {% endif %}
+            </span>
+        </div>
+    </section>
+
+    <div class="section-head">
+        <div>
+            <h2>账号与登录设备</h2>
+            <p>
+                常用信息直接展示，完整技术字段可按设备展开。
+            </p>
         </div>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <div class="flash">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endwith %}
-
-    <div class="panel">
-        <h2>当前状态</h2>
-
-        <span
-            class="state {% if report.registry_schema_ready %}ok{% else %}warn{% endif %}"
-        >
-            数据表：
-            {% if report.registry_schema_ready %}
-                已就绪
-            {% else %}
-                未切换
-            {% endif %}
-        </span>
-
-        <span
-            class="state {% if report.registry_enforced %}ok{% else %}warn{% endif %}"
-        >
-            会话强制校验：
-            {% if report.registry_enforced %}
-                已启用
-            {% else %}
-                尚未启用
-            {% endif %}
-        </span>
-
-        {% if not report.write_ready %}
-            <p class="muted">
-                当前会话管理写入能力暂未就绪。
-                页面仍可安全查看账号与设备信息。
-            </p>
-        {% endif %}
-    </div>
-
-    <div class="panel">
-        <h2>账号与登录设备</h2>
-
+    <section class="account-list">
         {% for item in report.accounts %}
             {% set user = item.user %}
 
-            <div class="account" id="account-{{ user.id }}">
-                <div class="account-head">
+            <article
+                class="account-card{% if not item.sessions %} no-sessions{% endif %}"
+                id="account-{{ user.id }}"
+            >
+                <header class="account-head">
                     <div>
-                        <h3>
-                            {{ user.username }}
-                            {% if user.display_name %}
-                                · {{ user.display_name }}
-                            {% endif %}
-                        </h3>
+                        <div class="account-name-row">
+                            <h3 class="account-name">
+                                {{ user.username }}
+                            </h3>
 
-                        <div class="muted">
-                            角色：{{ user.role }}
-                            · 状态：{{ user.status }}
-                            · session_version：
-                            {{ user.session_version }}
-                            · 当前有效设备：
-                            {{ item.active_session_count }}
-                            /
-                            {{ item.max_active_sessions }}
+                            {% if user.display_name %}
+                                <span class="account-display-name">
+                                    {{ user.display_name }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="account-meta">
+                            <span class="meta-pill primary">
+                                {{ user.role }}
+                            </span>
+
+                            <span
+                                class="meta-pill {% if user.status == 'active' %}active{% else %}inactive{% endif %}"
+                            >
+                                {{ user.status }}
+                            </span>
+
+                            <span class="meta-pill">
+                                会话版本 {{ user.session_version }}
+                            </span>
                         </div>
                     </div>
 
-                    {% if report.write_ready %}
-                        <div class="actions">
-                            <form
-                                class="inline"
-                                method="post"
-                                action="{{ url_for('v155_security_sessions_policy') }}"
+                    <div class="session-count">
+                        <strong>
+                            {{ item.active_session_count }}
+                            / {{ item.max_active_sessions }}
+                        </strong>
+                        <span>当前有效设备 / 在线上限</span>
+                    </div>
+                </header>
+
+                {% if report.write_ready %}
+                    <div class="account-controls">
+                        <form
+                            class="policy-form"
+                            method="post"
+                            action="{{ url_for('v155_security_sessions_policy') }}"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token }}"
                             >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
 
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
-
-                                <label>
-                                    在线上限
-                                    <input
-                                        type="number"
-                                        name="max_active_sessions"
-                                        min="{{ report.min_max_active_sessions }}"
-                                        max="{{ report.max_max_active_sessions }}"
-                                        value="{{ item.max_active_sessions }}"
-                                        required
-                                    >
-                                </label>
-
-                                <button type="submit">
-                                    保存上限
-                                </button>
-                            </form>
-
-                            <form
-                                class="inline"
-                                method="post"
-                                action="{{ url_for('v155_security_sessions_revoke_all') }}"
-                                onsubmit="return confirm('确认注销该账号的全部设备？该账号现有登录会全部失效；如果包含你当前正在使用的设备，本次登录也会失效。');"
+                            <input
+                                type="hidden"
+                                name="target_user_id"
+                                value="{{ user.id }}"
                             >
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token }}"
-                                >
 
-                                <input
-                                    type="hidden"
-                                    name="target_user_id"
-                                    value="{{ user.id }}"
-                                >
+                            <label for="session-limit-{{ user.id }}">
+                                同时在线设备上限
+                            </label>
 
-                                <button
-                                    class="danger"
-                                    type="submit"
-                                >
-                                    注销全部设备
-                                </button>
-                            </form>
-                        </div>
-                    {% endif %}
-                </div>
+                            <input
+                                id="session-limit-{{ user.id }}"
+                                type="number"
+                                name="max_active_sessions"
+                                min="{{ report.min_max_active_sessions }}"
+                                max="{{ report.max_max_active_sessions }}"
+                                value="{{ item.max_active_sessions }}"
+                                required
+                            >
+
+                            <button type="submit">
+                                保存上限
+                            </button>
+                        </form>
+
+                        <form
+                            class="danger-form"
+                            method="post"
+                            action="{{ url_for('v155_security_sessions_revoke_all') }}"
+                            onsubmit="return confirm('确认注销该账号的全部设备？该账号现有登录会全部失效；如果包含你当前正在使用的设备，本次登录也会失效。');"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token }}"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="target_user_id"
+                                value="{{ user.id }}"
+                            >
+
+                            <button
+                                class="danger"
+                                type="submit"
+                            >
+                                注销全部设备
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="account-readonly">
+                        当前仅可查看该账号的设备记录。
+                    </div>
+                {% endif %}
 
                 {% if item.sessions %}
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>状态</th>
-                                    <th>登录时间</th>
-                                    <th>最后活动</th>
-                                    <th>到期时间</th>
-                                    <th>登录 IP</th>
-                                    <th>最近 IP</th>
-                                    <th>设备信息</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
+                    <div class="device-list">
+                        {% for device in item.sessions %}
+                            <article
+                                class="device-card {% if device.status == 'active' %}active{% endif %}"
+                            >
+                                <div class="device-head">
+                                    <div class="device-title">
+                                        <strong title="{{ device.device_label or device.user_agent }}">
+                                            {% if device.device_label %}
+                                                {{ device.device_label }}
+                                            {% else %}
+                                                未命名设备
+                                            {% endif %}
+                                        </strong>
+                                        <span class="device-id">
+                                            会话记录 #{{ device.id }}
+                                        </span>
+                                    </div>
 
-                            <tbody>
-                            {% for device in item.sessions %}
-                                <tr>
-                                    <td>{{ device.id }}</td>
-                                    <td>{{ device.status }}</td>
-                                    <td>{{ device.created_at }}</td>
-                                    <td>{{ device.last_seen_at }}</td>
-                                    <td>{{ device.expires_at }}</td>
-                                    <td>{{ device.login_ip }}</td>
-                                    <td>{{ device.last_ip }}</td>
-                                    <td class="device">
-                                        {% if device.device_label %}
-                                            {{ device.device_label }}
-                                            <br>
-                                        {% endif %}
-                                        {{ device.user_agent }}
-                                    </td>
+                                    <span
+                                        class="device-status {% if device.status == 'active' %}active{% endif %}"
+                                    >
+                                        {{ device.status }}
+                                    </span>
+                                </div>
 
-                                    <td>
-                                        {% if report.write_ready and device.status == 'active' %}
-                                            <form
-                                                method="post"
-                                                action="{{ url_for('v155_security_sessions_revoke') }}"
-                                                onsubmit="return confirm('确认注销这个登录设备？该设备的当前会话将立即失效；如果这是你正在使用的设备，本次登录也会失效。');"
+                                <div class="device-glance">
+                                    <div class="glance-item">
+                                        <span>最后活动</span>
+                                        <strong title="{{ device.last_seen_at }}">
+                                            {{ device.last_seen_at or '-' }}
+                                        </strong>
+                                    </div>
+
+                                    <div class="glance-item">
+                                        <span>最近 IP</span>
+                                        <strong title="{{ device.last_ip }}">
+                                            {{ device.last_ip or '-' }}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <details class="device-details">
+                                    <summary>
+                                        完整设备与时间信息
+                                    </summary>
+
+                                    <div class="technical-grid">
+                                        <div class="technical-item">
+                                            <span>登录时间</span>
+                                            <strong>
+                                                {{ device.created_at or '-' }}
+                                            </strong>
+                                        </div>
+
+                                        <div class="technical-item">
+                                            <span>到期时间</span>
+                                            <strong>
+                                                {{ device.expires_at or '-' }}
+                                            </strong>
+                                        </div>
+
+                                        <div class="technical-item">
+                                            <span>登录 IP</span>
+                                            <strong>
+                                                {{ device.login_ip or '-' }}
+                                            </strong>
+                                        </div>
+
+                                        <div class="technical-item">
+                                            <span>最近 IP</span>
+                                            <strong>
+                                                {{ device.last_ip or '-' }}
+                                            </strong>
+                                        </div>
+
+                                        <div class="technical-item full">
+                                            <span>User-Agent</span>
+                                            <code>
+                                                {{ device.user_agent or '-' }}
+                                            </code>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <div class="device-action">
+                                    {% if report.write_ready and device.status == 'active' %}
+                                        <form
+                                            method="post"
+                                            action="{{ url_for('v155_security_sessions_revoke') }}"
+                                            onsubmit="return confirm('确认注销这个登录设备？该设备的当前会话将立即失效；如果这是你正在使用的设备，本次登录也会失效。');"
+                                        >
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                value="{{ csrf_token }}"
                                             >
-                                                <input
-                                                    type="hidden"
-                                                    name="csrf_token"
-                                                    value="{{ csrf_token }}"
-                                                >
 
-                                                <input
-                                                    type="hidden"
-                                                    name="target_user_id"
-                                                    value="{{ user.id }}"
-                                                >
+                                            <input
+                                                type="hidden"
+                                                name="target_user_id"
+                                                value="{{ user.id }}"
+                                            >
 
-                                                <input
-                                                    type="hidden"
-                                                    name="session_row_id"
-                                                    value="{{ device.id }}"
-                                                >
+                                            <input
+                                                type="hidden"
+                                                name="session_row_id"
+                                                value="{{ device.id }}"
+                                            >
 
-                                                <button
-                                                    class="danger"
-                                                    type="submit"
-                                                >
-                                                    注销此设备
-                                                </button>
-                                            </form>
-                                        {% else %}
-                                            <span class="muted">
-                                                无可用操作
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
+                                            <button
+                                                class="danger"
+                                                type="submit"
+                                            >
+                                                注销此设备
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="muted">
+                                            无可用操作
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
                     </div>
-
                 {% else %}
                     <div class="empty">
                         当前没有可显示的会话记录。
                     </div>
                 {% endif %}
+            </article>
+        {% else %}
+            <div class="page-empty">
+                当前没有可显示的系统账号。
             </div>
         {% endfor %}
-    </div>
+    </section>
 
-</div>
+</main>
 </body>
 </html>
