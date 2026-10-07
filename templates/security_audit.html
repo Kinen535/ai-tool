@@ -2,119 +2,617 @@
 
 {% block content %}
 
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h1>🧾 安全操作审计</h1>
+<style>
+    .audit-workspace {
+        --audit-ink: #14213d;
+        --audit-muted: #64748b;
+        --audit-border: #dbe5f1;
+        --audit-soft: #f7f9fc;
+        --audit-blue: #2563eb;
+        --audit-blue-soft: #eff6ff;
+        --audit-green: #059669;
+        --audit-green-soft: #ecfdf5;
+        --audit-red: #dc2626;
+        --audit-red-soft: #fef2f2;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 30px 24px 44px;
+        color: var(--audit-ink);
+    }
 
-        <div style="display:flex;gap:10px;">
-            <a href="/security/logs"
-               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                返回安全日志
-            </a>
+    .audit-workspace,
+    .audit-workspace * {
+        box-sizing: border-box;
+    }
 
-            <a href="/security/nginx"
-               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                Nginx同步
-            </a>
+    .audit-page-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 22px;
+    }
 
-            <a href="/security/blocks"
-               style="background:#fef2f2;color:#dc2626;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                封禁管理
-            </a>
+    .audit-eyebrow {
+        margin: 0 0 8px;
+        color: var(--audit-blue);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .16em;
+    }
+
+    .audit-page-head h1 {
+        margin: 0;
+        font-size: clamp(30px, 3vw, 42px);
+        line-height: 1.15;
+        letter-spacing: -.03em;
+    }
+
+    .audit-page-lead {
+        margin: 10px 0 0;
+        color: var(--audit-muted);
+        line-height: 1.7;
+    }
+
+    .audit-head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .audit-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 9px 15px;
+        border: 1px solid var(--audit-border);
+        border-radius: 12px;
+        background: #fff;
+        color: #334155;
+        font-weight: 700;
+        text-decoration: none;
+        transition: border-color .18s ease, color .18s ease, background .18s ease;
+    }
+
+    .audit-button:hover {
+        border-color: #9db6d8;
+        color: var(--audit-blue);
+        background: var(--audit-blue-soft);
+    }
+
+    .audit-button.primary {
+        border-color: #bfd4ff;
+        background: var(--audit-blue-soft);
+        color: var(--audit-blue);
+    }
+
+    .audit-summary {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(150px, .65fr));
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 18px;
+        border: 1px solid var(--audit-border);
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(30, 64, 175, .06);
+    }
+
+    .audit-summary-intro {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 94px;
+        padding: 4px 12px 4px 6px;
+    }
+
+    .audit-summary-intro h2 {
+        margin: 0;
+        font-size: 21px;
+    }
+
+    .audit-summary-intro p {
+        margin: 7px 0 0;
+        color: var(--audit-muted);
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .audit-stat {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 94px;
+        padding: 15px 17px;
+        border: 1px solid #e4ebf5;
+        border-radius: 15px;
+        background: var(--audit-soft);
+    }
+
+    .audit-stat span {
+        color: var(--audit-muted);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .audit-stat strong {
+        margin-top: 6px;
+        color: var(--audit-ink);
+        font-size: 25px;
+        line-height: 1;
+    }
+
+    .audit-records {
+        padding: 22px;
+        border: 1px solid var(--audit-border);
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(30, 64, 175, .05);
+    }
+
+    .audit-section-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 16px;
+    }
+
+    .audit-section-head h2 {
+        margin: 0;
+        font-size: 22px;
+    }
+
+    .audit-section-head p {
+        margin: 6px 0 0;
+        color: var(--audit-muted);
+        font-size: 14px;
+    }
+
+    .audit-page-marker {
+        flex: 0 0 auto;
+        color: #8aa0bd;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .audit-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .audit-entry {
+        border: 1px solid var(--audit-border);
+        border-radius: 15px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .audit-entry[open] {
+        border-color: #b7c9e5;
+        box-shadow: 0 9px 24px rgba(37, 99, 235, .07);
+    }
+
+    .audit-entry summary {
+        display: grid;
+        grid-template-columns: minmax(240px, 1.45fr) minmax(150px, .75fr) auto auto;
+        align-items: center;
+        gap: 18px;
+        min-height: 70px;
+        padding: 12px 16px;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .audit-entry summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .audit-action {
+        min-width: 0;
+    }
+
+    .audit-action strong {
+        display: block;
+        overflow: hidden;
+        color: var(--audit-ink);
+        font-size: 16px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .audit-action time {
+        display: block;
+        margin-top: 4px;
+        color: var(--audit-muted);
+        font-size: 13px;
+    }
+
+    .audit-ip {
+        color: #516784;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .audit-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 54px;
+        min-height: 30px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .audit-status.success {
+        background: var(--audit-green-soft);
+        color: var(--audit-green);
+    }
+
+    .audit-status.failed {
+        background: var(--audit-red-soft);
+        color: var(--audit-red);
+    }
+
+    .audit-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 54px;
+        color: #8aa0bd;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .audit-toggle::before {
+        content: "展开";
+    }
+
+    .audit-toggle::after {
+        content: "＋";
+        margin-left: 6px;
+        font-size: 16px;
+    }
+
+    .audit-entry[open] .audit-toggle::before {
+        content: "收起";
+    }
+
+    .audit-entry[open] .audit-toggle::after {
+        content: "－";
+    }
+
+    .audit-detail {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 16px;
+        border-top: 1px solid var(--audit-border);
+        background: var(--audit-soft);
+    }
+
+    .audit-detail-block {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid #e3eaf4;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .audit-detail-block.wide {
+        grid-column: 1 / -1;
+    }
+
+    .audit-detail-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #8aa0bd;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .04em;
+    }
+
+    .audit-detail-value {
+        display: block;
+        margin: 0;
+        color: #334155;
+        font-size: 14px;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    .audit-detail-value.code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+    }
+
+    .audit-empty {
+        padding: 34px 20px;
+        border: 1px dashed #cbd8e8;
+        border-radius: 15px;
+        background: var(--audit-soft);
+        color: var(--audit-muted);
+        text-align: center;
+    }
+
+    .audit-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin: 20px 0 0;
+    }
+
+    .audit-page-link,
+    .audit-page-disabled {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 9px 15px;
+        border-radius: 11px;
+        font-weight: 700;
+    }
+
+    .audit-page-link {
+        border: 1px solid #bfd4ff;
+        background: var(--audit-blue-soft);
+        color: var(--audit-blue);
+        text-decoration: none;
+    }
+
+    .audit-page-link:hover {
+        border-color: var(--audit-blue);
+    }
+
+    .audit-page-disabled {
+        border: 1px solid #e4eaf2;
+        background: #f1f5f9;
+        color: #a0aec0;
+    }
+
+    .audit-page-copy {
+        color: #334155;
+        font-size: 14px;
+        font-weight: 800;
+        text-align: center;
+    }
+
+    @media (max-width: 980px) {
+        .audit-page-head {
+            flex-direction: column;
+        }
+
+        .audit-head-actions {
+            justify-content: flex-start;
+        }
+
+        .audit-summary {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .audit-summary-intro {
+            grid-column: 1 / -1;
+            min-height: auto;
+        }
+
+        .audit-entry summary {
+            grid-template-columns: minmax(210px, 1fr) minmax(130px, .6fr) auto;
+        }
+
+        .audit-toggle {
+            grid-column: 1 / -1;
+            justify-content: flex-start;
+            min-height: 24px;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .audit-workspace {
+            padding: 22px 14px 34px;
+        }
+
+        .audit-head-actions,
+        .audit-button {
+            width: 100%;
+        }
+
+        .audit-summary {
+            grid-template-columns: 1fr;
+            padding: 14px;
+        }
+
+        .audit-summary-intro {
+            grid-column: auto;
+        }
+
+        .audit-records {
+            padding: 15px;
+        }
+
+        .audit-section-head {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .audit-entry summary {
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            padding: 14px;
+        }
+
+        .audit-action {
+            grid-column: 1 / -1;
+        }
+
+        .audit-ip {
+            grid-column: 1;
+        }
+
+        .audit-status {
+            grid-column: 2;
+        }
+
+        .audit-toggle {
+            grid-column: 1 / -1;
+        }
+
+        .audit-detail {
+            grid-template-columns: 1fr;
+            padding: 12px;
+        }
+
+        .audit-detail-block.wide {
+            grid-column: auto;
+        }
+
+        .audit-pagination {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .audit-page-link,
+        .audit-page-disabled {
+            width: 100%;
+        }
+
+        .audit-page-copy {
+            order: -1;
+        }
+    }
+</style>
+
+<main class="audit-workspace">
+    <header class="audit-page-head">
+        <div>
+            <p class="audit-eyebrow">SECURITY AUDIT</p>
+            <h1>安全操作审计</h1>
+            <p class="audit-page-lead">
+                默认聚焦动作与结果；路径、备注及设备信息按记录展开查看。
+            </p>
         </div>
-    </div>
 
-    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 审计概况</h2>
+        <nav class="audit-head-actions" aria-label="安全审计快捷入口">
+            <a class="audit-button primary" href="/security">返回安全控制台</a>
+            <a class="audit-button" href="/security/logs">安全日志</a>
+            <a class="audit-button" href="/security/nginx">Nginx 同步</a>
+            <a class="audit-button" href="/security/blocks">封禁管理</a>
+        </nav>
+    </header>
 
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>审计记录总数</div>
-                <h2>{{ report.total }}</h2>
-            </div>
-
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>当前页</div>
-                <h2>{{ report.page }} / {{ report.total_pages }}</h2>
-            </div>
-
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>每页</div>
-                <h2>{{ report.per_page }}</h2>
-            </div>
+    <section class="audit-summary" aria-labelledby="audit-summary-title">
+        <div class="audit-summary-intro">
+            <h2 id="audit-summary-title">审计概况</h2>
+            <p>记录由服务端按页读取，每页最多展示 {{ report.per_page }} 条。</p>
         </div>
-    </div>
 
-    <div style="background:white;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>② 操作记录</h2>
+        <div class="audit-stat">
+            <span>记录总数</span>
+            <strong>{{ report.total }}</strong>
+        </div>
+
+        <div class="audit-stat">
+            <span>当前页</span>
+            <strong>{{ report.page }} / {{ report.total_pages }}</strong>
+        </div>
+
+        <div class="audit-stat">
+            <span>每页记录</span>
+            <strong>{{ report.per_page }}</strong>
+        </div>
+    </section>
+
+    <section class="audit-records" aria-labelledby="audit-records-title">
+        <div class="audit-section-head">
+            <div>
+                <h2 id="audit-records-title">操作记录</h2>
+                <p>点击任意记录查看路径、备注、动作代码和 User-Agent。</p>
+            </div>
+            <span class="audit-page-marker">第 {{ report.page }} 页</span>
+        </div>
 
         {% if report.rows %}
-            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
-                <tr style="background:#f3f4f6;">
-                    <th style="padding:10px;text-align:left;">时间</th>
-                    <th style="padding:10px;text-align:left;">IP</th>
-                    <th style="padding:10px;text-align:left;">动作</th>
-                    <th style="padding:10px;text-align:left;">结果</th>
-                    <th style="padding:10px;text-align:left;">路径</th>
-                    <th style="padding:10px;text-align:left;">备注</th>
-                    <th style="padding:10px;text-align:left;">UA</th>
-                </tr>
-
+            <div class="audit-list">
                 {% for row in report.rows %}
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:10px;color:#64748b;">{{ row.created_at }}</td>
-                    <td style="padding:10px;font-weight:bold;">{{ row.admin_ip }}</td>
-                    <td style="padding:10px;">
-                        <div style="font-weight:bold;">{{ row.action_label }}</div>
-                        <div style="font-size:12px;color:#64748b;">{{ row.action_key }}</div>
-                    </td>
-                    <td style="padding:10px;">
-                        {% if row.result_status == "success" %}
-                            <span style="color:#16a34a;font-weight:bold;">成功</span>
-                        {% elif row.result_status == "failed" %}
-                            <span style="color:#dc2626;font-weight:bold;">失败</span>
-                        {% else %}
-                            <span style="color:#f97316;font-weight:bold;">{{ row.result_status }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding:10px;color:#475569;">{{ row.request_path }}</td>
-                    <td style="padding:10px;color:#475569;max-width:360px;word-break:break-all;">{{ row.note }}</td>
-                    <td style="padding:10px;color:#64748b;max-width:360px;word-break:break-all;">{{ row.user_agent }}</td>
-                </tr>
+                    <details class="audit-entry">
+                        <summary>
+                            <span class="audit-action">
+                                <strong>{{ row.action_label or '未命名操作' }}</strong>
+                                <time>{{ row.created_at }}</time>
+                            </span>
+
+                            <span class="audit-ip">{{ row.admin_ip or '未知 IP' }}</span>
+
+                            <span class="audit-status {% if row.result_status == 'success' %}success{% elif row.result_status == 'failed' %}failed{% endif %}">
+                                {% if row.result_status == "success" %}
+                                    成功
+                                {% elif row.result_status == "failed" %}
+                                    失败
+                                {% else %}
+                                    {{ row.result_status or '未知' }}
+                                {% endif %}
+                            </span>
+
+                            <span class="audit-toggle" aria-hidden="true"></span>
+                        </summary>
+
+                        <div class="audit-detail">
+                            <div class="audit-detail-block">
+                                <span class="audit-detail-label">动作代码</span>
+                                <span class="audit-detail-value code">{{ row.action_key or '—' }}</span>
+                            </div>
+
+                            <div class="audit-detail-block">
+                                <span class="audit-detail-label">请求路径</span>
+                                <span class="audit-detail-value code">{{ row.request_path or '—' }}</span>
+                            </div>
+
+                            <div class="audit-detail-block wide">
+                                <span class="audit-detail-label">操作备注</span>
+                                <span class="audit-detail-value code">{{ row.note or '无备注' }}</span>
+                            </div>
+
+                            <div class="audit-detail-block wide">
+                                <span class="audit-detail-label">User-Agent</span>
+                                <span class="audit-detail-value code">{{ row.user_agent or '未记录' }}</span>
+                            </div>
+                        </div>
+                    </details>
                 {% endfor %}
-            </table>
-        {% else %}
-            <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
-                暂无安全操作审计记录。
             </div>
-        {% endif %}
-    </div>
-
-    <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:20px 0;">
-        {% if report.has_prev %}
-            <a href="/security/audit?page={{ report.prev_page }}"
-               style="background:#eff6ff;color:#2563eb;padding:10px 16px;border-radius:10px;text-decoration:none;">
-                ← 上一页
-            </a>
         {% else %}
-            <span style="background:#f1f5f9;color:#94a3b8;padding:10px 16px;border-radius:10px;">
-                ← 上一页
-            </span>
+            <div class="audit-empty">暂无安全操作审计记录。</div>
         {% endif %}
 
-        <strong>第 {{ report.page }} / {{ report.total_pages }} 页，共 {{ report.total }} 条</strong>
+        <nav class="audit-pagination" aria-label="审计记录分页">
+            {% if report.has_prev %}
+                <a class="audit-page-link" href="/security/audit?page={{ report.prev_page }}">
+                    ← 上一页
+                </a>
+            {% else %}
+                <span class="audit-page-disabled">← 上一页</span>
+            {% endif %}
 
-        {% if report.has_next %}
-            <a href="/security/audit?page={{ report.next_page }}"
-               style="background:#eff6ff;color:#2563eb;padding:10px 16px;border-radius:10px;text-decoration:none;">
-                下一页 →
-            </a>
-        {% else %}
-            <span style="background:#f1f5f9;color:#94a3b8;padding:10px 16px;border-radius:10px;">
-                下一页 →
+            <span class="audit-page-copy">
+                第 {{ report.page }} / {{ report.total_pages }} 页，共 {{ report.total }} 条
             </span>
-        {% endif %}
-    </div>
-</div>
+
+            {% if report.has_next %}
+                <a class="audit-page-link" href="/security/audit?page={{ report.next_page }}">
+                    下一页 →
+                </a>
+            {% else %}
+                <span class="audit-page-disabled">下一页 →</span>
+            {% endif %}
+        </nav>
+    </section>
+</main>
 
 {% endblock %}
