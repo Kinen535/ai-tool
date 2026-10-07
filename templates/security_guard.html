@@ -2,284 +2,883 @@
 
 {% block content %}
 
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
-        <h1>🚧 安全闸门控制台</h1>
+<style>
+    .guard-page {
+        --guard-ink: #14213d;
+        --guard-muted: #64748b;
+        --guard-line: #dbe5f2;
+        --guard-soft: #f6f9fd;
+        --guard-blue: #2563eb;
+        --guard-blue-soft: #eff6ff;
+        --guard-green: #16a34a;
+        --guard-green-soft: #f0fdf4;
+        --guard-red: #dc2626;
+        --guard-red-soft: #fef2f2;
+        --guard-amber: #d97706;
+        --guard-amber-soft: #fff7ed;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 24px;
+        color: var(--guard-ink);
+    }
+
+    .guard-page * {
+        box-sizing: border-box;
+    }
+
+    .guard-page a {
+        color: inherit;
+    }
+
+    .guard-hero,
+    .guard-panel,
+    .guard-policy-card {
+        border: 1px solid var(--guard-line);
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .045);
+    }
+
+    .guard-hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 24px;
+        border-radius: 22px;
+    }
+
+    .guard-eyebrow {
+        margin: 0 0 8px;
+        color: var(--guard-blue);
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .guard-title {
+        margin: 0;
+        font-size: clamp(1.75rem, 3vw, 2.35rem);
+        line-height: 1.16;
+    }
+
+    .guard-intro {
+        max-width: 760px;
+        margin: 10px 0 0;
+        color: var(--guard-muted);
+        line-height: 1.7;
+    }
+
+    .guard-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .guard-link-button,
+    .guard-button {
+        display: inline-flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--guard-line);
+        border-radius: 12px;
+        padding: 9px 15px;
+        background: #fff;
+        color: #334155;
+        font: inherit;
+        font-weight: 750;
+        line-height: 1.2;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .guard-link-button:hover,
+    .guard-button:hover {
+        border-color: #93b4ec;
+        background: #f8fbff;
+    }
+
+    .guard-link-button--primary,
+    .guard-button--primary {
+        border-color: var(--guard-blue);
+        background: var(--guard-blue);
+        color: #fff;
+    }
+
+    .guard-button--danger {
+        border-color: #fecaca;
+        background: var(--guard-red-soft);
+        color: var(--guard-red);
+    }
+
+    .guard-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .guard-metric {
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid var(--guard-line);
+        border-radius: 18px;
+        background: #fff;
+    }
+
+    .guard-metric__label {
+        color: var(--guard-muted);
+        font-size: .9rem;
+        font-weight: 700;
+    }
+
+    .guard-metric__value {
+        margin-top: 8px;
+        font-size: 1.75rem;
+        font-weight: 850;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-metric__value--safe {
+        color: var(--guard-green);
+    }
+
+    .guard-metric__value--danger {
+        color: var(--guard-red);
+    }
+
+    .guard-metric__meta {
+        margin-top: 8px;
+        color: var(--guard-muted);
+        font-size: .82rem;
+        line-height: 1.45;
+    }
+
+    .guard-more-metrics {
+        margin-top: 10px;
+        border: 1px solid var(--guard-line);
+        border-radius: 14px;
+        background: var(--guard-soft);
+    }
+
+    .guard-more-metrics summary {
+        padding: 11px 14px;
+        color: #475569;
+        font-weight: 750;
+        cursor: pointer;
+    }
+
+    .guard-more-metrics__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 14px 14px;
+    }
+
+    .guard-secondary-metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 11px 13px;
+        border-radius: 11px;
+        background: #fff;
+        color: var(--guard-muted);
+    }
+
+    .guard-secondary-metric strong {
+        color: var(--guard-ink);
+        font-size: 1.05rem;
+    }
+
+    .guard-panel {
+        margin-top: 16px;
+        padding: 22px;
+        border-radius: 20px;
+    }
+
+    .guard-section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .guard-section-head h2,
+    .guard-policy-card h3 {
+        margin: 0;
+        line-height: 1.3;
+    }
+
+    .guard-section-head p,
+    .guard-policy-card p {
+        margin: 6px 0 0;
+        color: var(--guard-muted);
+        line-height: 1.65;
+    }
+
+    .guard-count {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--guard-blue-soft);
+        color: var(--guard-blue);
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .guard-policy-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .guard-policy-card {
+        padding: 19px;
+        border-radius: 17px;
+    }
+
+    .guard-policy-card--warning {
+        border-color: #fed7aa;
+        background: linear-gradient(135deg, #fff 0%, var(--guard-amber-soft) 100%);
+    }
+
+    .guard-policy-card--safe {
+        border-color: #bbf7d0;
+        background: linear-gradient(135deg, #fff 0%, var(--guard-green-soft) 100%);
+    }
+
+    .guard-policy-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .guard-state {
+        flex: 0 0 auto;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: var(--guard-green);
+        font-size: .76rem;
+        font-weight: 850;
+    }
+
+    .guard-state--danger {
+        background: var(--guard-red-soft);
+        color: var(--guard-red);
+    }
+
+    .guard-form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .guard-form-grid--quota {
+        grid-template-columns: minmax(160px, .7fr) minmax(180px, 1fr) auto;
+    }
+
+    .guard-field {
+        min-width: 0;
+    }
+
+    .guard-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: #334155;
+        font-size: .88rem;
+        font-weight: 750;
+    }
+
+    .guard-field input,
+    .guard-field select {
+        width: 100%;
+        min-height: 42px;
+        border: 1px solid #cbd5e1;
+        border-radius: 11px;
+        padding: 9px 12px;
+        background: #fff;
+        color: #0f172a;
+        font: inherit;
+    }
+
+    .guard-field input:focus,
+    .guard-field select:focus {
+        border-color: #6e9eef;
+        outline: 3px solid rgba(37, 99, 235, .12);
+    }
+
+    .guard-whitelist-form {
+        display: grid;
+        grid-template-columns: minmax(180px, .75fr) minmax(240px, 1.5fr) auto;
+        align-items: end;
+        gap: 12px;
+        padding: 15px;
+        border-radius: 15px;
+        background: var(--guard-soft);
+    }
+
+    .guard-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .guard-whitelist-list {
+        margin-top: 14px;
+    }
+
+    .guard-whitelist-row {
+        display: grid;
+        grid-template-columns: minmax(150px, .8fr) minmax(220px, 1.4fr) minmax(160px, .8fr) auto;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 15px;
+        border: 1px solid var(--guard-line);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .guard-whitelist-row__ip {
+        font-weight: 850;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-whitelist-row__note,
+    .guard-whitelist-row__time {
+        color: var(--guard-muted);
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-fixed-label {
+        color: #94a3b8;
+        font-size: .84rem;
+        font-weight: 750;
+    }
+
+    .guard-remove-disclosure {
+        position: relative;
+    }
+
+    .guard-remove-disclosure summary {
+        list-style: none;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        padding: 7px 10px;
+        background: var(--guard-red-soft);
+        color: var(--guard-red);
+        font-size: .84rem;
+        font-weight: 750;
+        cursor: pointer;
+    }
+
+    .guard-remove-disclosure summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .guard-remove-confirm {
+        position: absolute;
+        z-index: 4;
+        right: 0;
+        width: 230px;
+        margin-top: 7px;
+        padding: 12px;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 16px 35px rgba(15, 23, 42, .16);
+    }
+
+    .guard-remove-confirm p {
+        margin: 0 0 10px;
+        color: #7f1d1d;
+        font-size: .82rem;
+        line-height: 1.5;
+    }
+
+    .guard-record-list {
+        display: grid;
+        gap: 9px;
+        max-height: 520px;
+        overflow: auto;
+        padding-right: 3px;
+    }
+
+    .guard-record {
+        border: 1px solid var(--guard-line);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .guard-record[open] {
+        border-color: #b8cef4;
+        box-shadow: 0 9px 24px rgba(37, 99, 235, .07);
+    }
+
+    .guard-record summary {
+        display: grid;
+        grid-template-columns: minmax(110px, .65fr) minmax(150px, .9fr) minmax(150px, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        min-height: 58px;
+        padding: 12px 15px;
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .guard-record summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .guard-record__type {
+        display: inline-flex;
+        width: max-content;
+        max-width: 100%;
+        align-items: center;
+        border-radius: 999px;
+        padding: 5px 9px;
+        background: var(--guard-red-soft);
+        color: var(--guard-red);
+        font-size: .78rem;
+        font-weight: 850;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-record__ip {
+        font-weight: 850;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-record__time {
+        color: var(--guard-muted);
+        font-size: .88rem;
+    }
+
+    .guard-record__toggle {
+        color: var(--guard-blue);
+        font-size: .82rem;
+        font-weight: 750;
+    }
+
+    .guard-record[open] .guard-record__toggle::after {
+        content: "收起";
+    }
+
+    .guard-record:not([open]) .guard-record__toggle::after {
+        content: "展开";
+    }
+
+    .guard-record__detail {
+        display: grid;
+        grid-template-columns: minmax(140px, .55fr) minmax(0, 1.45fr);
+        gap: 12px;
+        padding: 0 15px 15px;
+    }
+
+    .guard-detail-box {
+        min-width: 0;
+        padding: 12px;
+        border-radius: 11px;
+        background: var(--guard-soft);
+    }
+
+    .guard-detail-box__label {
+        margin-bottom: 5px;
+        color: var(--guard-muted);
+        font-size: .76rem;
+        font-weight: 750;
+    }
+
+    .guard-detail-box__value {
+        color: #334155;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .guard-quota-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .guard-quota-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 1fr) auto;
+        gap: 8px 14px;
+        padding: 14px;
+        border: 1px solid var(--guard-line);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .guard-quota-row__ip {
+        font-weight: 850;
+        overflow-wrap: anywhere;
+    }
+
+    .guard-quota-row__count {
+        color: var(--guard-blue);
+        font-weight: 850;
+    }
+
+    .guard-quota-row__time {
+        grid-column: 1 / -1;
+        color: var(--guard-muted);
+        font-size: .86rem;
+    }
+
+    .guard-empty {
+        padding: 22px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
+        background: var(--guard-soft);
+        color: var(--guard-muted);
+        text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+        .guard-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .guard-policy-grid,
+        .guard-quota-list {
+            grid-template-columns: 1fr;
+        }
+
+        .guard-whitelist-row {
+            grid-template-columns: minmax(140px, .8fr) minmax(200px, 1.4fr) auto;
+        }
+
+        .guard-whitelist-row__time {
+            display: none;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .guard-page {
+            padding: 14px;
+        }
+
+        .guard-hero,
+        .guard-section-head {
+            flex-direction: column;
+        }
+
+        .guard-hero-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .guard-link-button {
+            flex: 1 1 150px;
+        }
+
+        .guard-form-grid,
+        .guard-form-grid--quota,
+        .guard-whitelist-form,
+        .guard-whitelist-row,
+        .guard-record summary,
+        .guard-record__detail {
+            grid-template-columns: 1fr;
+        }
+
+        .guard-button {
+            width: 100%;
+        }
+
+        .guard-whitelist-row__time {
+            display: block;
+        }
+
+        .guard-remove-confirm {
+            position: static;
+            width: 100%;
+        }
+
+        .guard-record summary {
+            gap: 7px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .guard-metrics,
+        .guard-more-metrics__grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<main class="guard-page">
+    <header class="guard-hero">
         <div>
-            <a href="/security/logs"
-               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;margin-right:8px;">
-                返回安全日志
+            <p class="guard-eyebrow">Security Guard</p>
+            <h1 class="guard-title">安全阀门</h1>
+            <p class="guard-intro">
+                集中管理档案写入保护、搜索额度与可信 IP。先判断风险，再调整策略，所有变更继续写入安全审计。
+            </p>
+        </div>
+
+        <nav class="guard-hero-actions" aria-label="安全阀门快捷入口">
+            <a class="guard-link-button guard-link-button--primary" href="/security">
+                返回安全控制台
             </a>
-            <form
-                method="post"
-                action="{{ url_for('v158_logout') }}"
-                style="display:inline;margin:0;"
-            >
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ session.get('v158_csrf_token', '') }}"
-                >
+            <a class="guard-link-button" href="/security/logs">
+                查看安全日志
+            </a>
+        </nav>
+    </header>
 
-                <button
-                    type="submit"
-                    style="
-                        border:0;
-                        background:#f1f5f9;
-                        color:#334155;
-                        padding:8px 14px;
-                        border-radius:10px;
-                        font:inherit;
-                        cursor:pointer;
-                    "
-                >
-                    退出
-                </button>
-            </form>
-        </div>
-    </div>
+    <section class="guard-metrics" aria-label="核心保护状态">
+        <article class="guard-metric">
+            <div class="guard-metric__label">档案写入保护</div>
+            {% if report.config.archive_read_only == "1" %}
+                <div class="guard-metric__value guard-metric__value--danger">只读中</div>
+                <div class="guard-metric__meta">写入、修改和删除请求将被拦截</div>
+            {% else %}
+                <div class="guard-metric__value guard-metric__value--safe">允许写入</div>
+                <div class="guard-metric__meta">当前未启用档案库只读保护</div>
+            {% endif %}
+        </article>
 
-    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 当前保护状态</h2>
+        <article class="guard-metric">
+            <div class="guard-metric__label">搜索额度保护</div>
+            {% if report.config.search_quota_enabled == "1" %}
+                <div class="guard-metric__value guard-metric__value--safe">已启用</div>
+                <div class="guard-metric__meta">单 IP 每日上限 {{ report.config.daily_search_limit }} 次</div>
+            {% else %}
+                <div class="guard-metric__value">未启用</div>
+                <div class="guard-metric__meta">当前不限制单 IP 的24小时搜索总量</div>
+            {% endif %}
+        </article>
 
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>档案库只读</div>
-                {% if report.config.archive_read_only == "1" %}
-                    <h2 style="color:#dc2626;">已开启</h2>
-                {% else %}
-                    <h2 style="color:#16a34a;">未开启</h2>
-                {% endif %}
+        <article class="guard-metric">
+            <div class="guard-metric__label">24小时拦截</div>
+            <div class="guard-metric__value{% if report.stats.block_total_24h %} guard-metric__value--danger{% endif %}">
+                {{ report.stats.block_total_24h }}
             </div>
+            <div class="guard-metric__meta">只读或搜索额度规则触发次数</div>
+        </article>
 
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>搜索额度保护</div>
-                {% if report.config.search_quota_enabled == "1" %}
-                    <h2 style="color:#16a34a;">已开启</h2>
-                {% else %}
-                    <h2 style="color:#64748b;">未开启</h2>
-                {% endif %}
+        <article class="guard-metric">
+            <div class="guard-metric__label">白名单 IP</div>
+            <div class="guard-metric__value">{{ report.stats.whitelist_count }}</div>
+            <div class="guard-metric__meta">可信来源不受搜索额度限制</div>
+        </article>
+    </section>
+
+    <details class="guard-more-metrics">
+        <summary>查看搜索运行指标</summary>
+        <div class="guard-more-metrics__grid">
+            <div class="guard-secondary-metric">
+                <span>24小时搜索记录</span>
+                <strong>{{ report.stats.search_total_24h }}</strong>
             </div>
-
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>单IP每日搜索额度</div>
-                <h2>{{ report.config.daily_search_limit }}</h2>
-            </div>
-
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>24小时拦截</div>
-                <h2 style="color:#dc2626;">{{ report.stats.block_total_24h }}</h2>
+            <div class="guard-secondary-metric">
+                <span>涉及搜索 IP</span>
+                <strong>{{ report.stats.quota_ip_count }}</strong>
             </div>
         </div>
+    </details>
 
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;">
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>24小时搜索记录</div>
-                <h2>{{ report.stats.search_total_24h }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>搜索IP数量</div>
-                <h2>{{ report.stats.quota_ip_count }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>白名单IP</div>
-                <h2>{{ report.stats.whitelist_count }}</h2>
+    <section class="guard-panel" aria-labelledby="guard-policy-title">
+        <div class="guard-section-head">
+            <div>
+                <h2 id="guard-policy-title">运行策略</h2>
+                <p>紧急保护与日常限额集中在这里配置，保存后立即生效。</p>
             </div>
         </div>
-    </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
-        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
-            <h2>② 档案库只读模式</h2>
-            <p style="color:#64748b;line-height:1.7;">
-                开启后，档案库写入、修改、删除类请求会被拦截。适合遇到攻击、异常提交、维护升级时使用。
-            </p>
+        <div class="guard-policy-grid">
+            <article class="guard-policy-card guard-policy-card--warning">
+                <div class="guard-policy-title">
+                    <h3>档案库只读</h3>
+                    {% if report.config.archive_read_only == "1" %}
+                        <span class="guard-state guard-state--danger">已开启</span>
+                    {% else %}
+                        <span class="guard-state">未开启</span>
+                    {% endif %}
+                </div>
+                <p>遇到攻击、异常提交或维护升级时，可临时阻止档案写入、修改和删除。</p>
 
-            <form method="post">
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ session.get('v158_csrf_token', '') }}"
-                >
-                <input type="hidden" name="action" value="set_read_only">
+                <form method="post" class="guard-form-grid">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('v158_csrf_token', '') }}">
+                    <input type="hidden" name="action" value="set_read_only">
 
-                <label style="font-weight:bold;">只读状态</label>
-                <select name="archive_read_only"
-                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
-                    <option value="0" {% if report.config.archive_read_only == "0" %}selected{% endif %}>关闭只读，允许写入</option>
-                    <option value="1" {% if report.config.archive_read_only == "1" %}selected{% endif %}>开启只读，禁止写入</option>
-                </select>
+                    <div class="guard-field">
+                        <label for="archive-read-only">只读状态</label>
+                        <select id="archive-read-only" name="archive_read_only">
+                            <option value="0" {% if report.config.archive_read_only == "0" %}selected{% endif %}>关闭只读，允许写入</option>
+                            <option value="1" {% if report.config.archive_read_only == "1" %}selected{% endif %}>开启只读，禁止写入</option>
+                        </select>
+                    </div>
 
-                <button type="submit"
-                        style="background:#f97316;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
-                    保存只读设置
-                </button>
-            </form>
+                    <button class="guard-button" type="submit">保存设置</button>
+                </form>
+            </article>
+
+            <article class="guard-policy-card guard-policy-card--safe">
+                <div class="guard-policy-title">
+                    <h3>搜索额度保护</h3>
+                    {% if report.config.search_quota_enabled == "1" %}
+                        <span class="guard-state">已开启</span>
+                    {% else %}
+                        <span class="guard-state">未开启</span>
+                    {% endif %}
+                </div>
+                <p>Nginx 负责分钟级频率，这里限制陌生 IP 在24小时内的搜索总量。</p>
+
+                <form method="post" class="guard-form-grid guard-form-grid--quota">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('v158_csrf_token', '') }}">
+                    <input type="hidden" name="action" value="set_quota">
+
+                    <div class="guard-field">
+                        <label for="quota-enabled">额度保护</label>
+                        <select id="quota-enabled" name="search_quota_enabled">
+                            <option value="1" {% if report.config.search_quota_enabled == "1" %}selected{% endif %}>开启</option>
+                            <option value="0" {% if report.config.search_quota_enabled == "0" %}selected{% endif %}>关闭</option>
+                        </select>
+                    </div>
+
+                    <div class="guard-field">
+                        <label for="daily-search-limit">单 IP 每日上限</label>
+                        <input id="daily-search-limit" name="daily_search_limit" type="number" min="1" step="1" inputmode="numeric" required value="{{ report.config.daily_search_limit }}">
+                    </div>
+
+                    <button class="guard-button" type="submit">保存设置</button>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section class="guard-panel" aria-labelledby="guard-whitelist-title">
+        <div class="guard-section-head">
+            <div>
+                <h2 id="guard-whitelist-title">IP 白名单</h2>
+                <p>白名单不受搜索额度限制；127.0.0.1 与 ::1 是服务器本机地址，固定保留。</p>
+            </div>
+            <span class="guard-count">{{ report.stats.whitelist_count }} 个地址</span>
         </div>
 
-        <div style="background:#f0fdf4;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
-            <h2>③ 搜索额度保护</h2>
-            <p style="color:#64748b;line-height:1.7;">
-                用于防止陌生 IP 批量搜索档案库。Nginx 限制分钟级频率，这里限制 24 小时总量。
-            </p>
-
-            <form method="post">
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ session.get('v158_csrf_token', '') }}"
-                >
-                <input type="hidden" name="action" value="set_quota">
-
-                <label style="font-weight:bold;">额度保护</label>
-                <select name="search_quota_enabled"
-                        style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
-                    <option value="1" {% if report.config.search_quota_enabled == "1" %}selected{% endif %}>开启</option>
-                    <option value="0" {% if report.config.search_quota_enabled == "0" %}selected{% endif %}>关闭</option>
-                </select>
-
-                <label style="font-weight:bold;">单 IP 每日搜索上限</label>
-                <input name="daily_search_limit"
-                       value="{{ report.config.daily_search_limit }}"
-                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0 14px 0;">
-
-                <button type="submit"
-                        style="background:#16a34a;color:white;border:0;border-radius:10px;padding:10px 16px;font-weight:bold;">
-                    保存额度设置
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>④ IP 白名单</h2>
-        <p style="color:#64748b;line-height:1.7;">
-            白名单 IP 不受搜索额度限制。127.0.0.1 为服务器本机测试，默认保留。
-        </p>
-
-        <form method="post" style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end;margin-bottom:16px;">
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ session.get('v158_csrf_token', '') }}"
-                >
+        <form method="post" class="guard-whitelist-form">
+            <input type="hidden" name="csrf_token" value="{{ session.get('v158_csrf_token', '') }}">
             <input type="hidden" name="action" value="add_whitelist">
 
-            <div>
-                <label style="font-weight:bold;">IP</label>
-                <input name="ip"
-                       placeholder="例如：119.130.130.238"
-                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            <div class="guard-field">
+                <label for="whitelist-ip">IP 地址</label>
+                <input id="whitelist-ip" name="ip" placeholder="例如：119.130.130.238" autocomplete="off" required>
             </div>
 
-            <div>
-                <label style="font-weight:bold;">备注</label>
-                <input name="note"
-                       placeholder="例如：管理员自用网络"
-                       style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px;">
+            <div class="guard-field">
+                <label for="whitelist-note">用途备注</label>
+                <input id="whitelist-note" name="note" placeholder="例如：管理员自用网络" autocomplete="off">
             </div>
 
-            <button type="submit"
-                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:bold;">
-                加入白名单
-            </button>
+            <button class="guard-button guard-button--primary" type="submit">加入白名单</button>
         </form>
 
         {% if report.whitelist %}
-            <table style="width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;">
-                <tr style="background:#f3f4f6;">
-                    <th style="padding:9px;text-align:left;">IP</th>
-                    <th style="padding:9px;text-align:left;">备注</th>
-                    <th style="padding:9px;text-align:left;">创建时间</th>
-                    <th style="padding:9px;text-align:left;">操作</th>
-                </tr>
+            <div class="guard-list guard-whitelist-list">
                 {% for row in report.whitelist %}
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:9px;font-weight:bold;">{{ row.ip }}</td>
-                    <td style="padding:9px;color:#64748b;">{{ row.note }}</td>
-                    <td style="padding:9px;color:#64748b;">{{ row.created_at }}</td>
-                    <td style="padding:9px;">
-                        {% if row.ip not in ["127.0.0.1", "::1"] %}
-                            <form method="post" style="display:inline;">
-                <input
-                    type="hidden"
-                    name="csrf_token"
-                    value="{{ session.get('v158_csrf_token', '') }}"
-                >
-                                <input type="hidden" name="action" value="remove_whitelist">
-                                <input type="hidden" name="ip" value="{{ row.ip }}">
-                                <button type="submit"
-                                        style="background:#fee2e2;color:#dc2626;border:0;border-radius:8px;padding:6px 10px;">
-                                    移除
-                                </button>
-                            </form>
-                        {% else %}
-                            <span style="color:#94a3b8;">保留</span>
-                        {% endif %}
-                    </td>
-                </tr>
+                    <article class="guard-whitelist-row">
+                        <div class="guard-whitelist-row__ip">{{ row.ip }}</div>
+                        <div class="guard-whitelist-row__note">{{ row.note or '未填写备注' }}</div>
+                        <time class="guard-whitelist-row__time">{{ row.created_at }}</time>
+                        <div>
+                            {% if row.ip not in ["127.0.0.1", "::1"] %}
+                                <details class="guard-remove-disclosure">
+                                    <summary>移除</summary>
+                                    <div class="guard-remove-confirm">
+                                        <p>确认将 {{ row.ip }} 移出白名单？该地址随后会重新受到搜索额度限制。</p>
+                                        <form method="post">
+                                            <input type="hidden" name="csrf_token" value="{{ session.get('v158_csrf_token', '') }}">
+                                            <input type="hidden" name="action" value="remove_whitelist">
+                                            <input type="hidden" name="ip" value="{{ row.ip }}">
+                                            <button class="guard-button guard-button--danger" type="submit">确认移除</button>
+                                        </form>
+                                    </div>
+                                </details>
+                            {% else %}
+                                <span class="guard-fixed-label">固定保留</span>
+                            {% endif %}
+                        </div>
+                    </article>
                 {% endfor %}
-            </table>
+            </div>
+        {% else %}
+            <div class="guard-empty">当前没有白名单地址。</div>
         {% endif %}
-    </div>
+    </section>
 
-    <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>⑤ 最近安全闸门拦截</h2>
+    <section class="guard-panel" aria-labelledby="guard-block-title">
+        <div class="guard-section-head">
+            <div>
+                <h2 id="guard-block-title">最近安全拦截</h2>
+                <p>先显示类型、IP和时间；请求路径与判定原因按记录展开，避免长文本挤压页面。</p>
+            </div>
+            <span class="guard-count">24小时 {{ report.stats.block_total_24h }} 次</span>
+        </div>
 
         {% if report.block_rows %}
-            <div style="max-height:420px;overflow:auto;background:white;border-radius:12px;">
-                <table style="width:100%;border-collapse:collapse;">
-                    <tr style="background:#f3f4f6;position:sticky;top:0;">
-                        <th style="padding:8px;text-align:left;">时间</th>
-                        <th style="padding:8px;text-align:left;">IP</th>
-                        <th style="padding:8px;text-align:left;">类型</th>
-                        <th style="padding:8px;text-align:left;">路径</th>
-                        <th style="padding:8px;text-align:left;">原因</th>
-                    </tr>
-                    {% for row in report.block_rows %}
-                    <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:8px;color:#64748b;">{{ row.created_at }}</td>
-                        <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
-                        <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ row.guard_type }}</td>
-                        <td style="padding:8px;">{{ row.path }}</td>
-                        <td style="padding:8px;color:#64748b;">{{ row.reason }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
+            <div class="guard-record-list">
+                {% for row in report.block_rows %}
+                    <details class="guard-record">
+                        <summary>
+                            <span class="guard-record__type">{{ row.guard_type }}</span>
+                            <span class="guard-record__ip">{{ row.ip }}</span>
+                            <time class="guard-record__time">{{ row.created_at }}</time>
+                            <span class="guard-record__toggle" aria-hidden="true"></span>
+                        </summary>
+                        <div class="guard-record__detail">
+                            <div class="guard-detail-box">
+                                <div class="guard-detail-box__label">请求路径</div>
+                                <div class="guard-detail-box__value">{{ row.path }}</div>
+                            </div>
+                            <div class="guard-detail-box">
+                                <div class="guard-detail-box__label">拦截原因</div>
+                                <div class="guard-detail-box__value">{{ row.reason }}</div>
+                            </div>
+                        </div>
+                    </details>
+                {% endfor %}
             </div>
         {% else %}
-            <div style="background:white;border-radius:12px;padding:14px;color:#64748b;">
-                暂无安全闸门拦截记录。
-            </div>
+            <div class="guard-empty">暂无安全阀门拦截记录。</div>
         {% endif %}
-    </div>
+    </section>
 
-    <div style="background:white;border-radius:18px;padding:22px;">
-        <h2>⑥ 24小时搜索额度记录</h2>
+    <section class="guard-panel" aria-labelledby="guard-quota-title">
+        <div class="guard-section-head">
+            <div>
+                <h2 id="guard-quota-title">24小时搜索额度记录</h2>
+                <p>按 IP 汇总搜索次数与最后活动时间，用于识别集中搜索行为。</p>
+            </div>
+            <span class="guard-count">{{ report.stats.quota_ip_count }} 个 IP</span>
+        </div>
 
         {% if report.quota_rows %}
-            <div style="max-height:420px;overflow:auto;">
-                <table style="width:100%;border-collapse:collapse;">
-                    <tr style="background:#f3f4f6;position:sticky;top:0;">
-                        <th style="padding:8px;text-align:left;">IP</th>
-                        <th style="padding:8px;text-align:left;">搜索次数</th>
-                        <th style="padding:8px;text-align:left;">最后搜索</th>
-                    </tr>
-                    {% for row in report.quota_rows %}
-                    <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
-                        <td style="padding:8px;">{{ row.search_count }}</td>
-                        <td style="padding:8px;color:#64748b;">{{ row.last_seen }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
+            <div class="guard-quota-list">
+                {% for row in report.quota_rows %}
+                    <article class="guard-quota-row">
+                        <div class="guard-quota-row__ip">{{ row.ip }}</div>
+                        <div class="guard-quota-row__count">{{ row.search_count }} 次</div>
+                        <time class="guard-quota-row__time">最后搜索：{{ row.last_seen }}</time>
+                    </article>
+                {% endfor %}
             </div>
         {% else %}
-            <div style="background:#f9fafb;border-radius:12px;padding:14px;color:#64748b;">
-                暂无搜索额度记录。
-            </div>
+            <div class="guard-empty">暂无搜索额度记录。</div>
         {% endif %}
-    </div>
-</div>
+    </section>
+</main>
 
 {% endblock %}
