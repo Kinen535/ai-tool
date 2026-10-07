@@ -2,221 +2,950 @@
 
 {% block content %}
 
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h1>🛡️ 安全控制台</h1>
+<style>
+    .security-console {
+        --sc-text: #0f172a;
+        --sc-muted: #64748b;
+        --sc-line: #dbe4f0;
+        --sc-soft: #f6f8fc;
+        --sc-blue: #2563eb;
+        --sc-blue-soft: #eff6ff;
+        --sc-green: #059669;
+        --sc-green-soft: #ecfdf5;
+        --sc-red: #dc2626;
+        --sc-red-soft: #fef2f2;
+        --sc-amber: #d97706;
+        --sc-amber-soft: #fff7ed;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 26px 24px 36px;
+        color: var(--sc-text);
+    }
 
-        <!-- V15.5-S3-C-UI compact console header -->
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <a href="/security/logs"
-               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                安全日志
+    .security-console *,
+    .security-console *::before,
+    .security-console *::after {
+        box-sizing: border-box;
+    }
+
+    .console-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 18px;
+    }
+
+    .console-eyebrow {
+        margin: 0 0 7px;
+        color: var(--sc-blue);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .console-title {
+        margin: 0;
+        font-size: clamp(28px, 3vw, 38px);
+        line-height: 1.15;
+        letter-spacing: -.03em;
+    }
+
+    .console-subtitle {
+        max-width: 680px;
+        margin: 10px 0 0;
+        color: var(--sc-muted);
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-shrink: 0;
+    }
+
+    .header-actions form {
+        margin: 0;
+    }
+
+    .console-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 9px 14px;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .console-button.primary {
+        background: var(--sc-blue-soft);
+        color: var(--sc-blue);
+    }
+
+    .console-button.neutral {
+        border-color: var(--sc-line);
+        background: #fff;
+        color: #475569;
+    }
+
+    .risk-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr);
+        gap: 24px;
+        overflow: hidden;
+        margin-bottom: 18px;
+        border: 1px solid var(--sc-line);
+        border-left-width: 6px;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, .06);
+    }
+
+    .risk-panel.high {
+        border-left-color: var(--sc-red);
+    }
+
+    .risk-panel.medium {
+        border-left-color: var(--sc-amber);
+    }
+
+    .risk-panel.low {
+        border-left-color: var(--sc-green);
+    }
+
+    .risk-main {
+        padding: 24px 26px;
+    }
+
+    .risk-label {
+        margin: 0;
+        color: var(--sc-muted);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .08em;
+    }
+
+    .risk-heading {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+    }
+
+    .risk-heading h2 {
+        margin: 0;
+        font-size: 25px;
+    }
+
+    .risk-level {
+        display: inline-flex;
+        align-items: center;
+        min-height: 31px;
+        padding: 5px 11px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .high .risk-level {
+        background: var(--sc-red-soft);
+        color: var(--sc-red);
+    }
+
+    .medium .risk-level {
+        background: var(--sc-amber-soft);
+        color: var(--sc-amber);
+    }
+
+    .low .risk-level {
+        background: var(--sc-green-soft);
+        color: var(--sc-green);
+    }
+
+    .risk-copy {
+        max-width: 760px;
+        margin: 13px 0 0;
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.75;
+    }
+
+    .signal-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 9px;
+        margin-top: 20px;
+    }
+
+    .signal-item {
+        padding: 12px 13px;
+        border-radius: 12px;
+        background: var(--sc-soft);
+    }
+
+    .signal-item span,
+    .configuration-item span {
+        display: block;
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .signal-item strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 21px;
+    }
+
+    .signal-item.critical strong {
+        color: var(--sc-red);
+    }
+
+    .signal-item.observe strong {
+        color: var(--sc-amber);
+    }
+
+    .risk-configuration {
+        display: grid;
+        align-content: center;
+        gap: 10px;
+        padding: 20px;
+        border-left: 1px solid var(--sc-line);
+        background: #fafcff;
+    }
+
+    .configuration-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 49px;
+        padding: 10px 13px;
+        border: 1px solid #e8eef6;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .configuration-item span {
+        color: var(--sc-muted);
+    }
+
+    .configuration-item strong {
+        font-size: 12px;
+        text-align: right;
+    }
+
+    .state-good {
+        color: var(--sc-green);
+    }
+
+    .state-warning {
+        color: var(--sc-amber);
+    }
+
+    .state-danger {
+        color: var(--sc-red);
+    }
+
+    .console-section {
+        margin-top: 18px;
+        padding: 20px;
+        border: 1px solid var(--sc-line);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, .045);
+    }
+
+    .section-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 15px;
+    }
+
+    .section-head h2 {
+        margin: 0;
+        font-size: 19px;
+    }
+
+    .section-head p {
+        margin: 5px 0 0;
+        color: var(--sc-muted);
+        font-size: 12px;
+    }
+
+    .section-kicker {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .primary-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 11px;
+    }
+
+    .metric-card {
+        min-width: 0;
+        padding: 15px 16px;
+        border: 1px solid #e7edf5;
+        border-radius: 14px;
+        background: var(--sc-soft);
+    }
+
+    .metric-card span {
+        display: block;
+        color: var(--sc-muted);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .metric-card strong {
+        display: block;
+        margin-top: 7px;
+        font-size: 27px;
+        line-height: 1;
+    }
+
+    .metric-card.critical strong {
+        color: var(--sc-red);
+    }
+
+    .secondary-metrics {
+        margin-top: 12px;
+        border: 1px solid var(--sc-line);
+        border-radius: 13px;
+        background: #fff;
+    }
+
+    .secondary-metrics summary,
+    .audit-item summary {
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .secondary-metrics summary::-webkit-details-marker,
+    .audit-item summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .secondary-metrics summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .secondary-metrics summary::after {
+        color: #94a3b8;
+        content: "展开";
+    }
+
+    .secondary-metrics[open] summary::after {
+        content: "收起";
+    }
+
+    .secondary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 13px 13px;
+    }
+
+    .secondary-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 11px 12px;
+        border-radius: 11px;
+        background: var(--sc-soft);
+        color: var(--sc-muted);
+        font-size: 12px;
+    }
+
+    .secondary-item strong {
+        color: var(--sc-text);
+        font-size: 16px;
+    }
+
+    .task-groups {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 13px;
+    }
+
+    .task-group {
+        min-width: 0;
+        padding: 15px;
+        border: 1px solid var(--sc-line);
+        border-radius: 15px;
+        background: #fbfdff;
+    }
+
+    .task-group h3 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    .task-group > p {
+        margin: 5px 0 12px;
+        color: var(--sc-muted);
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
+    .task-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 53px;
+        margin-top: 8px;
+        padding: 10px 12px;
+        border: 1px solid #e7edf5;
+        border-radius: 11px;
+        background: #fff;
+        color: var(--sc-text);
+        text-decoration: none;
+        transition: border-color .15s ease, transform .15s ease;
+    }
+
+    .task-link:hover {
+        border-color: #93c5fd;
+        transform: translateY(-1px);
+    }
+
+    .task-link-copy {
+        min-width: 0;
+    }
+
+    .task-link strong {
+        display: block;
+        font-size: 13px;
+    }
+
+    .task-link small {
+        display: block;
+        overflow: hidden;
+        margin-top: 3px;
+        color: var(--sc-muted);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .task-arrow {
+        flex-shrink: 0;
+        color: var(--sc-blue);
+        font-weight: 900;
+    }
+
+    .task-status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--sc-green-soft);
+        color: var(--sc-green);
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .task-status.warning {
+        background: var(--sc-red-soft);
+        color: var(--sc-red);
+    }
+
+    .audit-list {
+        display: grid;
+        gap: 8px;
+    }
+
+    .audit-item {
+        overflow: hidden;
+        border: 1px solid var(--sc-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .audit-item summary {
+        display: grid;
+        grid-template-columns: minmax(180px, 1fr) 170px 90px 54px;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 14px;
+    }
+
+    .audit-action strong {
+        display: block;
+        font-size: 13px;
+    }
+
+    .audit-action span,
+    .audit-ip {
+        display: block;
+        color: var(--sc-muted);
+        font-size: 11px;
+    }
+
+    .audit-action span {
+        margin-top: 3px;
+    }
+
+    .audit-result {
+        justify-self: start;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: var(--sc-red-soft);
+        color: var(--sc-red);
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .audit-result.success {
+        background: var(--sc-green-soft);
+        color: var(--sc-green);
+    }
+
+    .audit-toggle {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 800;
+        text-align: right;
+    }
+
+    .audit-toggle::after {
+        content: "展开";
+    }
+
+    .audit-item[open] .audit-toggle::after {
+        content: "收起";
+    }
+
+    .audit-detail {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+        gap: 14px;
+        padding: 12px 14px 14px;
+        border-top: 1px solid var(--sc-line);
+        background: var(--sc-soft);
+    }
+
+    .audit-detail span {
+        display: block;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .audit-detail strong,
+    .audit-detail p {
+        margin: 4px 0 0;
+        color: #475569;
+        font-size: 12px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+    }
+
+    .audit-empty {
+        padding: 22px;
+        border: 1px dashed var(--sc-line);
+        border-radius: 12px;
+        background: var(--sc-soft);
+        color: var(--sc-muted);
+        font-size: 13px;
+        text-align: center;
+    }
+
+    @media (max-width: 1080px) {
+        .risk-panel {
+            grid-template-columns: 1fr;
+        }
+
+        .risk-configuration {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            border-top: 1px solid var(--sc-line);
+            border-left: 0;
+        }
+
+        .configuration-item {
+            display: block;
+        }
+
+        .configuration-item strong {
+            display: block;
+            margin-top: 5px;
+            text-align: left;
+        }
+
+        .task-groups {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .security-console {
+            padding: 18px 14px 28px;
+        }
+
+        .console-header {
+            display: block;
+        }
+
+        .header-actions {
+            margin-top: 15px;
+        }
+
+        .risk-main,
+        .risk-configuration,
+        .console-section {
+            padding: 16px;
+        }
+
+        .risk-configuration,
+        .primary-metrics,
+        .secondary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .signal-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .audit-item summary {
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+        }
+
+        .audit-ip,
+        .audit-toggle {
+            display: none;
+        }
+
+        .audit-detail {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 460px) {
+        .primary-metrics,
+        .secondary-grid,
+        .risk-configuration {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+{% if report.risk_level == "高" %}
+    {% set risk_tone = "high" %}
+{% elif report.risk_level == "中" %}
+    {% set risk_tone = "medium" %}
+{% else %}
+    {% set risk_tone = "low" %}
+{% endif %}
+
+<main class="security-console">
+    <header class="console-header">
+        <div>
+            <p class="console-eyebrow">Security operations</p>
+            <h1 class="console-title">安全控制台</h1>
+            <p class="console-subtitle">
+                先判断当前风险，再进入对应处置；运行指标和审计细节按需展开。
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a class="console-button primary" href="/security/logs">
+                查看安全日志
             </a>
 
-            <form
-                method="post"
-                action="{{ url_for('v158_logout') }}"
-                style="display:inline;margin:0;"
-            >
+            <form method="post" action="{{ url_for('v158_logout') }}">
                 <input
                     type="hidden"
                     name="csrf_token"
                     value="{{ session.get('v158_csrf_token', '') }}"
                 >
-
-                <button
-                    type="submit"
-                    style="
-                        border:0;
-                        background:#f1f5f9;
-                        color:#334155;
-                        padding:8px 14px;
-                        border-radius:10px;
-                        font:inherit;
-                        cursor:pointer;
-                    "
-                >
+                <button class="console-button neutral" type="submit">
                     退出
                 </button>
             </form>
         </div>
-    </div>
+    </header>
 
-    <div style="
-        background:{% if report.risk_level == '高' %}#fef2f2{% elif report.risk_level == '中' %}#fff7ed{% else %}#f0fdf4{% endif %};
-        border-left:6px solid {% if report.risk_level == '高' %}#dc2626{% elif report.risk_level == '中' %}#f97316{% else %}#16a34a{% endif %};
-        border-radius:18px;
-        padding:22px;
-        margin-bottom:18px;
-    ">
-        <h2>① 当前安全判断</h2>
+    <section class="risk-panel {{ risk_tone }}">
+        <div class="risk-main">
+            <p class="risk-label">当前安全态势</p>
 
-        <h2 style="margin-top:10px;">
-            {% if report.risk_level == '高' %}
-                🚨 风险等级：高
-            {% elif report.risk_level == '中' %}
-                ⚠️ 风险等级：中
-            {% else %}
-                ✅ 风险等级：低
-            {% endif %}
-        </h2>
+            <div class="risk-heading">
+                <h2>
+                    {% if report.risk_level == "高" %}
+                        需要优先处理
+                    {% elif report.risk_level == "中" %}
+                        建议持续观察
+                    {% else %}
+                        当前运行平稳
+                    {% endif %}
+                </h2>
+                <span class="risk-level">{{ report.risk_level }}风险</span>
+            </div>
 
-        <p style="color:#475569;line-height:1.7;">{{ report.risk_text }}</p>
+            <p class="risk-copy">{{ report.risk_text }}</p>
 
-        <!-- V15.5-S3-D risk noise hint -->
-        <p style="color:#475569;line-height:1.7;">
-            高风险IP：
-            <b style="color:#dc2626;">{{ report.high_risk_ip_count }}</b>
-            ｜观察IP：
-            <b style="color:#f97316;">{{ report.observe_ip_count }}</b>
-            ｜真实异常：
-            <b style="color:#dc2626;">{{ report.suspicious_24h }}</b>
-        </p>
-
-        <p style="color:#475569;line-height:1.7;">
-            Nginx同步：
-            {% if report.nginx.is_synced %}
-                <b style="color:#16a34a;">已同步</b>
-            {% else %}
-                <b style="color:#dc2626;">待同步</b>
-            {% endif %}
-            ｜档案库只读：
-            {% if report.archive_read_only == "1" %}
-                <b style="color:#dc2626;">已开启</b>
-            {% else %}
-                <b style="color:#16a34a;">关闭</b>
-            {% endif %}
-            ｜搜索额度：
-            {% if report.quota_enabled == "1" %}
-                <b style="color:#16a34a;">开启，每日 {{ report.daily_search_limit }} 次</b>
-            {% else %}
-                <b style="color:#f97316;">关闭</b>
-            {% endif %}
-        </p>
-    </div>
-
-    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>② 24小时安全概况</h2>
-
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px;">
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>总访问</div>
-                <h2>{{ report.access_24h }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>真实异常</div>
-                <h2 style="color:#dc2626;">{{ report.suspicious_24h }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>搜索访问</div>
-                <h2>{{ report.search_24h }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>提交访问</div>
-                <h2>{{ report.submit_24h }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>生效封禁</div>
-                <h2 style="color:#dc2626;">{{ report.active_blocks }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>Nginx deny</div>
-                <h2>{{ report.nginx.nginx_deny_count }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>白名单</div>
-                <h2>{{ report.whitelist_count }}</h2>
-            </div>
-            <div style="background:white;border-radius:14px;padding:18px;text-align:center;">
-                <div>操作审计</div>
-                <h2>{{ report.audit_total }}</h2>
+            <div class="signal-grid">
+                <div class="signal-item critical">
+                    <span>高风险 IP</span>
+                    <strong>{{ report.high_risk_ip_count }}</strong>
+                </div>
+                <div class="signal-item observe">
+                    <span>观察 IP</span>
+                    <strong>{{ report.observe_ip_count }}</strong>
+                </div>
+                <div class="signal-item critical">
+                    <span>24 小时真实异常</span>
+                    <strong>{{ report.suspicious_24h }}</strong>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;">
-        <a href="/security/logs" style="background:white;border-left:6px solid #2563eb;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>③ 安全日志</h2>
-            <p style="color:#64748b;">查看访问、异常 IP、User-Agent、路径扫描情况。</p>
-            <b style="color:#2563eb;">进入安全日志 →</b>
-        </a>
+        <div class="risk-configuration">
+            <div class="configuration-item">
+                <span>Nginx 同步</span>
+                {% if report.nginx.is_synced %}
+                    <strong class="state-good">已同步</strong>
+                {% else %}
+                    <strong class="state-danger">待同步</strong>
+                {% endif %}
+            </div>
 
-        <a href="/security/blocks" style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>④ IP封禁池</h2>
-            <p style="color:#64748b;">处理高风险候选、手动封禁、解除封禁。</p>
-            <b style="color:#dc2626;">进入封禁管理 →</b>
-        </a>
+            <div class="configuration-item">
+                <span>档案库只读</span>
+                {% if report.archive_read_only == "1" %}
+                    <strong class="state-danger">已开启</strong>
+                {% else %}
+                    <strong class="state-good">关闭</strong>
+                {% endif %}
+            </div>
 
-        <a href="/security/nginx" style="background:#f8fafc;border-left:6px solid #64748b;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>⑤ Nginx同步</h2>
-            <p style="color:#64748b;">把数据库封禁名单同步到 Nginx 前置拦截。</p>
-            {% if report.nginx.is_synced %}
-                <b style="color:#16a34a;">已同步 →</b>
-            {% else %}
-                <b style="color:#dc2626;">待同步，立即处理 →</b>
-            {% endif %}
-        </a>
+            <div class="configuration-item">
+                <span>搜索额度</span>
+                {% if report.quota_enabled == "1" %}
+                    <strong class="state-good">
+                        每日 {{ report.daily_search_limit }} 次
+                    </strong>
+                {% else %}
+                    <strong class="state-warning">已关闭</strong>
+                {% endif %}
+            </div>
+        </div>
+    </section>
 
-        <a href="/security/guard" style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>⑥ 安全闸门</h2>
-            <p style="color:#64748b;">控制只读模式、搜索额度、白名单。</p>
-            <b style="color:#16a34a;">进入安全闸门 →</b>
-        </a>
+    <section class="console-section">
+        <div class="section-head">
+            <div>
+                <h2>24 小时安全概况</h2>
+                <p>核心运行信号直接展示，辅助指标按需查看。</p>
+            </div>
+            <span class="section-kicker">过去 24 小时</span>
+        </div>
 
-        <a href="/security/cleanup" style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>⑦ 日志清理</h2>
-            <p style="color:#64748b;">清理本机测试日志、过期额度、旧拦截记录。</p>
-            <b style="color:#f97316;">进入清理工具 →</b>
-        </a>
+        <div class="primary-metrics">
+            <article class="metric-card">
+                <span>总访问</span>
+                <strong>{{ report.access_24h }}</strong>
+            </article>
+            <article class="metric-card critical">
+                <span>真实异常</span>
+                <strong>{{ report.suspicious_24h }}</strong>
+            </article>
+            <article class="metric-card">
+                <span>提交访问</span>
+                <strong>{{ report.submit_24h }}</strong>
+            </article>
+            <article class="metric-card critical">
+                <span>生效封禁</span>
+                <strong>{{ report.active_blocks }}</strong>
+            </article>
+        </div>
 
-        <a href="{{ url_for('v158_security_accounts') }}" style="background:#f5f3ff;border-left:6px solid #7c3aed;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>⑧ 账号管理</h2>
-            <p style="color:#64748b;">查看系统账号、角色、启用状态、登录锁定和账号审计。</p>
-            <b style="color:#7c3aed;">进入账号管理 →</b>
-        </a>
+        <details class="secondary-metrics">
+            <summary>查看其余运行指标</summary>
+            <div class="secondary-grid">
+                <div class="secondary-item">
+                    <span>搜索访问</span>
+                    <strong>{{ report.search_24h }}</strong>
+                </div>
+                <div class="secondary-item">
+                    <span>Nginx deny</span>
+                    <strong>{{ report.nginx.nginx_deny_count }}</strong>
+                </div>
+                <div class="secondary-item">
+                    <span>白名单</span>
+                    <strong>{{ report.whitelist_count }}</strong>
+                </div>
+                <div class="secondary-item">
+                    <span>操作审计</span>
+                    <strong>{{ report.audit_total }}</strong>
+                </div>
+            </div>
+        </details>
+    </section>
 
-        <a href="/security/audit" style="background:white;border-left:6px solid #0f172a;border-radius:18px;padding:22px;text-decoration:none;color:#0f172a;">
-            <h2>⑨ 操作审计</h2>
-            <p style="color:#64748b;">追踪登录、封禁、解除、同步、清理操作。</p>
-            <b style="color:#0f172a;">进入操作审计 →</b>
-        </a>
-    </div>
+    <section class="console-section">
+        <div class="section-head">
+            <div>
+                <h2>安全处置工作区</h2>
+                <p>按任务目的选择入口，避免在多个功能之间反复寻找。</p>
+            </div>
+        </div>
 
-    <div style="background:white;border-radius:18px;padding:22px;">
-        <h2>⑩ 最近安全操作</h2>
+        <div class="task-groups">
+            <article class="task-group">
+                <h3>监测与处置</h3>
+                <p>查看异常证据并处理明确的高风险来源。</p>
+
+                <a class="task-link" href="/security/logs">
+                    <span class="task-link-copy">
+                        <strong>安全日志</strong>
+                        <small>访问、异常 IP、路径与客户端特征</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+
+                <a class="task-link" href="/security/blocks">
+                    <span class="task-link-copy">
+                        <strong>IP 封禁池</strong>
+                        <small>候选、手动封禁与解除封禁</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+            </article>
+
+            <article class="task-group">
+                <h3>防护配置</h3>
+                <p>维护前置拦截与系统访问边界。</p>
+
+                <a class="task-link" href="/security/nginx">
+                    <span class="task-link-copy">
+                        <strong>Nginx 同步</strong>
+                        <small>同步数据库封禁名单</small>
+                    </span>
+                    {% if report.nginx.is_synced %}
+                        <span class="task-status">已同步</span>
+                    {% else %}
+                        <span class="task-status warning">待同步</span>
+                    {% endif %}
+                </a>
+
+                <a class="task-link" href="/security/guard">
+                    <span class="task-link-copy">
+                        <strong>安全闸门</strong>
+                        <small>只读模式、搜索额度与白名单</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+            </article>
+
+            <article class="task-group">
+                <h3>系统治理</h3>
+                <p>处理账号、历史数据与管理员操作追溯。</p>
+
+                <a class="task-link" href="{{ url_for('v158_security_accounts') }}">
+                    <span class="task-link-copy">
+                        <strong>账号管理</strong>
+                        <small>角色、状态、锁定与账号审计</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+
+                <a class="task-link" href="/security/cleanup">
+                    <span class="task-link-copy">
+                        <strong>日志清理</strong>
+                        <small>测试日志、过期额度与旧拦截记录</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+
+                <a class="task-link" href="/security/audit">
+                    <span class="task-link-copy">
+                        <strong>操作审计</strong>
+                        <small>登录、封禁、同步与清理记录</small>
+                    </span>
+                    <span class="task-arrow">→</span>
+                </a>
+            </article>
+        </div>
+    </section>
+
+    <section class="console-section">
+        <div class="section-head">
+            <div>
+                <h2>最近安全操作 · 最近 10 条</h2>
+                <p>
+                    当前共 {{ report.audit_total }} 条；完整记录按 30 条一页查看，
+                    IP、路径和长备注可单独展开。
+                </p>
+            </div>
+            <a class="console-button neutral" href="/security/audit">
+                分页查看全部
+            </a>
+        </div>
 
         {% if recent_audit %}
-            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
-                <tr style="background:#f3f4f6;">
-                    <th style="padding:10px;text-align:left;">时间</th>
-                    <th style="padding:10px;text-align:left;">IP</th>
-                    <th style="padding:10px;text-align:left;">动作</th>
-                    <th style="padding:10px;text-align:left;">结果</th>
-                    <th style="padding:10px;text-align:left;">备注</th>
-                </tr>
-
+            <div class="audit-list">
                 {% for row in recent_audit %}
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:10px;color:#64748b;">{{ row.created_at }}</td>
-                    <td style="padding:10px;font-weight:bold;">{{ row.admin_ip }}</td>
-                    <td style="padding:10px;">{{ row.action_label }}</td>
-                    <td style="padding:10px;">
-                        {% if row.result_status == "success" %}
-                            <span style="color:#16a34a;font-weight:bold;">成功</span>
-                        {% else %}
-                            <span style="color:#dc2626;font-weight:bold;">{{ row.result_status }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding:10px;color:#64748b;max-width:520px;word-break:break-all;">{{ row.note }}</td>
-                </tr>
+                    <details class="audit-item">
+                        <summary>
+                            <span class="audit-action">
+                                <strong>{{ row.action_label }}</strong>
+                                <span>{{ row.created_at }}</span>
+                            </span>
+
+                            <span class="audit-ip">{{ row.admin_ip }}</span>
+
+                            <span class="audit-result {% if row.result_status == 'success' %}success{% endif %}">
+                                {% if row.result_status == "success" %}
+                                    成功
+                                {% else %}
+                                    {{ row.result_status }}
+                                {% endif %}
+                            </span>
+
+                            <span class="audit-toggle"></span>
+                        </summary>
+
+                        <div class="audit-detail">
+                            <div>
+                                <span>管理员 IP</span>
+                                <strong>{{ row.admin_ip }}</strong>
+                            </div>
+                            <div>
+                                <span>操作备注</span>
+                                <p>{{ row.note or '无备注' }}</p>
+                            </div>
+                        </div>
+                    </details>
                 {% endfor %}
-            </table>
-        {% else %}
-            <div style="background:#f8fafc;border-radius:12px;padding:14px;color:#64748b;">
-                暂无操作审计记录。
             </div>
+        {% else %}
+            <div class="audit-empty">暂无操作审计记录。</div>
         {% endif %}
-    </div>
-</div>
+    </section>
+</main>
 
 {% endblock %}
