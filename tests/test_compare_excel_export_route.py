@@ -5,6 +5,7 @@ import sqlite3
 from io import BytesIO
 
 import pytest
+from flask import g
 from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
 
@@ -117,6 +118,13 @@ def call_route(body):
         method="POST",
         json=body,
     ):
+        g.v155_access_context = {
+            "workspace_id": 1,
+            "battle_ids": (1,),
+            "current_battle_id": 1,
+            "permissions": ("compare.run",),
+        }
+
         response = (
             app_module.export_compare_excel_xlsx()
         )

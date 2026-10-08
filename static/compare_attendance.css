@@ -1053,3 +1053,530 @@
     cursor: wait;
     opacity: 0.65;
 }
+
+/* Compare layout A2: page-local layout only. */
+.ca-layout { min-width:0; color:var(--text-main,#0f172a); }
+.ca-layout [hidden] { display:none !important; }
+.ca-layout .ca-page-heading { margin-bottom:14px; }
+.ca-layout .page-title { font-size:26px; line-height:1.25; }
+.ca-layout .ca-page-subtitle { margin-top:5px; font-size:13px; }
+.ca-layout .ca-analysis-card,
+.ca-layout .ca-member-card { padding:18px; margin-bottom:16px; }
+.ca-layout .ca-section-title,
+.ca-layout .ca-overview-title { margin:0 0 12px; font-size:16px; }
+.ca-layout .ca-period-row {
+    display:grid; grid-template-columns:minmax(180px,1fr) minmax(0,2fr);
+    gap:14px; align-items:end;
+}
+.ca-layout .ca-period-row .two-col {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px; margin:0;
+}
+.ca-layout .ca-period-row label { display:block; margin-bottom:6px; }
+.ca-layout .ca-period-row .input { width:100%; margin:0; }
+.ca-layout .ca-auto-hint {
+    margin:0; padding:10px 12px; border-radius:8px;
+    background:var(--bg-soft,#f8fafc);
+    color:var(--text-sub,#64748b); font-size:13px;
+}
+.ca-layout .ca-analysis-scope-panel {
+    margin:12px 0 0; padding:12px;
+    background:var(--bg-soft,#f8fafc);
+    border-color:var(--border-color,#e2e8f0); border-radius:10px;
+}
+.ca-layout .ca-analysis-scope-heading { gap:10px; margin-bottom:9px; }
+.ca-layout .ca-analysis-scope-heading h3 { margin:0 0 3px; font-size:13px; }
+.ca-layout .ca-analysis-scope-heading p { font-size:12px; line-height:1.4; }
+.ca-layout .ca-analysis-scope-badge { padding:4px 8px; font-size:11px; }
+.ca-layout .ca-analysis-scope-field { gap:5px; font-size:12px; }
+.ca-layout .ca-analysis-scope-field select { min-height:36px; padding:7px 10px; }
+.ca-layout .ca-analysis-scope-detail-note { margin:8px 0 0; padding-top:8px; }
+.ca-layout .ca-analysis-actions {
+    display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:12px 0;
+}
+.ca-layout .ca-form-hint { color:var(--text-sub,#64748b); font-size:12px; }
+.ca-layout .ca-disclosure {
+    margin:10px 0; border:1px solid var(--border-color,#e2e8f0);
+    border-radius:10px; background:var(--bg-card,#fff);
+}
+.ca-layout .ca-disclosure > summary {
+    padding:10px 12px; cursor:pointer; font-size:13px; font-weight:700;
+}
+.ca-layout .ca-disclosure > summary span {
+    margin-left:10px; color:var(--text-sub,#64748b);
+    font-size:12px; font-weight:400;
+}
+.ca-layout .ca-disclosure-body { padding:0 12px 12px; }
+.ca-layout .ca-disclosure-body > .ca-form-hint { margin:0 0 10px; }
+.ca-layout .ca-attendance-config-editor {
+    margin:0; padding:14px; border:0; border-top:1px solid var(--border-color,#e2e8f0);
+    border-radius:0 0 10px 10px; background:var(--bg-soft,#f8fafc);
+}
+.ca-layout .ca-attendance-config-heading h3 { font-size:15px; }
+.ca-layout .ca-attendance-config-heading p { font-size:12px; }
+.ca-layout .ca-dashboard { margin-bottom:16px; }
+.ca-layout .ca-dashboard-head {
+    padding:0; margin-bottom:10px; border:0; background:transparent;
+}
+.ca-layout .ca-overview-title { margin:0; }
+.ca-layout .ca-current-scope-caption { margin-bottom:5px; padding:4px 8px; }
+.ca-layout .ca-dashboard-meta { margin-top:5px; font-size:12px; }
+.ca-layout .ca-summary-grid,
+.ca-layout .ca-metric-grid { gap:10px; margin-bottom:10px; }
+.ca-layout .ca-summary-card { padding:11px 13px; }
+.ca-layout .ca-summary-value {
+    margin-top:4px; font-size:24px; color:var(--text-main,#0f172a);
+}
+.ca-layout .ca-summary-note { margin-top:3px; font-size:11px; line-height:1.35; }
+.ca-layout .ca-metric-card { padding:12px 14px; }
+.ca-layout .ca-metric-head { align-items:flex-start; gap:6px; }
+.ca-layout .ca-metric-title { font-size:14px; white-space:nowrap; }
+.ca-layout .ca-metric-standard { font-size:11px; text-align:right; }
+.ca-layout .ca-metric-rate {
+    margin-top:10px; font-size:26px; color:var(--text-main,#0f172a);
+}
+.ca-layout .ca-metric-rate-disabled { font-size:22px; color:var(--text-sub,#64748b); }
+.ca-layout .ca-metric-details { margin-top:10px; font-size:12px; }
+.ca-layout .ca-metric-details > summary { cursor:pointer; color:var(--text-sub,#64748b); }
+.ca-layout .ca-metric-stats { margin-top:8px; }
+.ca-layout .ca-method {
+    padding:10px 12px; margin:0 0 10px;
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+}
+.ca-layout .ca-method .ca-scope-strip { margin-top:10px; }
+.ca-layout .ca-smart-table-toolbar {
+    padding:0; margin:0 0 10px; border:0; background:transparent;
+}
+.ca-layout .ca-smart-table-description { font-size:12px; margin-top:4px; }
+.ca-layout .ca-member-search-row {
+    display:flex; align-items:center; gap:10px; margin-top:12px;
+}
+.ca-layout .ca-member-search-row label { flex:0 0 auto; font-size:12px; }
+.ca-layout .ca-member-search-row .input { width:min(100%,380px); margin:0; }
+.ca-layout .ca-smart-table-controls { margin-top:10px; gap:8px; }
+.ca-layout .ca-filter-grid {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px 14px; margin:10px 0;
+}
+.ca-layout .ca-filter-grid label { display:block; margin-bottom:5px; font-size:12px; }
+.ca-layout #kickText {
+    box-sizing:border-box; width:100%; min-height:110px; resize:vertical;
+    padding:10px; border:1px solid var(--border-color,#e2e8f0); border-radius:8px;
+    background:var(--bg-card,#fff); color:var(--text-main,#0f172a);
+}
+.ca-layout .ca-summary-card,
+.ca-layout .ca-metric-card,
+.ca-layout .ca-group-panel,
+.ca-layout .ca-empty-state,
+.ca-layout .ca-scope-strip {
+    background:var(--bg-card,#fff); border-color:var(--border-color,#e2e8f0);
+}
+@media(max-width:760px) {
+    .ca-layout .ca-period-row,
+    .ca-layout .ca-filter-grid { grid-template-columns:1fr; }
+    .ca-layout .ca-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .ca-layout .ca-metric-grid { grid-template-columns:1fr; }
+    .ca-layout .ca-analysis-card,
+    .ca-layout .ca-member-card { padding:14px; }
+}
+@media(max-width:520px) {
+    .ca-layout .ca-period-row .two-col { grid-template-columns:1fr; }
+    .ca-layout .ca-member-search-row { align-items:stretch; flex-direction:column; }
+}
+
+/* Compare layout A3: compact controls and balanced detail filters. */
+.ca-layout .ca-analysis-card,
+.ca-layout .ca-member-card { padding:16px; }
+.ca-layout .ca-section-title { margin:0 0 10px; font-size:15px; line-height:1.35; }
+.ca-layout #compare-analysis-form {
+    display:grid; grid-template-columns:minmax(0,1fr) auto;
+    gap:10px 12px; margin:0; padding:0;
+}
+.ca-layout .ca-period-row { grid-column:1 / -1; }
+.ca-layout .ca-period-row label { margin:0 0 4px; font-size:13px; line-height:1.4; }
+.ca-layout .input {
+    box-sizing:border-box; min-width:0; height:38px; min-height:38px;
+    padding:7px 10px; font-size:13px; line-height:1.4;
+}
+.ca-layout .btn { min-height:36px; padding:7px 12px; font-size:13px; line-height:1.4; }
+.ca-layout .ca-analysis-scope-panel { margin:0; padding:10px 12px; }
+.ca-layout .ca-analysis-scope-heading { margin:0 0 8px; }
+.ca-layout .ca-analysis-scope-heading h3,
+.ca-layout .ca-analysis-scope-badge { display:none; }
+.ca-layout .ca-analysis-scope-heading p { margin:0; font-size:12px; line-height:1.4; }
+.ca-layout .ca-analysis-scope-field { font-size:12px; line-height:1.4; }
+.ca-layout .ca-analysis-scope-field select { box-sizing:border-box; height:36px; min-height:36px; }
+.ca-layout #compare-analysis-form .ca-analysis-actions {
+    align-self:center; display:flex; flex-direction:column; align-items:flex-start;
+    gap:5px; margin:0; padding:0 0 0 2px;
+}
+.ca-layout .ca-analysis-actions .ca-form-hint { max-width:150px; font-size:11px; }
+.ca-layout .ca-rules-disclosure { grid-column:1 / -1; margin:0; }
+.ca-layout .ca-disclosure > summary { padding:9px 11px; line-height:1.4; }
+.ca-layout .ca-attendance-metric-editor { padding:12px; }
+.ca-layout .ca-attendance-metric-editor > label:not(.ca-attendance-enable) { margin-top:8px; }
+.ca-layout .ca-attendance-config-heading { margin-bottom:12px; }
+.ca-layout .ca-attendance-enable,
+.ca-layout .ca-attendance-auto-disable { font-size:13px; }
+.ca-layout .ca-detail-filter-grid {
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px; margin:12px 0;
+}
+.ca-layout .ca-detail-filter-field { min-width:0; }
+.ca-layout label.ca-detail-filter-field { display:block; margin:0; }
+.ca-layout .ca-detail-filter-field > span {
+    display:block; margin:0 0 5px; font-size:12px; font-weight:600;
+}
+.ca-layout .ca-detail-filter-field .input { width:100%; margin:0; }
+.ca-layout .ca-range-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.ca-layout .ca-member-search-row { margin-top:10px; }
+.ca-layout .ca-smart-table-controls { margin-top:10px; }
+.ca-layout .ca-execution-tools .btn { min-height:34px; }
+.ca-layout .ca-execution-tools #kickText { min-height:96px; }
+.ca-layout .compare-table-shell .ca-member-table { width:max-content; min-width:100%; }
+.ca-layout .ca-member-table th[data-column="分组"],
+.ca-layout .ca-member-table td[data-column="分组"] {
+    left:var(--ca-member-sticky-width,142px) !important;
+}
+@media(max-width:1050px) {
+    .ca-layout .ca-detail-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:760px) {
+    .ca-layout #compare-analysis-form { grid-template-columns:minmax(0,1fr); }
+    .ca-layout #compare-analysis-form .ca-analysis-actions {
+        flex-direction:row; flex-wrap:wrap; align-items:center; padding:0;
+    }
+    .ca-layout .ca-period-row,
+    .ca-layout .ca-rules-disclosure { grid-column:1; }
+}
+@media(max-width:520px) {
+    .ca-layout .ca-detail-filter-grid { grid-template-columns:1fr; }
+}
+
+/* Compare sticky A4: stable row painting and explicit sticky layers. */
+.ca-layout .compare-table-shell {
+    isolation:isolate;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+}
+.ca-layout .compare-table-shell .ca-member-table tbody tr,
+.ca-layout .compare-table-shell .ca-member-table tbody tr:hover {
+    transform:none !important;
+    transition:background-color .18s ease !important;
+}
+.ca-layout .compare-table-shell .ca-member-table thead th {
+    z-index:30 !important;
+}
+.ca-layout .compare-table-shell .ca-member-table tbody td[data-column="成员"],
+.ca-layout .compare-table-shell .ca-member-table tbody td[data-column="分组"] {
+    position:sticky !important;
+    background:var(--compare-row-bg,var(--bg-card,#ffffff)) !important;
+}
+.ca-layout .compare-table-shell .ca-member-table tbody td[data-column="成员"] {
+    left:0 !important;
+    z-index:20 !important;
+}
+.ca-layout .compare-table-shell .ca-member-table tbody td[data-column="分组"] {
+    left:var(--ca-member-sticky-width,142px) !important;
+    z-index:19 !important;
+}
+.ca-layout .compare-table-shell .ca-member-table thead th[data-column="成员"] {
+    left:0 !important;
+    z-index:40 !important;
+}
+.ca-layout .compare-table-shell .ca-member-table thead th[data-column="分组"] {
+    left:var(--ca-member-sticky-width,142px) !important;
+    z-index:39 !important;
+}
+
+
+/* COMPARE_UI_DETAIL_CONVERGENCE_A1_20261008 */
+
+/*
+ * Detail convergence:
+ * - make the analysis flow visually primary
+ * - keep rules / export / column controls secondary
+ * - preserve all existing interaction contracts
+ */
+
+.ca-layout .ca-page-heading {
+    margin-bottom: 10px;
+}
+
+.ca-layout .ca-page-heading .page-title {
+    letter-spacing: -0.02em;
+}
+
+.ca-layout .ca-analysis-card {
+    position: relative;
+    padding: 15px 16px;
+    border-color: #dbe3ee;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
+}
+
+.ca-layout .ca-analysis-card::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    bottom: 14px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: #2563eb;
+}
+
+.ca-layout .ca-section-title {
+    margin-bottom: 9px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.ca-layout #compare-analysis-form {
+    column-gap: 16px;
+}
+
+.ca-layout .ca-analysis-scope-panel {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.ca-layout #compare-analysis-form .ca-analysis-actions {
+    min-width: 126px;
+    align-items: stretch;
+}
+
+.ca-layout .ca-primary-analysis-action {
+    min-width: 126px;
+    min-height: 40px;
+    padding-left: 18px;
+    padding-right: 18px;
+    font-weight: 800;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.16);
+}
+
+.ca-layout .ca-analysis-actions .ca-form-hint {
+    max-width: none;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.ca-layout .ca-rules-disclosure {
+    border-style: dashed;
+    background: #fafbfc;
+}
+
+.ca-layout .ca-rules-disclosure > summary {
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ca-layout .ca-rules-disclosure > summary span {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+
+/* Results: less card noise, stronger hierarchy. */
+
+.ca-layout .ca-overview-title {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.ca-layout .ca-dashboard-head {
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: none;
+}
+
+.ca-layout .ca-summary-grid {
+    gap: 9px;
+    margin-bottom: 10px;
+}
+
+.ca-layout .ca-summary-card {
+    min-height: 76px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.ca-layout .ca-summary-label {
+    font-size: 12px;
+}
+
+.ca-layout .ca-summary-value {
+    margin-top: 3px;
+    font-size: 23px;
+    line-height: 1.15;
+}
+
+.ca-layout .ca-summary-note {
+    margin-top: 3px;
+    color: #94a3b8;
+}
+
+.ca-layout .ca-metric-grid {
+    gap: 9px;
+    margin-bottom: 10px;
+}
+
+.ca-layout .ca-metric-card {
+    padding: 12px 13px;
+    border-radius: 11px;
+    box-shadow: none;
+}
+
+.ca-layout .ca-metric-rate {
+    margin-top: 7px;
+}
+
+.ca-layout .ca-metric-details {
+    margin-top: 7px;
+}
+
+.ca-layout .ca-scope-strip {
+    margin-bottom: 10px;
+    border-radius: 10px;
+}
+
+.ca-layout .ca-scope-item {
+    padding: 9px 11px;
+}
+
+
+/* Group detail is intentionally secondary. */
+
+.ca-layout .ca-group-panel {
+    margin-top: 10px;
+    border-radius: 11px;
+    box-shadow: none;
+}
+
+.ca-layout .ca-group-panel-head {
+    padding: 12px 14px;
+}
+
+.ca-layout .ca-group-panel-title {
+    font-size: 14px;
+}
+
+.ca-layout .ca-group-panel-note {
+    margin-top: 2px;
+}
+
+
+/*
+ * Member detail:
+ * search / view / status stay primary;
+ * column / export / reset controls move visually to the right.
+ */
+
+.ca-layout .ca-member-card {
+    padding: 15px 16px;
+}
+
+.ca-layout .ca-smart-table-toolbar {
+    margin: 0 0 9px;
+}
+
+.ca-layout .ca-smart-table-heading {
+    align-items: center;
+}
+
+.ca-layout .ca-smart-table-title {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.ca-layout .ca-smart-table-description {
+    max-width: 680px;
+    color: #94a3b8;
+    line-height: 1.45;
+}
+
+.ca-layout .ca-member-search-row {
+    margin-top: 9px;
+}
+
+.ca-layout .ca-smart-table-controls {
+    gap: 7px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ca-layout .ca-control-field {
+    min-height: 34px;
+}
+
+.ca-layout .ca-status-filters {
+    gap: 5px;
+}
+
+.ca-layout .ca-filter-button {
+    min-height: 32px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ca-layout .ca-column-settings {
+    margin-left: auto;
+}
+
+.ca-layout .ca-column-settings > summary,
+.ca-layout .ca-export-settings > summary,
+.ca-layout [data-ca-reset-table] {
+    min-height: 32px;
+    padding: 6px 10px;
+    color: #64748b;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    box-shadow: none;
+}
+
+.ca-layout .ca-column-settings > summary:hover,
+.ca-layout .ca-export-settings > summary:hover,
+.ca-layout [data-ca-reset-table]:hover {
+    background: #f1f5f9;
+}
+
+.ca-layout .compare-table-shell {
+    margin-top: 7px;
+    border-radius: 11px;
+    box-shadow: none;
+}
+
+
+/* Responsive: secondary tools should not force overflow. */
+
+@media (max-width: 900px) {
+    .ca-layout .ca-column-settings {
+        margin-left: 0;
+    }
+
+    .ca-layout .ca-smart-table-controls {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 760px) {
+    .ca-layout #compare-analysis-form .ca-analysis-actions {
+        min-width: 0;
+        align-items: center;
+    }
+
+    .ca-layout .ca-primary-analysis-action {
+        min-width: 118px;
+    }
+
+    .ca-layout .ca-analysis-actions .ca-form-hint {
+        text-align: left;
+    }
+}

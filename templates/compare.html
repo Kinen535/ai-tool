@@ -2,7 +2,7 @@
 {% block content %}
 <link
     rel="stylesheet"
-    href="{{ url_for('static', filename='compare_attendance.css') }}"
+    href="{{ url_for('static', filename='compare_attendance.css') }}?v=compare-layout-a4"
 >
 
 <style>
@@ -83,463 +83,25 @@
 {% set ca_assist = ca_overview.get('助攻', {}) %}
 {% set ca_donate = ca_overview.get('捐献', {}) %}
 
-<div class="ca-page-heading">
-    <div>
-        <div class="ca-eyebrow">
-            A15.4.29 · 对比分析
-        </div>
+<div class="ca-layout">
+<div class="ca-page-heading"><div>
+<h1 class="page-title">数据分析</h1>
+<p class="ca-page-subtitle">选择快照和统计范围，查看考勤结果与成员增量。</p>
+</div></div>
 
-        <h1 class="page-title">
-            同盟考勤驾驶舱
-        </h1>
-
-        <p class="ca-page-subtitle">
-            基于所选起止快照计算战功、助攻和捐献增量。
-            同盟及分组概览始终使用完整结束快照，
-            下方成员明细可继续按现有条件筛选。
-        </p>
-    </div>
-</div>
-
-{% if ca and ca_overview %}
-<section
-    class="ca-dashboard"
-    data-ca-dashboard
->
-    <div class="ca-dashboard-head">
-        <div>
-            <h2 class="ca-dashboard-title">
-                <div class="ca-current-scope-caption" data-ca-current-scope>
-                    <span>当前统计范围</span>
-                    <strong>{{
-                        analysis_scope.scope_label
-                        | default("全同盟", true)
-                    }}</strong>
-                </div>
-
-                {% if
-                    analysis_scope_type
-                    | default("alliance", true)
-                    == "member"
-                %}
-                <section class="ca-member-scope-card">
-                    <strong>
-                        个人分析卡：{{
-                            analysis_scope_value
-                            | default("未选择成员", true)
-                        }}
-                    </strong>
-                    <p>
-                        当前达标率按1名成员计算；
-                        100%表示该成员达标，
-                        0%表示该成员未达标，
-                        不代表同盟整体比例。
-                    </p>
-                </section>
-                {% endif %}
-
-                同盟考勤总览
-            </h2>
-
-            <div class="ca-dashboard-meta">
-                <span>
-                    周期：
-                    {{ ca_period.get('开始', '-') }}
-                    至
-                    {{ ca_period.get('结束', '-') }}
-                </span>
-
-                <span>
-                    {{ ca.get('配置状态', '') }}
-                </span>
-            </div>
-        </div>
-
-        <div class="ca-dashboard-actions">
-            <button
-                type="button"
-                class="ca-dashboard-button"
-                data-ca-toggle-groups
-                aria-expanded="true"
-            >
-                收起分组概览
-            </button>
-        </div>
-    </div>
-
-    <div class="ca-summary-grid">
-        <article class="ca-summary-card">
-            <div class="ca-summary-label">
-                同盟总人数
-            </div>
-
-            <div class="ca-summary-value">
-                {{
-                    ca_overview.get(
-                        '总人数',
-                        ca_scope.get('结束快照人数', 0)
-                    )
-                }}
-            </div>
-
-            <div class="ca-summary-note">
-                以结束快照成员范围为准
-            </div>
-        </article>
-
-        <article class="ca-summary-card">
-            <div class="ca-summary-label">
-                有效考核人数
-            </div>
-
-            <div class="ca-summary-value">
-                {{ ca_overview.get('考核人数', 0) }}
-            </div>
-
-            <div class="ca-summary-note">
-                无基线成员不进入合格率分母
-            </div>
-        </article>
-
-        <article class="ca-summary-card">
-            <div class="ca-summary-label">
-                豁免人数
-            </div>
-
-            <div class="ca-summary-value">
-                {{
-                    ca_overview.get(
-                        '豁免人数',
-                        ca.get('豁免成员数', 0)
-                    )
-                }}
-            </div>
-
-            <div class="ca-summary-note">
-                当前战场独立豁免规则
-            </div>
-        </article>
-
-        <article class="ca-summary-card">
-            <div class="ca-summary-label">
-                综合考勤分
-            </div>
-
-            <div class="ca-summary-value">
-                {{ ca_overview.get('综合考勤分', 0) }}
-            </div>
-
-            <div class="ca-summary-note">
-                {# A15.4.29-E4 disabled attendance display #}
-                {% if ca_enabled.get('battle', True) %}
-                战功{{ (ca_weights.get('battle', 0) * 100)|round(1) }}%
-                {% endif %}
-
-                {% if ca_enabled.get('assist', True) %}
-                    {% if ca_enabled.get('battle', True) %} · {% endif %}
-                助攻{{ (ca_weights.get('assist', 0) * 100)|round(1) }}%
-                {% endif %}
-
-                {% if ca_enabled.get('donate', True) %}
-                    {% if ca_enabled.get('battle', True) or ca_enabled.get('assist', True) %} · {% endif %}
-                捐献{{ (ca_weights.get('donate', 0) * 100)|round(1) }}%
-                {% endif %}
-            </div>
-        </article>
-    </div>
-
-    <div class="ca-metric-grid">
-        {% for metric_name, metric_key, metric in [
-            ('战功', 'battle', ca_battle),
-            ('助攻', 'assist', ca_assist),
-            ('捐献', 'donate', ca_donate)
-        ] %}
-        <article
-            class="ca-metric-card"
-            data-ca-metric="{{ metric_key }}"
-        >
-            <div class="ca-metric-head">
-                <h3 class="ca-metric-title">
-                    {{ metric_name }}考勤
-                </h3>
-
-                <div class="ca-metric-standard">
-                    标准 ≥
-                    {{ ca_thresholds.get(metric_key, 0) }}
-                    {% if ca_enabled.get(metric_key, True) %}
-                    · 有效权重
-                    {{ (ca_weights.get(metric_key, 0) * 100)|round(1) }}%
-                    {% else %}
-                    · 本轮未纳入
-                    {% endif %}
-                </div>
-            </div>
-
-            {% if ca_enabled.get(metric_key, True) %}
-            <div class="ca-metric-rate">
-                {{ metric.get('合格率', 0) }}%
-            </div>
-
-            <div class="ca-metric-rate-label">
-                有效考核合格率
-            </div>
-            {% else %}
-            <div class="ca-metric-rate ca-metric-rate-disabled">
-                未纳入
-            </div>
-
-            <div class="ca-metric-rate-label">
-                不参与综合考勤
-            </div>
-            {% endif %}
-
-            <div class="ca-metric-stats">
-                <div class="ca-metric-stat">
-                    <span>合格人数</span>
-                    <strong>
-                        {{ metric.get('合格人数', 0) }}
-                    </strong>
-                </div>
-
-                <div class="ca-metric-stat">
-                    <span>参与人数</span>
-                    <strong>
-                        {{ metric.get('参与人数', 0) }}
-                    </strong>
-                </div>
-
-                <div class="ca-metric-stat">
-                    <span>缺勤人数</span>
-                    <strong>
-                        {{ metric.get('缺勤人数', 0) }}
-                    </strong>
-                </div>
-
-                <div class="ca-metric-stat">
-                    <span>未达标人数</span>
-                    <strong>
-                        {{ metric.get('未达标人数', 0) }}
-                    </strong>
-                </div>
-
-                <div class="ca-metric-stat">
-                    <span>数据异常</span>
-                    <strong>
-                        {{ metric.get('数据异常人数', 0) }}
-                    </strong>
-                </div>
-
-                <div class="ca-metric-stat">
-                    <span>总增长</span>
-                    <strong>
-                        {{ metric.get('总增长', 0) }}
-                    </strong>
-                </div>
-            </div>
-        </article>
-        {% endfor %}
-    </div>
-
-    <div class="ca-scope-strip">
-        <div class="ca-scope-item">
-            <span>起始人数</span>
-            <strong>
-                {{ ca_scope.get('起始快照人数', 0) }}
-            </strong>
-        </div>
-
-        <div class="ca-scope-item">
-            <span>结束人数</span>
-            <strong>
-                {{ ca_scope.get('结束快照人数', 0) }}
-            </strong>
-        </div>
-
-        <div class="ca-scope-item">
-            <span>匹配成员</span>
-            <strong>
-                {{ ca_scope.get('匹配成员数', 0) }}
-            </strong>
-        </div>
-
-        <div class="ca-scope-item">
-            <span>新增成员</span>
-            <strong>
-                {{ ca_scope.get('新增成员数', 0) }}
-            </strong>
-        </div>
-
-        <div class="ca-scope-item">
-            <span>离开成员</span>
-            <strong>
-                {{ ca_scope.get('离开成员数', 0) }}
-            </strong>
-        </div>
-
-        <div class="ca-scope-item">
-            <span>无基线成员</span>
-            <strong>
-                {{ ca_overview.get('无基线人数', 0) }}
-            </strong>
-        </div>
-    </div>
-
-    <section
-        class="ca-group-panel"
-        data-ca-groups
-    >
-        <div class="ca-group-panel-head">
-            <div>
-                <h3 class="ca-group-panel-title">
-                    分组考勤概览
-                </h3>
-
-                <div class="ca-group-panel-note">
-                    共 {{ ca_groups|length }} 个分组，
-                    总人数由完整结束快照统计。
-                </div>
-            </div>
-        </div>
-
-        <div class="ca-group-table-wrap">
-            <table class="ca-group-table">
-                <thead>
-                    <tr>
-                        <th>排名</th>
-                        <th>分组</th>
-                        <th>总人数</th>
-                        <th>考核人数</th>
-                        <th>豁免</th>
-                        <th>综合分</th>
-                        <th>战功合格率</th>
-                        <th>助攻合格率</th>
-                        <th>捐献合格率</th>
-                        <th>无基线</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for group in ca_groups %}
-                    <tr data-ca-group-row>
-                        <td>
-                            {{ group.get('综合排名', '-') }}
-                        </td>
-
-                        <td>
-                            {{ group.get('分组', '未分组') }}
-                        </td>
-
-                        <td>
-                            {{ group.get('总人数', 0) }}
-                        </td>
-
-                        <td>
-                            {{ group.get('考核人数', 0) }}
-                        </td>
-
-                        <td>
-                            {{ group.get('豁免人数', 0) }}
-                        </td>
-
-                        <td>
-                            <strong>
-                                {{ group.get('综合考勤分', 0) }}
-                            </strong>
-                        </td>
-
-                        {% for metric_key, rate in [
-                            ('battle', group.get('战功合格率', 0)),
-                            ('assist', group.get('助攻合格率', 0)),
-                            ('donate', group.get('捐献合格率', 0))
-                        ] %}
-                        <td>
-                            {% if ca_enabled.get(metric_key, True) %}
-                            <span class="
-                                {% if rate >= 80 %}
-                                    ca-rate-strong
-                                {% elif rate >= 50 %}
-                                    ca-rate-warning
-                                {% else %}
-                                    ca-rate-danger
-                                {% endif %}
-                            ">
-                                {{ rate }}%
-                            </span>
-                            {% else %}
-                            <span
-                                class="ca-rate-disabled"
-                                title="本轮未纳入综合考勤"
-                            >
-                                —
-                            </span>
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-
-                        <td>
-                            {{ group.get('无基线人数', 0) }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <details class="ca-method">
-        <summary>
-            查看统计口径
-        </summary>
-
-        <div class="ca-method-body">
-            <div>
-                {{ ca_scope.get('考勤分母规则', '') }}
-            </div>
-
-            <div>
-                豁免规则：{{ ca.get('豁免规则', '') }}
-            </div>
-
-            <div>
-                默认排序：
-                {{
-                    ca.get('默认排序', {}).get(
-                        '模式',
-                        '异常优先'
-                    )
-                }}
-            </div>
-        </div>
-    </details>
-</section>
-{% else %}
-<section
-    class="ca-dashboard"
-    data-ca-dashboard
->
-    <div class="ca-empty-state">
-        <h2>
-            当前缓存尚无考勤驾驶舱数据
-        </h2>
-
-        <p>
-            请在下方重新执行一次自动或手动对比分析。
-            新生成的结果会显示完整同盟概览和分组考勤。
-        </p>
-    </div>
-</section>
-{% endif %}
-
-<div class="card">
-    <div class="card-title">对比设置</div>
-    <form method="post">
-        <label>模式</label>
-        <select class="input" name="compare_mode">
-            <option value="auto" {% if compare_mode == 'auto' %}selected{% endif %}>A 自动对比最近两次上传</option>
-            <option value="manual" {% if compare_mode == 'manual' %}selected{% endif %}>B 手动选择两个时间点</option>
+<section class="card ca-analysis-card" aria-labelledby="compare-analysis-title">
+<h2 id="compare-analysis-title" class="ca-section-title">① 分析条件</h2>
+<form id="compare-analysis-form" method="post">
+<div class="ca-period-row">
+<div class="ca-mode-field">
+        <label for="compare-mode">对比方式</label>
+        <select class="input" id="compare-mode" name="compare_mode">
+            <option value="auto" {% if compare_mode == 'auto' %}selected{% endif %}>自动：最近两次上传</option>
+            <option value="manual" {% if compare_mode == 'manual' %}selected{% endif %}>手动：选择起止快照</option>
         </select>
 
-        <div class="two-col top-align">
+</div>
+        <div class="two-col top-align" data-ca-manual-fields {% if compare_mode != "manual" %}hidden{% endif %}>
             <div>
                 <label>起始时间点（手动模式）</label>
                 <select class="input" name="snapshot_old">
@@ -561,9 +123,8 @@
             </div>
         </div>
 
-<!-- ===== 第一行：基础筛选 ===== -->
-<div class="two-col top-align">
-
+<p class="ca-auto-hint" data-ca-auto-hint {% if compare_mode == "manual" %}hidden{% endif %}>自动使用当前战场最近两次上传快照。</p>
+</div>
             <section
                 class="ca-analysis-scope-panel"
                 data-ca-analysis-scope
@@ -573,8 +134,7 @@
                         <h3>分析范围</h3>
 
                         <p>
-                            先决定上方驾驶舱统计谁，
-                            再使用下方条件筛选成员明细。
+                            概况按此范围统计；成员明细另行筛选。
                         </p>
                     </div>
 
@@ -762,85 +322,10 @@
                     }
                     | tojson
                 }}</script>
-
-                <p class="ca-analysis-scope-detail-note">
-                    明细表二次筛选：
-                    仅过滤下方成员明细，
-                    不改变上方驾驶舱统计。
-                </p>
             </section>
-
-    <div>
-        <label>团关键词筛选</label>
-        <input
-            class="input"
-            type="text"
-            name="team_keyword"
-            value="{{ team_keyword or '' }}"
-            placeholder="输入完整或部分团名"
-        >
-
-        <!-- V15.7-H2 member search input -->
-        <label style="margin-top:14px;">成员姓名搜索</label>
-        <input
-            class="input"
-            type="text"
-            name="member_keyword"
-            value="{{ member_keyword or '' }}"
-            placeholder="输入完整或部分成员名"
-        >
-        <div style="margin-top:6px;font-size:12px;color:#64748b;">
-            支持模糊搜索，可与战功、助攻、捐献、势力范围组合使用。
-        </div>
-    </div>
-
-    <div>
-        <label>势力增长范围</label>
-        <div style="display:flex; gap:6px;">
-            <input class="input" type="number" name="power_growth_min" placeholder="最小值">
-            <input class="input" type="number" name="power_growth_max" placeholder="最大值">
-        </div>
-    </div>
-
-</div>
-
-
-<!-- ===== 第二行：战斗行为 ===== -->
-<div class="two-col top-align">
-
-    <div>
-        <label>战功增长范围</label>
-        <div style="display:flex; gap:6px;">
-            <input class="input" type="number" name="war_min" placeholder="最小值">
-            <input class="input" type="number" name="war_max" placeholder="最大值">
-        </div>
-    </div>
-
-    <div>
-        <label>助攻增长范围</label>
-        <div style="display:flex; gap:6px;">
-            <input class="input" type="number" name="assist_min" placeholder="最小值">
-            <input class="input" type="number" name="assist_max" placeholder="最大值">
-        </div>
-    </div>
-
-</div>
-
-
-<!-- ===== 第三行：贡献行为 ===== -->
-<div class="two-col top-align">
-
-    <div>
-        <label>捐献增长范围</label>
-        <div style="display:flex; gap:6px;">
-            <input class="input" type="number" name="donate_min" placeholder="最小值">
-            <input class="input" type="number" name="donate_max" placeholder="最大值">
-        </div>
-    </div>
-
-</div>
-
-
+<div class="ca-analysis-actions"><button class="btn primary ca-primary-analysis-action" type="submit">开始分析</button><span class="ca-form-hint">按当前条件更新结果</span></div>
+<details class="ca-disclosure ca-rules-disclosure" id="compare-attendance-rules">
+<summary>高级设置 <span>考勤规则与权重</span></summary>
 <!-- ===== 自定义考勤标准 ===== -->
 <section
     class="ca-attendance-config-editor"
@@ -1035,79 +520,444 @@
     </div>
 </section>
 
-<!-- ===== 按钮 ===== -->
-<button class="btn primary" type="submit">开始分析</button>
-    </form>
-</div>
+</details>
+</form>
+</section>
 
-<div class="card">
-    <div class="card-title">自动管理建议</div>
+{% if ca and ca_overview %}
+<section
+    class="ca-dashboard"
+    data-ca-dashboard
+>
+    <div class="ca-dashboard-head">
+        <div>
+            <div class="ca-dashboard-title">
+                <div class="ca-current-scope-caption" data-ca-current-scope>
+                    <span>当前统计范围</span>
+                    <strong>{{
+                        analysis_scope.scope_label
+                        | default("全同盟", true)
+                    }}</strong>
+                </div>
 
-    <div class="card" style="margin-top:20px;">
-        <div class="card-title">执行名单（可选择复制）</div>
+                {% if
+                    analysis_scope_type
+                    | default("alliance", true)
+                    == "member"
+                %}
+                <section class="ca-member-scope-card">
+                    <strong>
+                        个人分析卡：{{
+                            analysis_scope_value
+                            | default("未选择成员", true)
+                        }}
+                    </strong>
+                    <p>
+                        当前达标率按1名成员计算；
+                        100%表示该成员达标，
+                        0%表示该成员未达标，
+                        不代表同盟整体比例。
+                    </p>
+                </section>
+                {% endif %}
 
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
-            <div id="copyOptions" style="display:flex; gap:14px; flex-wrap:wrap;">
-                <label><input type="checkbox" value="清理名单" checked> 清理名单</label>
-                <label><input type="checkbox" value="警告名单" checked> 警告名单</label>
-                <label><input type="checkbox" value="核心成员"> 核心成员</label>
-                <label><input type="checkbox" value="未执行名单"> 未执行名单</label>
+                <h2 class="ca-overview-title">② 核心分析结果</h2>
             </div>
 
-            <div id="selectedCount" class="muted" style="margin-left:auto;">已选：0 人</div>
+            <div class="ca-dashboard-meta">
+                <span>
+                    周期：
+                    {{ ca_period.get('开始', '-') }}
+                    至
+                    {{ ca_period.get('结束', '-') }}
+                </span>
+
+                <span>
+                    {{ ca.get('配置状态', '') }}
+                </span>
+            </div>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
-            <input id="searchInput" class="input" type="text" placeholder="搜索成员名字（仅过滤下方表格）" style="max-width:320px;">
-            <button class="btn" type="button" onclick="selectAllAbnormal()">全选异常</button>
-            <button class="btn" type="button" onclick="selectAllClean()">全选清理</button>
-            <label style="margin-left:10px; display:flex; align-items:center; gap:6px;">
-                <input type="checkbox" id="autoModeToggle" checked>
-                自动生成名单
-            </label>
-        </div>
-
-        <textarea id="kickText" style="width:100%;height:180px;"></textarea>
-
-        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn primary" type="button" onclick="generateKickText()">生成名单</button>
-            <button class="btn" type="button" onclick="copyKickText(event)">一键复制</button>
-            <button class="btn" type="button" onclick="clearSelectedRows()">清空点选</button>
+        <div class="ca-dashboard-actions">
+            <button
+                type="button"
+                class="ca-dashboard-button"
+                data-ca-toggle-groups
+                aria-expanded="false"
+            >
+                展开分组概览
+            </button>
         </div>
     </div>
 
-    <!-- ⭐ 原名单展示（已迁移到总览页）
+    <div class="ca-summary-grid">
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                统计范围人数
+            </div>
 
-<div class="card-grid">
-    {% for title, key in [("清理名单","清理名单"),("警告名单","警告名单"),("核心成员","核心成员"),("未执行名单","未执行名单")] %}
-    <div class="mini-card">
-        <div class="mini-title">{{ title }}</div>
+            <div class="ca-summary-value">
+                {{
+                    ca_overview.get(
+                        '总人数',
+                        ca_scope.get('结束快照人数', 0)
+                    )
+                }}
+            </div>
 
-        <button class="toggle-btn" onclick="toggleList(this)" type="button">
-            展开 ({{ advice[key]|length }}人)
-        </button>
+            <div class="ca-summary-note">
+                以结束快照成员范围为准
+            </div>
+        </article>
 
-        <ul class="limit-list">
-            {% for x in advice[key] %}
-            <li>{{ x }}</li>
-            {% endfor %}
-            {% if not advice[key] %}
-            <li class="muted">暂无</li>
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                有效考核人数
+            </div>
+
+            <div class="ca-summary-value">
+                {{ ca_overview.get('考核人数', 0) }}
+            </div>
+
+            <div class="ca-summary-note">
+                无基线成员不进入合格率分母
+            </div>
+        </article>
+
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                豁免人数
+            </div>
+
+            <div class="ca-summary-value">
+                {{
+                    ca_overview.get(
+                        '豁免人数',
+                        ca.get('豁免成员数', 0)
+                    )
+                }}
+            </div>
+
+            <div class="ca-summary-note">
+                当前战场独立豁免规则
+            </div>
+        </article>
+
+        <article class="ca-summary-card">
+            <div class="ca-summary-label">
+                综合考勤分
+            </div>
+
+            <div class="ca-summary-value">
+                {{ ca_overview.get('综合考勤分', 0) }}
+            </div>
+
+            <div class="ca-summary-note">
+                {# A15.4.29-E4 disabled attendance display #}
+                {% if ca_enabled.get('battle', True) %}
+                战功{{ (ca_weights.get('battle', 0) * 100)|round(1) }}%
+                {% endif %}
+
+                {% if ca_enabled.get('assist', True) %}
+                    {% if ca_enabled.get('battle', True) %} · {% endif %}
+                助攻{{ (ca_weights.get('assist', 0) * 100)|round(1) }}%
+                {% endif %}
+
+                {% if ca_enabled.get('donate', True) %}
+                    {% if ca_enabled.get('battle', True) or ca_enabled.get('assist', True) %} · {% endif %}
+                捐献{{ (ca_weights.get('donate', 0) * 100)|round(1) }}%
+                {% endif %}
+            </div>
+        </article>
+    </div>
+
+    <div class="ca-metric-grid">
+        {% for metric_name, metric_key, metric in [
+            ('战功', 'battle', ca_battle),
+            ('助攻', 'assist', ca_assist),
+            ('捐献', 'donate', ca_donate)
+        ] %}
+        <article
+            class="ca-metric-card"
+            data-ca-metric="{{ metric_key }}"
+        >
+            <div class="ca-metric-head">
+                <h3 class="ca-metric-title">
+                    {{ metric_name }}考勤
+                </h3>
+
+                <div class="ca-metric-standard">
+                    标准 ≥
+                    {{ ca_thresholds.get(metric_key, 0) }}
+                    {% if ca_enabled.get(metric_key, True) %}
+                    · 有效权重
+                    {{ (ca_weights.get(metric_key, 0) * 100)|round(1) }}%
+                    {% else %}
+                    · 本轮未纳入
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if ca_enabled.get(metric_key, True) %}
+            <div class="ca-metric-rate">
+                {{ metric.get('合格率', 0) }}%
+            </div>
+
+            <div class="ca-metric-rate-label">
+                有效考核合格率
+            </div>
+            {% else %}
+            <div class="ca-metric-rate ca-metric-rate-disabled">
+                未纳入
+            </div>
+
+            <div class="ca-metric-rate-label">
+                不参与综合考勤
+            </div>
             {% endif %}
-        </ul>
+
+            <details class="ca-metric-details">
+                <summary>人数与增量明细</summary>
+            <div class="ca-metric-stats">
+                <div class="ca-metric-stat">
+                    <span>合格人数</span>
+                    <strong>
+                        {{ metric.get('合格人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>参与人数</span>
+                    <strong>
+                        {{ metric.get('参与人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>缺勤人数</span>
+                    <strong>
+                        {{ metric.get('缺勤人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>未达标人数</span>
+                    <strong>
+                        {{ metric.get('未达标人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>数据异常</span>
+                    <strong>
+                        {{ metric.get('数据异常人数', 0) }}
+                    </strong>
+                </div>
+
+                <div class="ca-metric-stat">
+                    <span>总增长</span>
+                    <strong>
+                        {{ metric.get('总增长', 0) }}
+                    </strong>
+                </div>
+            </div>
+            </details>
+        </article>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
 
--->
-</div>
+    <details class="ca-method">
+        <summary>
+            成员基线与统计口径
+        </summary>
 
-<div class="card">
-    <div class="card-title">成员明细（完整版）</div>
+    <div class="ca-scope-strip">
+        <div class="ca-scope-item">
+            <span>起始人数</span>
+            <strong>
+                {{ ca_scope.get('起始快照人数', 0) }}
+            </strong>
+        </div>
 
-    <div style="color:var(--text-sub);font-size:13px;margin-bottom:12px;">
-        表头与成员列已固定，可在表格区域内上下、左右滚动。
+        <div class="ca-scope-item">
+            <span>结束人数</span>
+            <strong>
+                {{ ca_scope.get('结束快照人数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>匹配成员</span>
+            <strong>
+                {{ ca_scope.get('匹配成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>新增成员</span>
+            <strong>
+                {{ ca_scope.get('新增成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>离开成员</span>
+            <strong>
+                {{ ca_scope.get('离开成员数', 0) }}
+            </strong>
+        </div>
+
+        <div class="ca-scope-item">
+            <span>无基线成员</span>
+            <strong>
+                {{ ca_overview.get('无基线人数', 0) }}
+            </strong>
+        </div>
     </div>
+
+        <div class="ca-method-body">
+            <div>
+                {{ ca_scope.get('考勤分母规则', '') }}
+            </div>
+
+            <div>
+                豁免规则：{{ ca.get('豁免规则', '') }}
+            </div>
+
+            <div>
+                默认排序：
+                {{
+                    ca.get('默认排序', {}).get(
+                        '模式',
+                        '异常优先'
+                    )
+                }}
+            </div>
+        </div>
+    </details>
+    <section
+        class="ca-group-panel ca-is-hidden"
+        data-ca-groups
+    >
+        <div class="ca-group-panel-head">
+            <div>
+                <h3 class="ca-group-panel-title">
+                    分组考勤概览
+                </h3>
+
+                <div class="ca-group-panel-note">
+                    共 {{ ca_groups|length }} 个分组，
+                    总人数由完整结束快照统计。
+                </div>
+            </div>
+        </div>
+
+        <div class="ca-group-table-wrap">
+            <table class="ca-group-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>分组</th>
+                        <th>总人数</th>
+                        <th>考核人数</th>
+                        <th>豁免</th>
+                        <th>综合分</th>
+                        <th>战功合格率</th>
+                        <th>助攻合格率</th>
+                        <th>捐献合格率</th>
+                        <th>无基线</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for group in ca_groups %}
+                    <tr data-ca-group-row>
+                        <td>
+                            {{ group.get('综合排名', '-') }}
+                        </td>
+
+                        <td>
+                            {{ group.get('分组', '未分组') }}
+                        </td>
+
+                        <td>
+                            {{ group.get('总人数', 0) }}
+                        </td>
+
+                        <td>
+                            {{ group.get('考核人数', 0) }}
+                        </td>
+
+                        <td>
+                            {{ group.get('豁免人数', 0) }}
+                        </td>
+
+                        <td>
+                            <strong>
+                                {{ group.get('综合考勤分', 0) }}
+                            </strong>
+                        </td>
+
+                        {% for metric_key, rate in [
+                            ('battle', group.get('战功合格率', 0)),
+                            ('assist', group.get('助攻合格率', 0)),
+                            ('donate', group.get('捐献合格率', 0))
+                        ] %}
+                        <td>
+                            {% if ca_enabled.get(metric_key, True) %}
+                            <span class="
+                                {% if rate >= 80 %}
+                                    ca-rate-strong
+                                {% elif rate >= 50 %}
+                                    ca-rate-warning
+                                {% else %}
+                                    ca-rate-danger
+                                {% endif %}
+                            ">
+                                {{ rate }}%
+                            </span>
+                            {% else %}
+                            <span
+                                class="ca-rate-disabled"
+                                title="本轮未纳入综合考勤"
+                            >
+                                —
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+
+                        <td>
+                            {{ group.get('无基线人数', 0) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+
+</section>
+{% else %}
+<section
+    class="ca-dashboard"
+    data-ca-dashboard
+>
+    <div class="ca-empty-state">
+        <h2>
+            当前缓存尚无考勤驾驶舱数据
+        </h2>
+
+        <p>
+            请在上方执行一次自动或手动对比分析。
+            新生成的结果会显示完整同盟概览和分组考勤。
+        </p>
+    </div>
+</section>
+{% endif %}
+
+<section class="card ca-member-card" aria-label="成员明细">
 
     <section
     class="ca-smart-table-toolbar"
@@ -1115,13 +965,10 @@
 >
     <div class="ca-smart-table-heading">
         <div>
-            <h2 class="ca-smart-table-title">
-                成员考勤明细
-            </h2>
+            <h2 class="ca-smart-table-title">③ 成员明细</h2>
 
             <p class="ca-smart-table-description">
-                支持快捷筛选、表头排序、列显示配置和当前视图导出。
-                成员与分组列固定显示，原有点选与名单生成方式保持不变。
+                表头、成员与分组列固定；本页搜索和状态可组合筛选。
             </p>
         </div>
 
@@ -1133,6 +980,37 @@
         </div>
     </div>
 
+<div class="ca-member-search-row">
+<label for="searchInput">快速搜索</label>
+<input id="searchInput" class="input" type="search" placeholder="输入成员姓名，仅筛选本页" autocomplete="off">
+</div>
+<details class="ca-disclosure ca-member-filters">
+<summary>高级筛选 <span>分组、姓名与增长范围</span></summary>
+<div class="ca-disclosure-body">
+<p class="ca-form-hint">支持名称模糊匹配；应用到全部成员明细，不改变概况统计范围。</p>
+<div class="ca-detail-filter-grid">
+<label class="ca-detail-filter-field"><span>分组关键词</span><input form="compare-analysis-form"
+            class="input"
+            type="text"
+            name="team_keyword"
+            value="{{ team_keyword or '' }}"
+            placeholder="输入完整或部分团名"
+        ></label>
+<label class="ca-detail-filter-field"><span>成员姓名</span><input form="compare-analysis-form"
+            class="input"
+            type="text"
+            name="member_keyword"
+            value="{{ member_keyword or '' }}"
+            placeholder="输入完整或部分成员名"
+        ></label>
+<div class="ca-detail-filter-field"><span>势力增长范围</span><div class="ca-range-inputs"><input aria-label="势力增长范围最小值" form="compare-analysis-form" class="input" type="number" name="power_growth_min" placeholder="最小值"><input aria-label="势力增长范围最大值" form="compare-analysis-form" class="input" type="number" name="power_growth_max" placeholder="最大值"></div></div>
+<div class="ca-detail-filter-field"><span>战功增长范围</span><div class="ca-range-inputs"><input aria-label="战功增长范围最小值" form="compare-analysis-form" class="input" type="number" name="war_min" placeholder="最小值"><input aria-label="战功增长范围最大值" form="compare-analysis-form" class="input" type="number" name="war_max" placeholder="最大值"></div></div>
+<div class="ca-detail-filter-field"><span>助攻增长范围</span><div class="ca-range-inputs"><input aria-label="助攻增长范围最小值" form="compare-analysis-form" class="input" type="number" name="assist_min" placeholder="最小值"><input aria-label="助攻增长范围最大值" form="compare-analysis-form" class="input" type="number" name="assist_max" placeholder="最大值"></div></div>
+<div class="ca-detail-filter-field"><span>捐献增长范围</span><div class="ca-range-inputs"><input aria-label="捐献增长范围最小值" form="compare-analysis-form" class="input" type="number" name="donate_min" placeholder="最小值"><input aria-label="捐献增长范围最大值" form="compare-analysis-form" class="input" type="number" name="donate_max" placeholder="最大值"></div></div>
+</div>
+<button class="btn" type="submit" form="compare-analysis-form">应用筛选</button>
+</div>
+</details>
     <div class="ca-smart-table-controls">
         <label class="ca-control-field">
             <span>表格视图</span>
@@ -1270,6 +1148,42 @@
         </button>
     </div>
 </section>
+
+<details class="ca-disclosure ca-execution-tools" id="compare-execution-list">
+<summary>执行名单 <span id="selectedCount">已选：0 人</span></summary>
+<div class="ca-disclosure-body">
+<p class="ca-form-hint">点选表格中的异常成员，再生成或复制名单。</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+            <div id="copyOptions" style="display:flex; gap:14px; flex-wrap:wrap;">
+                <label><input type="checkbox" value="清理名单" checked> 清理名单</label>
+                <label><input type="checkbox" value="警告名单" checked> 警告名单</label>
+                <label><input type="checkbox" value="核心成员"> 核心成员</label>
+                <label><input type="checkbox" value="未执行名单"> 未执行名单</label>
+            </div>
+
+
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+
+            <button class="btn" type="button" onclick="selectAllAbnormal()">全选异常</button>
+            <button class="btn" type="button" onclick="selectAllClean()">全选清理</button>
+            <label style="margin-left:10px; display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="autoModeToggle" checked>
+                自动生成名单
+            </label>
+        </div>
+
+        <textarea id="kickText" rows="5" aria-label="生成的执行名单" placeholder="点选成员后生成名单"></textarea>
+
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn primary" type="button" onclick="generateKickText()">生成名单</button>
+            <button class="btn" type="button" onclick="copyKickText(event)">一键复制</button>
+            <button class="btn" type="button" onclick="clearSelectedRows()">清空点选</button>
+        </div>
+
+</div>
+</details>
 
 <div class="table-container compare-table-shell" data-ca-member-table-shell>
         <table class="table ca-member-table" id="compare-member-table" data-ca-member-table>
@@ -1516,6 +1430,8 @@
         
         </div>
     </div>
+</section>
+
 </div>
 
 <script>
@@ -1740,7 +1656,7 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 <script
-    src="{{ url_for('static', filename='compare_attendance.js') }}"
+    src="{{ url_for('static', filename='compare_attendance.js') }}?v=compare-layout-a4"
     defer
 ></script>
 {% endblock %}

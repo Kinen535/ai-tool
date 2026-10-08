@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    const GROUP_STORAGE_KEY = "compareAttendanceGroupsExpandedV1";
+    const GROUP_STORAGE_KEY = "compareAttendanceGroupsExpandedV2";
     const COLUMN_STORAGE_KEY = "compareAttendanceColumnsV1";
     const PRESET_STORAGE_KEY = "compareAttendancePresetV1";
     const SORT_STORAGE_KEY = "compareAttendanceSortV1";
@@ -88,7 +88,7 @@
             console.warn("无法读取考勤看板本地状态", error);
         }
 
-        return true;
+        return false;
     }
 
     function saveGroupExpandedState(expanded) {
@@ -692,9 +692,10 @@
             (row) => {
                 row.classList.toggle(
                     "ca-smart-filter-hidden",
-                    !rowMatchesFilter(
-                        row,
-                        filterValue
+                    !rowMatchesFilter(row, filterValue)
+                    || !(row.dataset.name || "").toLowerCase().includes(
+                        context.searchInput
+                            ? context.searchInput.value.trim().toLowerCase() : ""
                     )
                 );
             }
@@ -947,11 +948,18 @@
             countElement,
             emptyElement,
             filterButtons,
+            searchInput: document.getElementById("searchInput"),
             columnIndexes,
             visibleColumns: [],
             activeFilter: "all",
             sortState: null
         };
+
+        if (context.searchInput) {
+            context.searchInput.addEventListener("input", () => {
+                applyStatusFilter(context, context.activeFilter);
+            });
+        }
 
         buildColumnMenu(context);
 
@@ -1592,5 +1600,185 @@
     document.addEventListener(
         "DOMContentLoaded",
         initialiseCompareScopeSelector
+    );
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("compare-analysis-form");
+    const mode = document.getElementById("compare-mode");
+    if (!form || !mode) return;
+    const updateMode = () => {
+        const manual = mode.value === "manual";
+        form.querySelectorAll("[data-ca-manual-fields]").forEach(field => {
+            field.hidden = !manual;
+        });
+        const hint = form.querySelector("[data-ca-auto-hint]");
+        if (hint) hint.hidden = manual;
+    };
+    mode.addEventListener("change", updateMode);
+    updateMode();
+    document.addEventListener("invalid", event => {
+        if (event.target.form !== form) return;
+        let ancestor = event.target.parentElement;
+        while (ancestor) {
+            if (ancestor.tagName === "DETAILS") ancestor.open = true;
+            ancestor = ancestor.parentElement;
+        }
+    }, true);
+});
+
+// Keep the group column aligned with the actual rendered member-column width.
+document.addEventListener("DOMContentLoaded", () => {
+    const root = document.querySelector(".ca-layout");
+    if (!root) return;
+    const table = root.querySelector("[data-ca-member-table]");
+    const memberHeader = table && table.querySelector('th[data-column="成员"]');
+    if (!memberHeader) return;
+    const updateOffset = () => {
+        const width = memberHeader.getBoundingClientRect().width;
+        if (Number.isFinite(width) && width > 0) {
+            table.style.setProperty("--ca-member-sticky-width", width + "px");
+        }
+    };
+    updateOffset();
+    if (typeof ResizeObserver === "function") {
+        const observer = new ResizeObserver(updateOffset);
+        observer.observe(memberHeader);
+    }
+    window.addEventListener("resize", updateOffset);
+});
+/* COMPARE_UI_DETAIL_CONVERGENCE_A2_R2_20261008 */
+(function () {
+    "use strict";
+
+    /*
+     * Keep the primary workflow visible and secondary controls
+     * compact by default.
+     */
+
+    function collapseSecondaryDisclosures() {
+        const rules = document.getElementById(
+            "compare-attendance-rules"
+        );
+
+        if (rules) {
+            rules.open = false;
+        }
+
+        const labels = [
+            "成员基线与统计口径",
+            "高级筛选"
+        ];
+
+        document
+            .querySelectorAll("details")
+            .forEach(
+                (detailsElement) => {
+                    const summary = (
+                        detailsElement.querySelector(
+                            ":scope > summary"
+                        )
+                    );
+
+                    if (!summary) {
+                        return;
+                    }
+
+                    const text = (
+                        summary.textContent
+                        || ""
+                    )
+                        .replace(
+                            /\s+/g,
+                            " "
+                        )
+                        .trim();
+
+                    if (
+                        labels.some(
+                            (label) => (
+                                text.includes(
+                                    label
+                                )
+                            )
+                        )
+                    ) {
+                        detailsElement.open = false;
+                    }
+                }
+            );
+    }
+
+
+    /*
+     * Group overview already owns a persistent localStorage state.
+     *
+     * Migrate an old expanded state to collapsed only once.
+     * After this one-time migration, the existing implementation
+     * remains authoritative and remembers the user's later choice.
+     */
+    function migrateGroupOverviewDefaultOnce() {
+        const migrationKey = (
+            "compareUiA2GroupDefaultCollapsedV1"
+        );
+
+        try {
+            if (
+                window.localStorage.getItem(
+                    migrationKey
+                )
+                === "1"
+            ) {
+                return;
+            }
+
+            const dashboard = (
+                document.querySelector(
+                    "[data-ca-dashboard]"
+                )
+            );
+
+            const toggleButton = (
+                dashboard
+                    ? dashboard.querySelector(
+                        "[data-ca-toggle-groups]"
+                    )
+                    : null
+            );
+
+            if (
+                toggleButton
+                && toggleButton.getAttribute(
+                    "aria-expanded"
+                )
+                === "true"
+            ) {
+                /*
+                 * Use the existing click handler so the original
+                 * storage contract writes the collapsed state.
+                 */
+                toggleButton.click();
+            }
+
+            window.localStorage.setItem(
+                migrationKey,
+                "1"
+            );
+
+        } catch (error) {
+            console.warn(
+                "无法迁移分组概览默认状态",
+                error
+            );
+        }
+    }
+
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+            collapseSecondaryDisclosures();
+            migrateGroupOverviewDefaultOnce();
+        }
     );
 })();
