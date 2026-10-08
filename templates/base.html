@@ -2127,6 +2127,505 @@ html[data-theme="dark"] .v158-logout-button:hover {
             <!-- 页面内容 -->
             <div class="page-content">
 
+{# PRODUCT-INTEGRATION-P1-A7 SYSTEM MANAGEMENT WORKSPACE START #}
+
+{% set v155_system_workspace_super_admin =
+    g.v158_current_user
+    and g.v158_current_user.get("role") == "super_admin"
+%}
+
+{% set v155_system_workspace_path =
+    request.path.startswith('/rules')
+    or request.path.startswith('/security')
+    or request.path.startswith('/identity/log')
+%}
+
+{% set v155_system_workspace_allowed =
+    'rules.view' in v155_menu_permissions
+    or v155_system_workspace_super_admin
+    or 'identity.logs.view' in v155_menu_permissions
+    or 'member.view' in v155_menu_permissions
+%}
+
+{% if v155_system_workspace_path and v155_system_workspace_allowed %}
+
+<style id="pi-system-management-workspace-style">
+
+.pi-system-management-workspace {
+    margin:0 0 18px 0;
+    padding:14px 16px 12px 16px;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    background:linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #f8fafc 100%
+    );
+    box-shadow:0 5px 18px rgba(15,23,42,0.04);
+}
+
+.pi-system-management-workspace-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:11px;
+}
+
+.pi-system-management-workspace-title {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:16px;
+    font-weight:900;
+    color:#0f172a;
+}
+
+.pi-system-management-workspace-flow {
+    color:#94a3b8;
+    font-size:12px;
+    font-weight:700;
+}
+
+.pi-system-management-workspace-tabs {
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+}
+
+.pi-system-management-workspace-tab {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:34px;
+    padding:7px 12px;
+    border-radius:9px;
+    border:1px solid transparent;
+    background:#f1f5f9;
+    color:#475569;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:800;
+    transition:
+        background .15s ease,
+        border-color .15s ease,
+        color .15s ease,
+        transform .15s ease;
+}
+
+.pi-system-management-workspace-tab:hover {
+    background:#e2e8f0;
+    color:#334155;
+    transform:translateY(-1px);
+}
+
+.pi-system-management-workspace-tab.is-active {
+    background:#f8fafc;
+    color:#0f172a;
+    border-color:#94a3b8;
+    box-shadow:
+        inset 0 0 0 1px rgba(15,23,42,.04);
+}
+
+html[data-theme="dark"] .pi-system-management-workspace {
+    background:#101827;
+    border-color:#334155;
+}
+
+html[data-theme="dark"] .pi-system-management-workspace-title {
+    color:#f8fafc;
+}
+
+html[data-theme="dark"] .pi-system-management-workspace-flow {
+    color:#94a3b8;
+}
+
+html[data-theme="dark"] .pi-system-management-workspace-tab {
+    background:#1e293b;
+    color:#cbd5e1;
+}
+
+html[data-theme="dark"] .pi-system-management-workspace-tab:hover {
+    background:#334155;
+    color:#f8fafc;
+}
+
+html[data-theme="dark"] .pi-system-management-workspace-tab.is-active {
+    background:#020617;
+    color:#f8fafc;
+    border-color:#64748b;
+}
+
+@media (max-width:760px) {
+
+    .pi-system-management-workspace {
+        padding:12px;
+        border-radius:14px;
+    }
+
+    .pi-system-management-workspace-flow {
+        width:100%;
+    }
+
+    .pi-system-management-workspace-tabs {
+        display:grid;
+        grid-template-columns:
+            repeat(2,minmax(0,1fr));
+        width:100%;
+    }
+
+    .pi-system-management-workspace-tab {
+        width:100%;
+        box-sizing:border-box;
+    }
+
+}
+
+@media (max-width:520px) {
+
+    .pi-system-management-workspace-tabs {
+        grid-template-columns:1fr;
+    }
+
+}
+
+
+/* SECURITY-NAVIGATION-HIERARCHY-CONVERGENCE-V1 */
+.pi-security-workspace {
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid #e2e8f0;
+}
+
+.pi-security-workspace-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:9px;
+}
+
+.pi-security-workspace-label {
+    color:#0f172a;
+    font-size:13px;
+    font-weight:900;
+}
+
+.pi-security-workspace-note {
+    color:#94a3b8;
+    font-size:12px;
+    font-weight:700;
+}
+
+.pi-security-workspace-tabs {
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+}
+
+.pi-security-workspace-tab {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:32px;
+    padding:6px 10px;
+    border:1px solid transparent;
+    border-radius:9px;
+    background:#f8fafc;
+    color:#64748b;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:800;
+    transition:
+        background .15s ease,
+        border-color .15s ease,
+        color .15s ease,
+        transform .15s ease;
+}
+
+.pi-security-workspace-tab:hover {
+    background:#eff6ff;
+    color:#1d4ed8;
+    transform:translateY(-1px);
+}
+
+.pi-security-workspace-tab.is-active {
+    background:#eff6ff;
+    color:#1d4ed8;
+    border-color:#93c5fd;
+    box-shadow:inset 0 0 0 1px rgba(37,99,235,.04);
+}
+
+html[data-theme="dark"] .pi-security-workspace {
+    border-top-color:#334155;
+}
+
+html[data-theme="dark"] .pi-security-workspace-label {
+    color:#f8fafc;
+}
+
+html[data-theme="dark"] .pi-security-workspace-note {
+    color:#94a3b8;
+}
+
+html[data-theme="dark"] .pi-security-workspace-tab {
+    background:#1e293b;
+    color:#cbd5e1;
+}
+
+html[data-theme="dark"] .pi-security-workspace-tab:hover {
+    background:#172554;
+    color:#dbeafe;
+}
+
+html[data-theme="dark"] .pi-security-workspace-tab.is-active {
+    background:#172554;
+    color:#dbeafe;
+    border-color:#3b82f6;
+}
+
+@media (max-width:760px) {
+    .pi-security-workspace-head {
+        align-items:flex-start;
+    }
+
+    .pi-security-workspace-note {
+        width:100%;
+    }
+
+    .pi-security-workspace-tabs {
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        width:100%;
+    }
+
+    .pi-security-workspace-tab {
+        width:100%;
+        box-sizing:border-box;
+    }
+}
+
+@media (max-width:420px) {
+    .pi-security-workspace-tabs {
+        grid-template-columns:1fr;
+    }
+}
+
+</style>
+
+<div class="pi-system-management-workspace">
+
+    <div class="pi-system-management-workspace-head">
+
+        <div class="pi-system-management-workspace-title">
+            <span>⚙️</span>
+            <span>系统管理</span>
+        </div>
+
+        <div class="pi-system-management-workspace-flow">
+            当前位置 ·
+            {% if request.path.startswith('/rules') %}
+                规则管理
+
+            {% elif request.path == '/security' %}
+                安全中心 · 安全总览
+
+            {% elif request.path.startswith('/security/accounts') %}
+                安全中心 · 账号管理
+
+            {% elif request.path.startswith('/security/access-center') %}
+                安全中心 · 权限中心
+
+            {% elif request.path.startswith('/security/sessions') %}
+                安全中心 · 登录会话
+
+            {% elif request.path.startswith('/security/ip') %}
+                安全中心 · 安全日志 · IP 详情
+
+            {% elif request.path.startswith('/security/logs') %}
+                安全中心 · 安全日志
+
+            {% elif request.path.startswith('/security/guard') %}
+                安全中心 · 运行防护
+
+            {% elif request.path.startswith('/security/nginx') %}
+                安全中心 · IP 封禁 · Nginx 同步
+
+            {% elif request.path.startswith('/security/blocks') %}
+                安全中心 · IP 封禁
+
+            {% elif request.path.startswith('/security/cleanup') %}
+                安全中心 · 操作审计 · 日志清理
+
+            {% elif request.path.startswith('/security/audit') %}
+                安全中心 · 操作审计
+
+            {% elif request.path.startswith('/security/login') %}
+                安全中心 · 登录验证
+
+            {% elif request.path.startswith('/security') %}
+                安全中心
+
+            {% elif request.path.startswith('/identity/log') %}
+                身份日志
+
+            {% else %}
+                系统管理
+            {% endif %}
+        </div>
+
+    </div>
+
+    <nav class="pi-system-management-workspace-tabs"
+         aria-label="系统管理二级导航">
+
+        {% if 'rules.view' in v155_menu_permissions %}
+        <a href="/rules"
+           class="pi-system-management-workspace-tab
+           {% if request.path.startswith('/rules') %}
+           is-active
+           {% endif %}">
+            规则管理
+        </a>
+        {% endif %}
+
+
+        {% if v155_system_workspace_super_admin %}
+
+        <a href="/security"
+           class="pi-system-management-workspace-tab
+           {% if request.path.startswith('/security') %}
+           is-active
+           {% endif %}">
+            安全中心
+        </a>
+
+        {% endif %}
+
+
+        {% if
+            'identity.logs.view' in v155_menu_permissions
+            or 'member.view' in v155_menu_permissions
+        %}
+        <a href="/identity/logs"
+           class="pi-system-management-workspace-tab
+           {% if request.path.startswith('/identity/log') %}
+           is-active
+           {% endif %}">
+            身份日志
+        </a>
+        {% endif %}
+
+    </nav>
+
+    {% if
+        v155_system_workspace_super_admin
+        and request.path.startswith('/security')
+        and not request.path.startswith('/security/login')
+    %}
+
+    {# SECURITY-NAVIGATION-HIERARCHY-CONVERGENCE-V1 #}
+    <div class="pi-security-workspace">
+
+        <div class="pi-security-workspace-head">
+            <div class="pi-security-workspace-label">
+                安全中心
+            </div>
+            <div class="pi-security-workspace-note">
+                总览 · 身份与访问 · 监测与处置
+            </div>
+        </div>
+
+        <nav class="pi-security-workspace-tabs"
+             aria-label="安全中心功能导航">
+
+            <a href="/security"
+               class="pi-security-workspace-tab
+               {% if request.path == '/security' %}
+               is-active
+               {% endif %}">
+                安全总览
+            </a>
+
+            <a href="/security/accounts"
+               class="pi-security-workspace-tab
+               {% if request.path.startswith('/security/accounts') %}
+               is-active
+               {% endif %}">
+                账号管理
+            </a>
+
+            <a href="/security/access-center"
+               class="pi-security-workspace-tab
+               {% if request.path.startswith('/security/access-center') %}
+               is-active
+               {% endif %}">
+                权限中心
+            </a>
+
+            <a href="/security/sessions"
+               class="pi-security-workspace-tab
+               {% if request.path.startswith('/security/sessions') %}
+               is-active
+               {% endif %}">
+                登录会话
+            </a>
+
+            <a href="/security/logs"
+               class="pi-security-workspace-tab
+               {% if
+                   request.path.startswith('/security/logs')
+                   or request.path.startswith('/security/ip')
+               %}
+               is-active
+               {% endif %}">
+                安全日志
+            </a>
+
+            <a href="/security/guard"
+               class="pi-security-workspace-tab
+               {% if request.path.startswith('/security/guard') %}
+               is-active
+               {% endif %}">
+                运行防护
+            </a>
+
+            <a href="/security/blocks"
+               class="pi-security-workspace-tab
+               {% if
+                   request.path.startswith('/security/blocks')
+                   or request.path.startswith('/security/nginx')
+               %}
+               is-active
+               {% endif %}">
+                IP 封禁
+            </a>
+
+            <a href="/security/audit"
+               class="pi-security-workspace-tab
+               {% if
+                   request.path.startswith('/security/audit')
+                   or request.path.startswith('/security/cleanup')
+               %}
+               is-active
+               {% endif %}">
+                操作审计
+            </a>
+
+        </nav>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endif %}
+
+{# PRODUCT-INTEGRATION-P1-A7 SYSTEM MANAGEMENT WORKSPACE END #}
+
                 {% block content %}
                 {% endblock %}
 
