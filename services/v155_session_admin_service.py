@@ -556,6 +556,9 @@ def build_session_admin_report(
     conn: sqlite3.Connection,
     *,
     actor_user_id: int,
+    history_page: int = 1,
+    history_page_size: int = 20,
+    history_status: str = "all",
 ) -> dict[str, Any]:
 
     _require_super_admin(
@@ -572,6 +575,41 @@ def build_session_admin_report(
     enforcement_enabled = (
         v155_session_registry_enforced()
     )
+
+    try:
+        requested_page = max(
+            1,
+            int(history_page),
+        )
+    except (TypeError, ValueError):
+        requested_page = 1
+
+    try:
+        page_size = max(
+            1,
+            min(
+                100,
+                int(history_page_size),
+            ),
+        )
+    except (TypeError, ValueError):
+        page_size = 20
+
+    selected_status = str(
+        history_status
+        or "all"
+    ).strip().lower()
+
+    allowed_statuses = {
+        "all",
+        "expired",
+        "logged_out",
+        "revoked",
+        "superseded",
+    }
+
+    if selected_status not in allowed_statuses:
+        selected_status = "all"
 
     rows = conn.execute(
         """
@@ -597,15 +635,44 @@ def build_session_admin_report(
         """
     ).fetchall()
 
-    accounts = []
+    session_columns = """
+        id,
+        user_id,
+        session_version,
+        status,
+        created_at,
+        last_seen_at,
+        expires_at,
+        revoked_at,
+        revoke_reason,
+        revoked_by_user_id,
+        login_ip,
+        last_ip,
+        user_agent,
+        device_label
+    """
 
+    effective_status_case = """
+        CASE
+            WHEN status='active'
+                 AND COALESCE(session_version, 0)<>?
+            THEN 'superseded'
+            WHEN status='active'
+                 AND (expires_at IS NULL OR expires_at<=?)
+            THEN 'expired'
+            ELSE status
+        END
+    """
+
+    accounts = []
     now_text = _now_text()
 
     for row in rows:
         user = dict(row)
-
-        user_id = int(
-            user["id"]
+        user_id = int(user["id"])
+        current_version = int(
+            user.get("session_version")
+            or 1
         )
 
         if schema_ready:
@@ -616,84 +683,188 @@ def build_session_admin_report(
                 )
             )
 
-            sessions = (
-                list_user_sessions(
-                    conn,
-                    user_id=user_id,
-                )
-            )
-
-            active_row = conn.execute(
-                """
-                SELECT COUNT(*)
+            active_rows = conn.execute(
+                "SELECT "
+                + session_columns
+                + """
                 FROM v155_user_sessions
                 WHERE
                     user_id=?
                     AND status='active'
                     AND session_version=?
                     AND expires_at>?
+                ORDER BY
+                    COALESCE(last_seen_at, created_at) DESC,
+                    id DESC
                 """,
                 (
                     user_id,
-                    int(
-                        user.get(
-                            "session_version"
-                        )
-                        or 1
-                    ),
+                    current_version,
                     now_text,
                 ),
+            ).fetchall()
+
+            active_sessions = []
+            for active_row in active_rows:
+                session_item = dict(active_row)
+                session_item["effective_status"] = "active"
+                session_item["is_effectively_active"] = True
+                session_item["can_revoke"] = True
+                active_sessions.append(session_item)
+
+            history_base = (
+                "SELECT "
+                + session_columns
+                + ", "
+                + effective_status_case
+                + " AS effective_status "
+                + """
+                FROM v155_user_sessions
+                WHERE
+                    user_id=?
+                    AND NOT (
+                        status='active'
+                        AND session_version=?
+                        AND expires_at>?
+                    )
+                """
+            )
+
+            history_params = (
+                current_version,
+                now_text,
+                user_id,
+                current_version,
+                now_text,
+            )
+
+            count_rows = conn.execute(
+                "SELECT effective_status, COUNT(*) "
+                "FROM ("
+                + history_base
+                + ") AS history "
+                "GROUP BY effective_status",
+                history_params,
+            ).fetchall()
+
+            history_status_counts = {
+                "expired": 0,
+                "logged_out": 0,
+                "revoked": 0,
+                "superseded": 0,
+            }
+
+            for count_row in count_rows:
+                status_name = str(count_row[0] or "expired")
+                status_count = int(count_row[1] or 0)
+                if status_name in history_status_counts:
+                    history_status_counts[status_name] += status_count
+
+            history_total = sum(
+                int(count_row[1] or 0)
+                for count_row in count_rows
+            )
+
+            filter_sql = ""
+            filter_params = ()
+            if selected_status != "all":
+                filter_sql = " WHERE effective_status=?"
+                filter_params = (selected_status,)
+
+            filtered_row = conn.execute(
+                "SELECT COUNT(*) FROM ("
+                + history_base
+                + ") AS history"
+                + filter_sql,
+                history_params + filter_params,
             ).fetchone()
 
-            active_count = int(
-                active_row[0]
+            filtered_total = int(
+                filtered_row[0]
                 or 0
             )
 
-        else:
-            max_sessions = (
-                DEFAULT_MAX_ACTIVE_SESSIONS
+            history_pages = max(
+                1,
+                (
+                    filtered_total
+                    + page_size
+                    - 1
+                )
+                // page_size,
             )
 
-            sessions = []
-            active_count = 0
+            account_page = min(
+                requested_page,
+                history_pages,
+            )
+
+            history_rows = conn.execute(
+                "SELECT * FROM ("
+                + history_base
+                + ") AS history"
+                + filter_sql
+                + " ORDER BY "
+                + "COALESCE(last_seen_at, created_at) DESC, "
+                + "id DESC LIMIT ? OFFSET ?",
+                history_params
+                + filter_params
+                + (
+                    page_size,
+                    (account_page - 1) * page_size,
+                ),
+            ).fetchall()
+
+            history_sessions = []
+            for history_row in history_rows:
+                session_item = dict(history_row)
+                session_item["is_effectively_active"] = False
+                session_item["can_revoke"] = False
+                history_sessions.append(session_item)
+
+        else:
+            max_sessions = DEFAULT_MAX_ACTIVE_SESSIONS
+            active_sessions = []
+            history_sessions = []
+            history_status_counts = {
+                "expired": 0,
+                "logged_out": 0,
+                "revoked": 0,
+                "superseded": 0,
+            }
+            history_total = 0
+            filtered_total = 0
+            history_pages = 1
+            account_page = 1
 
         accounts.append(
             {
                 "user": user,
-                "max_active_sessions": (
-                    max_sessions
-                ),
-                "active_session_count": (
-                    active_count
-                ),
-                "sessions": sessions,
+                "max_active_sessions": max_sessions,
+                "active_session_count": len(active_sessions),
+                "active_sessions": active_sessions,
+                "history_sessions": history_sessions,
+                "history_total": history_total,
+                "history_filtered_total": filtered_total,
+                "history_status_counts": history_status_counts,
+                "history_page": account_page,
+                "history_pages": history_pages,
+                "sessions": active_sessions + history_sessions,
             }
         )
 
     return {
-        "registry_schema_ready": (
-            schema_ready
-        ),
-        "registry_enforced": (
-            enforcement_enabled
-        ),
-        "write_ready": (
-            schema_ready
-            and enforcement_enabled
-        ),
-        "default_max_active_sessions": (
-            DEFAULT_MAX_ACTIVE_SESSIONS
-        ),
-        "min_max_active_sessions": (
-            MIN_MAX_ACTIVE_SESSIONS
-        ),
-        "max_max_active_sessions": (
-            MAX_MAX_ACTIVE_SESSIONS
-        ),
+        "registry_schema_ready": schema_ready,
+        "registry_enforced": enforcement_enabled,
+        "write_ready": schema_ready and enforcement_enabled,
+        "default_max_active_sessions": DEFAULT_MAX_ACTIVE_SESSIONS,
+        "min_max_active_sessions": MIN_MAX_ACTIVE_SESSIONS,
+        "max_max_active_sessions": MAX_MAX_ACTIVE_SESSIONS,
+        "history_page": requested_page,
+        "history_page_size": page_size,
+        "history_status": selected_status,
         "accounts": accounts,
     }
-
 
 def revoke_single_session(
     conn: sqlite3.Connection,

@@ -12376,6 +12376,7 @@ def v158_security_accounts():
     methods=["GET"],
 )
 def v155_security_sessions():
+    from flask import request
     from services.v155_session_admin_service import (
         build_session_admin_report,
     )
@@ -12404,6 +12405,31 @@ def v155_security_sessions():
     if actor_user_id <= 0:
         abort(403)
 
+    history_page = request.args.get(
+        "history_page",
+        1,
+        type=int,
+    )
+    if history_page is None or history_page < 1:
+        history_page = 1
+
+    history_status = str(
+        request.args.get(
+            "history_status",
+            "all",
+        )
+        or "all"
+    ).strip().lower()
+
+    if history_status not in {
+        "all",
+        "expired",
+        "logged_out",
+        "revoked",
+        "superseded",
+    }:
+        history_status = "all"
+
     conn = _v158_open_auth_connection()
 
     try:
@@ -12412,6 +12438,11 @@ def v155_security_sessions():
                 conn,
                 actor_user_id=(
                     actor_user_id
+                ),
+                history_page=history_page,
+                history_page_size=20,
+                history_status=(
+                    history_status
                 ),
             )
         )
@@ -12431,7 +12462,6 @@ def v155_security_sessions():
 
     finally:
         conn.close()
-
 
 @app.route(
     "/security/sessions/revoke",
