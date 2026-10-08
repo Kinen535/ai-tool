@@ -4191,6 +4191,56 @@ def overview():
         f"未执行：{len(advice.get('未执行名单', []))} 人",
     ]
 
+
+    # PRODUCT-INTEGRATION-P1-A2: today command center glue
+    # Reuse existing V11/V12/V14/V15 read-only reporting chain.
+    # No new decision rule is introduced here.
+
+    today_command = None
+
+    try:
+        from services.engines.leader_center_engine import (
+            build_leader_center_report,
+        )
+        from services.engines.command_center_engine import (
+            build_command_center_report,
+        )
+
+        command_conn = sqlite3.connect(
+            "data/snapshots.db"
+        )
+
+        try:
+            command_staff_report = build_staff_report(
+                command_conn,
+                battle_id=battle_id,
+            )
+
+            command_leader_report = (
+                build_leader_center_report(
+                    command_conn,
+                    command_staff_report,
+                    battle_id=battle_id,
+                )
+            )
+
+            today_command = (
+                build_command_center_report(
+                    command_staff_report,
+                    command_leader_report,
+                )
+            )
+
+        finally:
+            command_conn.close()
+
+    except Exception as e:
+        print(
+            "❌ 首页加载今日指挥台失败:",
+            e,
+        )
+        today_command = None
+
     return render_template(
         "overview.html",
         current_battle=current_battle,
@@ -4198,7 +4248,8 @@ def overview():
         top_members=top_members,
         top_abnormal=top_abnormal,
         advice=advice,
-        advice_summary=advice_summary
+        advice_summary=advice_summary,
+        today_command=today_command
     )
 
 

@@ -1,143 +1,662 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- HOMEPAGE_UI_CONVERGENCE_A1_R2_20261008 -->
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='overview_home.css') }}?v=home-a1-r2-20261008"
+>
 
-<h1 class="page-title">总览</h1>
-<a href="/export_members" target="_blank">
-    <button style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:5px;">
-        导出成员数据
-    </button>
-</a>
-<!-- ① 顶部统计卡片 -->
-<div class="stats-grid">
-    {% for k, v in stats.items() %}
-    <div class="card stat-card">
-        <div class="stat-label">{{ k }}</div>
-        <div class="stat-value">{{ v }}</div>
+<div class="home-page">
+
+{# ==========================================================
+   PRODUCT-INTEGRATION-P1-A2 TODAY COMMAND CENTER
+   ========================================================== #}
+
+{% if
+    'command.view' in v155_menu_permissions
+    or 'staff.view' in v155_menu_permissions
+%}
+
+{% if today_command %}
+
+{% set cc = today_command %}
+
+<div class="home-command-hero" style="
+    background:linear-gradient(
+        135deg,
+        #eff6ff 0%,
+        #f8fafc 52%,
+        #faf5ff 100%
+    );
+    border:1px solid #dbeafe;
+    border-left:6px solid #2563eb;
+    border-radius:20px;
+    padding:24px;
+    margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(15,23,42,0.08);
+">
+
+    <div class="home-command-header" style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:18px;
+        flex-wrap:wrap;
+        margin-bottom:18px;
+    ">
+
+        <div class="home-command-copy" style="max-width:850px;">
+
+            <div class="home-eyebrow" style="
+                font-size:13px;
+                color:#64748b;
+                font-weight:800;
+                letter-spacing:.08em;
+                margin-bottom:6px;
+            ">
+                今日指挥
+            </div>
+
+            <h1 class="home-title" style="
+                margin:0 0 8px 0;
+                font-size:30px;
+            ">
+                今日指挥台
+            </h1>
+
+            <div class="home-command-summary" style="
+                color:#475569;
+                font-size:15px;
+                line-height:1.8;
+            ">
+                {{ cc.summary }}
+            </div>
+
+        </div>
+
+        <div class="home-decision-card" style="
+            background:#fff;
+            border:1px solid #bfdbfe;
+            border-radius:14px;
+            padding:12px 16px;
+            min-width:180px;
+        ">
+
+            <div style="
+                font-size:12px;
+                color:#64748b;
+                margin-bottom:4px;
+            ">
+                当前总判断
+            </div>
+
+            <div style="
+                font-size:20px;
+                font-weight:900;
+                {% if cc.decision.level == 'danger' %}
+                    color:#dc2626;
+                {% elif cc.decision.level == 'warning' %}
+                    color:#f97316;
+                {% elif cc.decision.level == 'safe' %}
+                    color:#16a34a;
+                {% else %}
+                    color:#2563eb;
+                {% endif %}
+            ">
+                {{ cc.decision.label }}
+            </div>
+
+            <div style="
+                margin-top:5px;
+                color:#64748b;
+                font-size:12px;
+            ">
+                可信度
+                {{ (cc.decision.confidence * 100)|round(1) }}%
+            </div>
+
+        </div>
+
     </div>
-    {% endfor %}
+
+    <div class="home-command-stats" style="
+        display:grid;
+        grid-template-columns:
+            repeat(auto-fit,minmax(135px,1fr));
+        gap:12px;
+        margin-bottom:18px;
+    ">
+
+        <div class="stat-card">
+            <div>待反馈任务</div>
+            <h2>{{ cc.stats.task_pending }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>P1反馈率</div>
+            <h2>{{ cc.stats.p1_feedback_rate }}%</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>高压分组</div>
+            <h2>{{ cc.stats.high_pressure_groups }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>待指定负责人</div>
+            <h2>{{ cc.stats.unassigned_groups }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>异常任务</div>
+            <h2>{{ cc.stats.abnormal_tasks }}</h2>
+        </div>
+
+        <div class="stat-card">
+            <div>动作闭环率</div>
+            <h2>{{ cc.stats.action_progress_rate }}%</h2>
+        </div>
+
+    </div>
+
+    <div class="home-command-columns" style="
+        display:grid;
+        grid-template-columns:
+            repeat(auto-fit,minmax(300px,1fr));
+        gap:16px;
+        align-items:start;
+    ">
+
+        <div class="home-command-panel home-command-panel-priority" style="
+            background:#fff;
+            border:1px solid #fed7aa;
+            border-radius:16px;
+            padding:16px;
+        ">
+
+            <div class="home-panel-title" style="
+                font-size:17px;
+                font-weight:900;
+                margin-bottom:12px;
+            ">
+                今日优先处理
+            </div>
+
+            {% if cc.action_cards %}
+
+                {% for item in cc.action_cards[:4] %}
+
+                <div class="home-priority-item" style="
+                    padding:11px 12px;
+                    margin-bottom:8px;
+                    border-radius:10px;
+                    background:#f8fafc;
+                    border:1px solid #e5e7eb;
+                ">
+
+                    {% if item.level == "danger" %}
+                        <span style="
+                            color:#dc2626;
+                            font-weight:900;
+                        ">
+                            🔴 {{ item.title }}
+                        </span>
+
+                    {% elif item.level == "warning" %}
+                        <span style="
+                            color:#f97316;
+                            font-weight:900;
+                        ">
+                            🟠 {{ item.title }}
+                        </span>
+
+                    {% elif item.level == "safe" %}
+                        <span style="
+                            color:#16a34a;
+                            font-weight:900;
+                        ">
+                            🟢 {{ item.title }}
+                        </span>
+
+                    {% else %}
+                        <span style="
+                            color:#2563eb;
+                            font-weight:900;
+                        ">
+                            🔵 {{ item.title }}
+                        </span>
+                    {% endif %}
+
+                </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div style="color:#64748b;">
+                    当前没有需要优先处理的指挥事项。
+                </div>
+
+            {% endif %}
+
+            <a href="/command"
+               style="
+                   display:inline-block;
+                   margin-top:6px;
+                   color:#2563eb;
+                   font-weight:800;
+                   text-decoration:none;
+               ">
+                查看完整指挥清单 →
+            </a>
+
+        </div>
+
+        <div class="home-command-panel home-command-panel-focus" style="
+            background:#fff;
+            border:1px solid #bbf7d0;
+            border-radius:16px;
+            padding:16px;
+        ">
+
+            <div class="home-panel-title" style="
+                font-size:17px;
+                font-weight:900;
+                margin-bottom:12px;
+            ">
+                今日指挥重点
+            </div>
+
+            {% if cc.today_focus %}
+
+                {% for item in cc.today_focus[:5] %}
+
+                    <div class="home-focus-item" style="
+                        line-height:1.8;
+                        padding:4px 0;
+                        color:#334155;
+                    ">
+                        • {{ item }}
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div style="color:#64748b;">
+                    当前没有新增指挥重点。
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <div class="home-quick-actions" style="
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+        margin-top:18px;
+    ">
+
+        {% if
+            'tasks.view' in v155_menu_permissions
+            or 'staff.view' in v155_menu_permissions
+        %}
+        <a href="/tasks?preset=today"
+           style="
+               padding:9px 14px;
+               background:#2563eb;
+               color:#fff;
+               border-radius:10px;
+               text-decoration:none;
+               font-weight:800;
+           ">
+            今日任务
+        </a>
+        {% endif %}
+
+        <a href="/command"
+           style="
+               padding:9px 14px;
+               background:#eef2ff;
+               color:#4338ca;
+               border-radius:10px;
+               text-decoration:none;
+               font-weight:800;
+           ">
+            盟务指挥
+        </a>
+
+        {% if
+            'staff.center.view' in v155_menu_permissions
+            or 'staff.view' in v155_menu_permissions
+        %}
+        <a href="/staff"
+           style="
+               padding:9px 14px;
+               background:#faf5ff;
+               color:#7e22ce;
+               border-radius:10px;
+               text-decoration:none;
+               font-weight:800;
+           ">
+            AI幕僚
+        </a>
+        {% endif %}
+
+        {% if
+            'leaders.view' in v155_menu_permissions
+            or 'staff.view' in v155_menu_permissions
+        %}
+        <a href="/leaders"
+           style="
+               padding:9px 14px;
+               background:#ecfdf5;
+               color:#047857;
+               border-radius:10px;
+               text-decoration:none;
+               font-weight:800;
+           ">
+            团队驾驶舱
+        </a>
+        {% endif %}
+
+        {% if
+            'ai.daily.view' in v155_menu_permissions
+            or 'staff.view' in v155_menu_permissions
+        %}
+        <a href="/ai/daily"
+           style="
+               padding:9px 14px;
+               background:#fff7ed;
+               color:#c2410c;
+               border-radius:10px;
+               text-decoration:none;
+               font-weight:800;
+           ">
+            AI日报
+        </a>
+        {% endif %}
+
+    </div>
+
 </div>
-<div class="card">
-    <div class="card-title">🔥 今日决策建议</div>
-    <ul>
-      {% for line in advice_summary %}
-        <li>{{ line }}</li>
-      {% endfor %}
-    </ul>
-  </div>
 
-<!-- ② 中部决策区 -->
-<div class="card" style="margin-top:20px;">
-    <div class="card-title">自动管理建议（核心决策）</div>
+{% else %}
 
-    <div class="card-grid">
-        <div class="mini-card">
-            <div class="mini-title">🔴 清理名单（{{ advice["清理名单"]|length }}人）</div>
-            <ul class="scroll-list">
-                {% for x in advice["清理名单"] %}
-                <li class="text-red">{{ x }}</li>
-                {% endfor %}
-                {% if advice["清理名单"]|length == 0 %}
-                <li class="muted">暂无</li>
-                {% endif %}
-            </ul>
-        </div>
+<div class="home-command-fallback" style="
+    background:#fff7ed;
+    border-left:6px solid #f97316;
+    border-radius:16px;
+    padding:18px;
+    margin-bottom:22px;
+">
+    <div style="
+        font-size:20px;
+        font-weight:900;
+        margin-bottom:6px;
+    ">
+        今日指挥台
+    </div>
 
-        <div class="mini-card">
-            <div class="mini-title">🟡 警告名单（{{ advice["警告名单"]|length }}人）</div>
-            <ul class="scroll-list">
-                {% for x in advice["警告名单"] %}
-                <li class="text-yellow">{{ x }}</li>
-                {% endfor %}
-                {% if advice["警告名单"]|length == 0 %}
-                <li class="muted">暂无</li>
-                {% endif %}
-            </ul>
-        </div>
-
-        <div class="mini-card">
-            <div class="mini-title">🟢 核心成员（{{ advice["核心成员"]|length }}人）</div>
-            <ul class="scroll-list">
-                {% for x in advice["核心成员"] %}
-                <li class="text-green">{{ x }}</li>
-                {% endfor %}
-                {% if advice["核心成员"]|length == 0 %}
-                <li class="muted">暂无</li>
-                {% endif %}
-            </ul>
-        </div>
-
-        <div class="mini-card">
-            <div class="mini-title">⚪ 未执行名单（{{ advice["未执行名单"]|length }}人）</div>
-            <ul class="scroll-list">
-                {% for x in advice["未执行名单"] %}
-                <li>{{ x }}</li>
-                {% endfor %}
-                {% if advice["未执行名单"]|length == 0 %}
-                <li class="muted">暂无</li>
-                {% endif %}
-            </ul>
-        </div>
-
+    <div style="color:#64748b;">
+        今日指挥数据暂时不可用。
+        旧版基础态势数据仍可正常使用。
     </div>
 </div>
 
-<!-- ③ 底部数据区 -->
-<div class="two-col" style="margin-top:20px;">
-    <div class="card">
-        <div class="card-title">战力前十</div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>昵称</th>
-                    <th>战力</th>
-                    <th>所属团</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in top_members %}
-                <tr>
-                    <td>{{ row.nickname }}</td>
-                    <td>{{ row.power }}</td>
-                    <td>{{ row.team_name }}</td>
-                </tr>
-                {% endfor %}
-                {% if not top_members %}
-                <tr>
-                    <td colspan="3" class="muted">暂无成员</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+{% endif %}
+
+{% endif %}
+
+
+<div class="home-section-divider" style="
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:4px 0 14px 0;
+    color:#64748b;
+    font-size:13px;
+    font-weight:800;
+">
+    <span>战场概览</span>
+
+    <span style="
+        height:1px;
+        flex:1;
+        background:#e2e8f0;
+    "></span>
+</div>
+
+
+
+
+{# ==========================================================
+   PRODUCT-INTEGRATION-P1-A3 COMPACT BASIC CONTEXT
+   首页只保留基础态势；详细分析回归各专业工作区。
+   ========================================================== #}
+
+<div class="card dashboard-card home-baseline-card"
+     style="
+        padding:18px 22px;
+        margin-top:4px;
+     ">
+
+    <div class="home-baseline-header" style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:18px;
+        flex-wrap:wrap;
+    ">
+
+        <div>
+
+            <div style="
+                font-size:13px;
+                color:#64748b;
+                font-weight:800;
+                margin-bottom:5px;
+            ">
+                基础态势
+            </div>
+
+            <div style="
+                display:flex;
+                align-items:baseline;
+                gap:10px;
+                flex-wrap:wrap;
+            ">
+
+                <span style="
+                    color:#64748b;
+                    font-size:13px;
+                ">
+                    当前战场
+                </span>
+
+                <span style="
+                    color:#2563eb;
+                    font-size:24px;
+                    font-weight:950;
+                ">
+                    {{ current_battle }}
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="badge success home-ai-status">
+            AI 正常运行
+        </div>
+
     </div>
 
-    <div class="card">
-        <div class="card-title">最近异常（按势力增长）</div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>成员</th>
-                    <th>团</th>
-                    <th>势力增长</th>
-                    <th>执行状态</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in top_abnormal %}
-                <tr>
-                    <td>{{ row["成员"] }}</td>
-                    <td>{{ row["分组"] }}</td>
-                    <td>{{ row["势力增长"] }}</td>
-                    <td>{{ row["执行状态"] }}</td>
-                </tr>
-                {% endfor %}
-                {% if not top_abnormal %}
-                <tr>
-                    <td colspan="4" class="muted">暂无对比结果</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+
+    <div class="home-baseline-metrics" style="
+        display:grid;
+        grid-template-columns:
+            repeat(auto-fit,minmax(130px,1fr));
+        gap:0;
+        margin-top:18px;
+        border-top:1px solid #e2e8f0;
+        border-bottom:1px solid #e2e8f0;
+    ">
+
+        <div style="
+            padding:14px 12px;
+        ">
+            <div style="
+                color:#64748b;
+                font-size:12px;
+            ">
+                成员
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:900;
+                margin-top:3px;
+            ">
+                {{ stats["成员总数"] }}
+            </div>
+        </div>
+
+        <div style="
+            padding:14px 12px;
+        ">
+            <div style="
+                color:#64748b;
+                font-size:12px;
+            ">
+                高战
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:900;
+                margin-top:3px;
+            ">
+                {{ stats["高战人数"] }}
+            </div>
+        </div>
+
+        <div style="
+            padding:14px 12px;
+        ">
+            <div style="
+                color:#64748b;
+                font-size:12px;
+            ">
+                风险成员
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:900;
+                margin-top:3px;
+                color:#dc2626;
+            ">
+                {{ stats["最近异常数"] }}
+            </div>
+        </div>
+
+        <div style="
+            padding:14px 12px;
+        ">
+            <div style="
+                color:#64748b;
+                font-size:12px;
+            ">
+                快照
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:900;
+                margin-top:3px;
+            ">
+                {{ stats["快照次数"] }}
+            </div>
+        </div>
+
     </div>
+
+
+    <div class="home-baseline-links" style="
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        align-items:center;
+        margin-top:14px;
+    ">
+
+        <span style="
+            color:#94a3b8;
+            font-size:12px;
+            margin-right:2px;
+        ">
+            深入查看
+        </span>
+
+        {% if
+            'members.view' in v155_menu_permissions
+            or 'member.view' in v155_menu_permissions
+        %}
+        <a href="/members"
+           style="
+               color:#334155;
+               text-decoration:none;
+               font-size:13px;
+               font-weight:800;
+           ">
+            成员管理 →
+        </a>
+        {% endif %}
+
+        {% if 'risk.view' in v155_menu_permissions %}
+        <a href="/risk"
+           style="
+               color:#dc2626;
+               text-decoration:none;
+               font-size:13px;
+               font-weight:800;
+           ">
+            风险明细 →
+        </a>
+        {% endif %}
+
+        {% if 'trend.view' in v155_menu_permissions %}
+        <a href="/trends"
+           style="
+               color:#2563eb;
+               text-decoration:none;
+               font-size:13px;
+               font-weight:800;
+           ">
+            趋势证据 →
+        </a>
+        {% endif %}
+
+        {% if 'import.use' in v155_menu_permissions %}
+        <a href="/snapshots"
+           style="
+               color:#7c3aed;
+               text-decoration:none;
+               font-size:13px;
+               font-weight:800;
+           ">
+            数据快照 →
+        </a>
+        {% endif %}
+
+    </div>
+
+</div>
+
 </div>
 
 {% endblock %}

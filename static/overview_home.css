@@ -1,0 +1,809 @@
+/*
+ * HOMEPAGE_UI_CONVERGENCE_A1_R2_20261008
+ * Homepage-only visual convergence.
+ * Global style.css intentionally untouched.
+ */
+
+.home-page {
+    --home-text: #0f172a;
+    --home-muted: #64748b;
+    --home-soft: #f8fafc;
+    --home-line: #e2e8f0;
+    --home-blue: #2563eb;
+    --home-red: #dc2626;
+    --home-green: #15803d;
+
+    color: var(--home-text);
+}
+
+
+/* Main command workspace */
+
+.home-page .home-command-hero {
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #fbfdff 100%
+        ) !important;
+
+    border:
+        1px solid #dbe3ef !important;
+
+    border-left:
+        4px solid var(--home-blue) !important;
+
+    border-radius:
+        18px !important;
+
+    padding:
+        22px !important;
+
+    margin-bottom:
+        18px !important;
+
+    box-shadow:
+        0 8px 28px
+        rgba(15, 23, 42, .05);
+}
+
+
+.home-page .home-command-header {
+    align-items:
+        center !important;
+
+    margin-bottom:
+        16px !important;
+}
+
+
+.home-page .home-command-copy {
+    max-width:
+        760px !important;
+}
+
+
+.home-page .home-eyebrow {
+    color:
+        var(--home-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        .08em !important;
+
+    margin-bottom:
+        5px !important;
+}
+
+
+.home-page .home-title {
+    margin:
+        0 0 7px !important;
+
+    font-size:
+        28px !important;
+
+    line-height:
+        1.2;
+
+    letter-spacing:
+        -.02em;
+}
+
+
+.home-page .home-command-summary {
+    color:
+        #475569 !important;
+
+    font-size:
+        14px !important;
+
+    line-height:
+        1.7 !important;
+}
+
+
+/* Decision */
+
+.home-page .home-decision-card {
+    min-width:
+        190px !important;
+
+    background:
+        var(--home-soft) !important;
+
+    border:
+        1px solid var(--home-line) !important;
+
+    border-radius:
+        14px !important;
+
+    padding:
+        12px 15px !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Six command metrics */
+
+.home-page .home-command-stats {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(
+            6,
+            minmax(0, 1fr)
+        ) !important;
+
+    gap:
+        10px !important;
+
+    margin-bottom:
+        16px !important;
+}
+
+
+.home-page
+.home-command-stats
+.stat-card {
+    min-width:
+        0 !important;
+
+    padding:
+        13px 14px !important;
+
+    background:
+        #ffffff !important;
+
+    border:
+        1px solid var(--home-line) !important;
+
+    border-radius:
+        12px !important;
+
+    box-shadow:
+        none !important;
+
+    transform:
+        none !important;
+}
+
+
+.home-page
+.home-command-stats
+.stat-card:hover {
+    transform:
+        none !important;
+
+    box-shadow:
+        none !important;
+
+    border-color:
+        #cbd5e1 !important;
+}
+
+
+.home-page
+.home-command-stats
+.stat-card
+> div:first-child {
+    color:
+        var(--home-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        1.35;
+}
+
+
+.home-page
+.home-command-stats
+.stat-card h2 {
+    margin:
+        6px 0 0 !important;
+
+    font-size:
+        24px !important;
+
+    line-height:
+        1.05;
+
+    color:
+        var(--home-text);
+}
+
+
+.home-page
+.home-command-stats
+.stat-card:nth-child(3) h2,
+.home-page
+.home-command-stats
+.stat-card:nth-child(5) h2 {
+    color:
+        var(--home-red) !important;
+}
+
+
+.home-page
+.home-command-stats
+.stat-card:nth-child(6) h2 {
+    color:
+        var(--home-green) !important;
+}
+
+
+/* Priority / focus */
+
+.home-page .home-command-columns {
+    grid-template-columns:
+        minmax(0, 1.08fr)
+        minmax(0, .92fr) !important;
+
+    gap:
+        14px !important;
+}
+
+
+.home-page .home-command-panel {
+    background:
+        #ffffff !important;
+
+    border:
+        1px solid var(--home-line) !important;
+
+    border-radius:
+        14px !important;
+
+    padding:
+        16px !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+.home-page
+.home-command-panel-priority {
+    border-left:
+        3px solid #f97316 !important;
+}
+
+
+.home-page
+.home-command-panel-focus {
+    border-left:
+        3px solid #22c55e !important;
+}
+
+
+.home-page .home-panel-title {
+    margin-bottom:
+        11px !important;
+
+    color:
+        var(--home-text) !important;
+
+    font-size:
+        15px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+.home-page .home-priority-item {
+    padding:
+        10px 11px !important;
+
+    margin-bottom:
+        7px !important;
+
+    border:
+        1px solid #edf0f4 !important;
+
+    border-radius:
+        10px !important;
+
+    background:
+        var(--home-soft) !important;
+}
+
+
+.home-page .home-focus-item {
+    padding:
+        5px 0 !important;
+
+    color:
+        #334155 !important;
+
+    font-size:
+        13px;
+
+    line-height:
+        1.65 !important;
+}
+
+
+/* Main actions */
+
+.home-page .home-quick-actions {
+    gap:
+        8px !important;
+
+    margin-top:
+        15px !important;
+}
+
+
+.home-page .home-quick-actions a {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center;
+
+    min-height:
+        36px;
+
+    padding:
+        8px 13px !important;
+
+    background:
+        #f8fafc !important;
+
+    color:
+        #334155 !important;
+
+    border:
+        1px solid var(--home-line);
+
+    border-radius:
+        9px !important;
+
+    text-decoration:
+        none !important;
+
+    font-size:
+        13px;
+
+    font-weight:
+        750 !important;
+}
+
+
+.home-page
+.home-quick-actions
+a:hover {
+    background:
+        #f1f5f9 !important;
+
+    border-color:
+        #cbd5e1;
+
+    color:
+        var(--home-text) !important;
+}
+
+
+.home-page
+.home-quick-actions
+a[href="/tasks?preset=today"] {
+    background:
+        var(--home-blue) !important;
+
+    color:
+        #ffffff !important;
+
+    border-color:
+        var(--home-blue) !important;
+}
+
+
+/* Fallback */
+
+.home-page .home-command-fallback {
+    background:
+        #fffaf5 !important;
+
+    border:
+        1px solid #fed7aa !important;
+
+    border-left:
+        4px solid #f97316 !important;
+
+    border-radius:
+        14px !important;
+
+    padding:
+        16px 18px !important;
+
+    margin-bottom:
+        18px !important;
+}
+
+
+/* Battlefield section */
+
+.home-page .home-section-divider {
+    margin:
+        4px 0 12px !important;
+
+    color:
+        var(--home-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        .03em;
+}
+
+
+.home-page .home-baseline-card {
+    padding:
+        18px 20px !important;
+
+    margin-top:
+        0 !important;
+
+    background:
+        #ffffff !important;
+
+    border:
+        1px solid var(--home-line) !important;
+
+    border-radius:
+        16px !important;
+
+    box-shadow:
+        0 5px 20px
+        rgba(15, 23, 42, .035) !important;
+
+    transform:
+        none !important;
+}
+
+
+.home-page .home-baseline-card:hover {
+    transform:
+        none !important;
+
+    box-shadow:
+        0 5px 20px
+        rgba(15, 23, 42, .035) !important;
+}
+
+
+.home-page .home-baseline-header {
+    align-items:
+        center !important;
+
+    gap:
+        14px !important;
+}
+
+
+.home-page .home-ai-status {
+    padding:
+        6px 10px !important;
+
+    background:
+        #f0fdf4 !important;
+
+    border:
+        1px solid #bbf7d0;
+
+    border-radius:
+        999px !important;
+
+    color:
+        #15803d !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        800 !important;
+}
+
+
+/* Baseline metrics */
+
+.home-page .home-baseline-metrics {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        ) !important;
+
+    gap:
+        0 !important;
+
+    margin-top:
+        15px !important;
+
+    border-top:
+        1px solid var(--home-line) !important;
+
+    border-bottom:
+        1px solid var(--home-line) !important;
+}
+
+
+.home-page
+.home-baseline-metrics
+> div {
+    padding:
+        13px 12px !important;
+}
+
+
+.home-page
+.home-baseline-metrics
+> div
+> div:first-child {
+    color:
+        var(--home-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        700;
+}
+
+
+.home-page
+.home-baseline-metrics
+> div
+> div:nth-child(2) {
+    margin-top:
+        3px !important;
+
+    color:
+        var(--home-text);
+
+    font-size:
+        21px !important;
+
+    font-weight:
+        900 !important;
+}
+
+
+.home-page
+.home-baseline-metrics
+> div:nth-child(3)
+> div:nth-child(2) {
+    color:
+        var(--home-red) !important;
+}
+
+
+/* Secondary links */
+
+.home-page .home-baseline-links {
+    gap:
+        8px !important;
+
+    margin-top:
+        13px !important;
+}
+
+
+.home-page .home-baseline-links a {
+    color:
+        #475569 !important;
+
+    text-decoration:
+        none !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        750 !important;
+
+    padding:
+        5px 7px;
+
+    border-radius:
+        7px;
+}
+
+
+.home-page
+.home-baseline-links a:hover {
+    background:
+        #f1f5f9;
+
+    color:
+        var(--home-blue) !important;
+}
+
+
+.home-page
+.home-baseline-links
+a[href="/risk"] {
+    color:
+        #b91c1c !important;
+}
+
+
+/* Responsive */
+
+@media (max-width: 1180px) {
+    .home-page
+    .home-command-stats {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+    }
+}
+
+
+@media (max-width: 860px) {
+    .home-page
+    .home-command-columns {
+        grid-template-columns:
+            1fr !important;
+    }
+
+    .home-page
+    .home-baseline-metrics {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+    }
+}
+
+
+@media (max-width: 620px) {
+    .home-page
+    .home-command-hero {
+        padding:
+            17px !important;
+    }
+
+    .home-page
+    .home-title {
+        font-size:
+            24px !important;
+    }
+
+    .home-page
+    .home-command-stats {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+    }
+
+    .home-page
+    .home-decision-card {
+        width:
+            100%;
+
+        min-width:
+            0 !important;
+    }
+
+    .home-page
+    .home-quick-actions a {
+        flex:
+            1 1 auto;
+
+        justify-content:
+            center;
+    }
+}
+
+
+/* Dark */
+
+html[data-theme="dark"]
+.home-page {
+    --home-text:
+        #e5edf7;
+
+    --home-muted:
+        #94a3b8;
+
+    --home-soft:
+        #111827;
+
+    --home-line:
+        #293548;
+}
+
+
+html[data-theme="dark"]
+.home-page
+.home-command-hero,
+html[data-theme="dark"]
+.home-page
+.home-command-panel,
+html[data-theme="dark"]
+.home-page
+.home-baseline-card {
+    background:
+        #0f172a !important;
+
+    border-color:
+        #293548 !important;
+}
+
+
+html[data-theme="dark"]
+.home-page
+.home-decision-card,
+html[data-theme="dark"]
+.home-page
+.home-command-stats
+.stat-card,
+html[data-theme="dark"]
+.home-page
+.home-priority-item {
+    background:
+        #111827 !important;
+
+    border-color:
+        #293548 !important;
+}
+
+
+html[data-theme="dark"]
+.home-page
+.home-command-summary,
+html[data-theme="dark"]
+.home-page
+.home-focus-item {
+    color:
+        #cbd5e1 !important;
+}
+
+
+html[data-theme="dark"]
+.home-page
+.home-quick-actions a {
+    background:
+        #172033 !important;
+
+    border-color:
+        #334155;
+
+    color:
+        #dbe7f5 !important;
+}
+
+
+html[data-theme="dark"]
+.home-page
+.home-baseline-links a {
+    color:
+        #cbd5e1 !important;
+}
