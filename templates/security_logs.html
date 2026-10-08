@@ -95,6 +95,7 @@
             <table style="width:100%;border-collapse:collapse;">
                 <tr style="background:#f3f4f6;">
                     <th style="padding:9px;text-align:left;">IP</th>
+                    <th style="padding:9px;text-align:left;">账号归因</th>
                     <th style="padding:9px;text-align:left;">访问次数</th>
                     <th style="padding:9px;text-align:left;">异常次数</th>
                     <th style="padding:9px;text-align:left;">异常占比</th>
@@ -105,6 +106,39 @@
                 {% for item in report.top_ips %}
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:9px;font-weight:bold;">{{ item.ip }}</td>
+                    <td style="padding:9px;min-width:160px;">
+                        {% if item.identity.confidence == "high" %}
+                            <div style="font-weight:bold;color:#15803d;">
+                                {{ item.identity.display_name or item.identity.username }}
+                            </div>
+                            <div style="font-size:12px;color:#16a34a;">
+                                {{ item.identity.confidence_label }}
+                            </div>
+                        {% elif item.identity.confidence == "medium" %}
+                            <div style="font-weight:bold;color:#1d4ed8;">
+                                {{ item.identity.display_name or item.identity.username }}
+                            </div>
+                            <div style="font-size:12px;color:#2563eb;">
+                                {{ item.identity.confidence_label }}
+                            </div>
+                        {% elif item.identity.confidence == "historical" %}
+                            <div style="font-weight:bold;color:#7c3aed;">
+                                {{ item.identity.display_name or item.identity.username }}
+                            </div>
+                            <div style="font-size:12px;color:#8b5cf6;">
+                                {{ item.identity.confidence_label }}
+                            </div>
+                        {% elif item.identity.confidence == "ambiguous" %}
+                            <div style="font-weight:bold;color:#b45309;">
+                                {{ item.identity.confidence_label }}
+                            </div>
+                            <div style="font-size:12px;color:#92400e;">
+                                {{ item.identity.candidate_count }} 个账号候选
+                            </div>
+                        {% else %}
+                            <span style="color:#94a3b8;">未归因</span>
+                        {% endif %}
+                    </td>
                     <td style="padding:9px;">{{ item.total_count }}</td>
                     <td style="padding:9px;color:#dc2626;font-weight:bold;">{{ item.suspicious_count }}</td>
                     <td style="padding:9px;">{{ item.suspicious_ratio }}%</td>

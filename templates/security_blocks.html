@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+    <div style="display:grid;grid-template-columns:minmax(0,1.45fr) minmax(360px,0.75fr);gap:18px;margin-bottom:18px;align-items:start;">
         <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
             <h2>② 高风险候选</h2>
             <p style="color:#64748b;">
@@ -74,23 +74,53 @@
 
             {% if report.candidates %}
                 <div style="max-height:520px;overflow:auto;background:white;border-radius:12px;">
-                    <table style="width:100%;border-collapse:collapse;">
-                        <tr style="background:#f3f4f6;position:sticky;top:0;">
+                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+                        <colgroup>
+                            <col style="width:21%;">
+                            <col style="width:14%;">
+                            <col>
+                            <col style="width:112px;">
+                        </colgroup>
+                        <tr style="background:#f3f4f6;position:sticky;top:0;z-index:1;">
                             <th style="padding:8px;text-align:left;">IP</th>
                             <th style="padding:8px;text-align:left;">风险</th>
-                            <th style="padding:8px;text-align:left;">原因</th>
+                            <th style="padding:8px;text-align:left;">原因摘要</th>
                             <th style="padding:8px;text-align:left;">操作</th>
                         </tr>
                         {% for row in report.candidates %}
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding:8px;font-weight:bold;">{{ row.ip }}</td>
-                            <td style="padding:8px;color:#dc2626;font-weight:bold;">{{ row.risk_label }}</td>
-                            <td style="padding:8px;color:#64748b;">
-                                {{ row.risk_reason }}
-                                <br>
-                                <span style="font-size:12px;">{{ row.reasons }}</span>
+                        <tr style="border-bottom:1px solid #e5e7eb;vertical-align:top;">
+                            <td style="padding:10px 8px;font-weight:bold;white-space:nowrap;">{{ row.ip }}</td>
+                            <td style="padding:10px 8px;color:#dc2626;font-weight:bold;white-space:nowrap;">
+                                {{ row.risk_label }}
                             </td>
-                            <td style="padding:8px;">
+                            <td style="padding:10px 8px;color:#64748b;line-height:1.6;">
+                                <div style="font-weight:600;color:#475569;">
+                                    {{ row.risk_reason|truncate(110, True, '…') }}
+                                </div>
+
+                                {% if row.reasons %}
+                                <details style="margin-top:8px;">
+                                    <summary style="cursor:pointer;color:#2563eb;font-weight:600;font-size:13px;">
+                                        查看完整异常证据
+                                    </summary>
+                                    <div style="
+                                        margin-top:8px;
+                                        padding:10px 12px;
+                                        max-height:180px;
+                                        overflow:auto;
+                                        background:#f8fafc;
+                                        border-radius:8px;
+                                        color:#64748b;
+                                        font-size:12px;
+                                        line-height:1.65;
+                                        word-break:break-word;
+                                    ">
+                                        {{ row.reasons }}
+                                    </div>
+                                </details>
+                                {% endif %}
+                            </td>
+                            <td style="padding:10px 8px;white-space:nowrap;">
                                 <form method="post" style="display:inline;">
                 <input
                     type="hidden"
@@ -101,7 +131,7 @@
                                     <input type="hidden" name="ip" value="{{ row.ip }}">
                                     <input type="hidden" name="reason" value="{{ row.risk_reason }}">
                                     <button type="submit"
-                                            style="background:#dc2626;color:white;border:0;border-radius:8px;padding:7px 10px;font-weight:bold;">
+                                            style="background:#dc2626;color:white;border:0;border-radius:8px;padding:7px 10px;font-weight:bold;white-space:nowrap;cursor:pointer;">
                                         确认封禁
                                     </button>
                                 </form>

@@ -174,6 +174,94 @@ def detect_suspicious(
     ua = str(user_agent or "").lower()
     method = str(method or "").upper()
     path = str(path or "")
+    path_lower = path.lower()
+
+    # ------------------------------------------------------------
+    # Strong path-based scanner evidence.
+    #
+    # Keep this deliberately narrow. These are application-
+    # irrelevant exploit / credential probes seen in real traffic.
+    # Do not treat /.well-known/* as suspicious generically because
+    # passkey-endpoints is legitimate platform discovery traffic.
+    # ------------------------------------------------------------
+
+    if (
+        path_lower == "/xmlrpc.php"
+        or path_lower == "/wp-admin/install.php"
+        or path_lower.startswith(
+            "/wp-json/wp/v2/users"
+        )
+        or path_lower.endswith(
+            "/wp-login.php"
+        )
+    ):
+        reasons.append(
+            "扫描路径:WordPress探测"
+        )
+
+    elif (
+        "/vendor/phpunit/"
+        in path_lower
+        and path_lower.endswith(
+            "/eval-stdin.php"
+        )
+    ):
+        reasons.append(
+            "扫描路径:PHPUnit漏洞探测"
+        )
+
+    elif (
+        path_lower
+        in {
+            "/env",
+            "/.env",
+            "/env.example",
+            "/.env.example",
+            "/config.env",
+            "/config.json",
+            "/config/app.php",
+            "/.bashrc",
+            "/deploy.sh",
+        }
+        or path_lower.startswith(
+            "/.aws/"
+        )
+        or path_lower.startswith(
+            "/.git/"
+        )
+        or path_lower.endswith(
+            "/.env"
+        )
+        or path_lower.endswith(
+            "/.bashrc"
+        )
+        or path_lower.endswith(
+            "/deploy.sh"
+        )
+        or path_lower.rsplit(
+            "/",
+            1,
+        )[-1]
+        in {
+            "phpinfo.php",
+            "phpinfo.php3",
+            "php-info.php",
+        }
+    ):
+        reasons.append(
+            "扫描路径:敏感文件探测"
+        )
+
+    elif (
+        path_lower.startswith(
+            "/web-inf/"
+        )
+        or "/web-inf/"
+        in path_lower
+    ):
+        reasons.append(
+            "扫描路径:WEB-INF探测"
+        )
 
     if not ua:
         reasons.append("空UA")
@@ -535,6 +623,546 @@ def get_ip_detail_report(conn: sqlite3.Connection, ip: str, limit: int = 300) ->
 # V15.5-S2.1 security logs pagination
 # =========================
 
+def get_security_identity_attribution(
+    conn: sqlite3.Connection,
+    ip: str,
+    *,
+    user_agent: str = "",
+    observed_at: str = "",
+) -> Dict[str, Any]:
+    """
+    Resolve security traffic to known application identities
+    without mutating the security access log.
+
+    Confidence semantics:
+      high:
+        exactly one user has a time-overlapping session and
+        user-agent also matches when UA evidence is available.
+
+      medium:
+        exactly one user has a time-overlapping session, but
+        user-agent evidence is absent or not exact.
+
+      ambiguous:
+        more than one user is supported by overlapping session
+        evidence for the same public IP.
+
+      historical:
+        no overlapping session is found, but login history
+        proves prior use of this IP.
+
+      unattributed:
+        no reliable application identity evidence exists.
+    """
+    ip = str(ip or "").strip()
+    user_agent = str(user_agent or "").strip()
+    observed_at = str(observed_at or "").strip()
+
+    empty = {
+        "confidence": "unattributed",
+        "confidence_label": "未归因",
+        "user_id": None,
+        "username": "",
+        "display_name": "",
+        "role": "",
+        "user_status": "",
+        "candidate_count": 0,
+        "candidate_users": [],
+        "session_id": None,
+        "session_status": "",
+        "session_created_at": "",
+        "session_last_seen_at": "",
+        "session_expires_at": "",
+        "device_label": "",
+        "evidence": "无可靠账号证据",
+    }
+
+    if not ip:
+        return empty
+
+    if not observed_at:
+        observed_at = (
+            conn.execute(
+                """
+                SELECT MAX(created_at)
+                FROM v155_security_access_logs
+                WHERE ip=?
+                """,
+                (ip,),
+            ).fetchone()[0]
+            or ""
+        )
+
+    session_rows = conn.execute(
+        """
+        SELECT
+            s.id AS session_id,
+            s.user_id,
+            s.status AS session_status,
+            s.created_at AS session_created_at,
+            s.last_seen_at AS session_last_seen_at,
+            s.expires_at AS session_expires_at,
+            s.revoked_at,
+            s.login_ip,
+            s.last_ip,
+            s.user_agent AS session_user_agent,
+            s.device_label,
+            u.username,
+            u.display_name,
+            u.role,
+            u.status AS user_status
+        FROM v155_user_sessions s
+        JOIN v158_users u
+          ON u.id = s.user_id
+        WHERE
+            s.login_ip = ?
+            OR s.last_ip = ?
+        ORDER BY
+            CASE
+                WHEN s.status='active' THEN 0
+                ELSE 1
+            END,
+            s.created_at DESC,
+            s.id DESC
+        """,
+        (
+            ip,
+            ip,
+        ),
+    ).fetchall()
+
+    # Security access logs use server-local naive timestamps
+    # such as:
+    #     2026-10-08 10:26:40
+    #
+    # Session registry timestamps use UTC ISO timestamps
+    # such as:
+    #     2026-10-08T01:19:04Z
+    #
+    # They must never be compared lexicographically.
+    from datetime import datetime, timezone
+
+    local_tz = (
+        datetime.now()
+        .astimezone()
+        .tzinfo
+    )
+
+    def parse_identity_time(
+        value,
+        *,
+        naive_timezone,
+    ):
+        value = str(
+            value or ""
+        ).strip()
+
+        if not value:
+            return None
+
+        normalized = value
+
+        if normalized.endswith("Z"):
+            normalized = (
+                normalized[:-1]
+                + "+00:00"
+            )
+
+        try:
+            result = (
+                datetime.fromisoformat(
+                    normalized
+                )
+            )
+        except ValueError:
+            return None
+
+        if result.tzinfo is None:
+            result = result.replace(
+                tzinfo=naive_timezone
+            )
+
+        return result.astimezone(
+            timezone.utc
+        )
+
+    observed_dt = (
+        parse_identity_time(
+            observed_at,
+            naive_timezone=local_tz,
+        )
+        if observed_at
+        else None
+    )
+
+    candidate_users = {}
+
+    for row in session_rows:
+        item = dict(row)
+
+        include = True
+
+        if observed_dt is not None:
+            started_at = (
+                parse_identity_time(
+                    item.get(
+                        "session_created_at"
+                    ),
+                    naive_timezone=timezone.utc,
+                )
+            )
+
+            ended_raw = (
+                item.get("revoked_at")
+                or item.get(
+                    "session_expires_at"
+                )
+            )
+
+            ended_at = (
+                parse_identity_time(
+                    ended_raw,
+                    naive_timezone=timezone.utc,
+                )
+            )
+
+            if (
+                started_at is None
+                or observed_dt < started_at
+            ):
+                include = False
+
+            if (
+                include
+                and ended_at is not None
+                and observed_dt > ended_at
+            ):
+                include = False
+
+        if not include:
+            continue
+
+        uid = int(
+            item["user_id"]
+        )
+
+        if uid not in candidate_users:
+            candidate_users[uid] = item
+
+    candidates = list(
+        candidate_users.values()
+    )
+
+    if len(candidates) > 1:
+        labels = []
+
+        for item in candidates:
+            name = (
+                str(
+                    item.get("display_name")
+                    or item.get("username")
+                    or item.get("user_id")
+                )
+            )
+            labels.append(name)
+
+        result = dict(empty)
+        result.update(
+            {
+                "confidence": "ambiguous",
+                "confidence_label": "多账号共享IP",
+                "candidate_count": len(candidates),
+                "candidate_users": [
+                    {
+                        "user_id": int(
+                            item["user_id"]
+                        ),
+                        "username": str(
+                            item.get("username")
+                            or ""
+                        ),
+                        "display_name": str(
+                            item.get("display_name")
+                            or ""
+                        ),
+                        "role": str(
+                            item.get("role")
+                            or ""
+                        ),
+                    }
+                    for item in candidates
+                ],
+                "evidence": (
+                    "同一时间窗口内该公网IP存在多个账号候选："
+                    + "、".join(labels)
+                ),
+            }
+        )
+
+        return result
+
+    if len(candidates) == 1:
+        item = candidates[0]
+
+        session_ua = str(
+            item.get("session_user_agent")
+            or ""
+        ).strip()
+
+        ua_exact = bool(
+            user_agent
+            and session_ua
+            and user_agent == session_ua
+        )
+
+        confidence = (
+            "high"
+            if ua_exact
+            else "medium"
+        )
+
+        confidence_label = (
+            "高可信账号"
+            if ua_exact
+            else "会话关联"
+        )
+
+        evidence = (
+            "IP、访问时间与登录会话重合"
+        )
+
+        if ua_exact:
+            evidence += "，且User-Agent一致"
+        elif user_agent and session_ua:
+            evidence += "，但User-Agent不完全一致"
+        else:
+            evidence += "，User-Agent证据不足"
+
+        result = dict(empty)
+        result.update(
+            {
+                "confidence": confidence,
+                "confidence_label": confidence_label,
+                "user_id": int(
+                    item["user_id"]
+                ),
+                "username": str(
+                    item.get("username")
+                    or ""
+                ),
+                "display_name": str(
+                    item.get("display_name")
+                    or ""
+                ),
+                "role": str(
+                    item.get("role")
+                    or ""
+                ),
+                "user_status": str(
+                    item.get("user_status")
+                    or ""
+                ),
+                "candidate_count": 1,
+                "candidate_users": [
+                    {
+                        "user_id": int(
+                            item["user_id"]
+                        ),
+                        "username": str(
+                            item.get("username")
+                            or ""
+                        ),
+                        "display_name": str(
+                            item.get("display_name")
+                            or ""
+                        ),
+                        "role": str(
+                            item.get("role")
+                            or ""
+                        ),
+                    }
+                ],
+                "session_id": int(
+                    item["session_id"]
+                ),
+                "session_status": str(
+                    item.get(
+                        "session_status"
+                    )
+                    or ""
+                ),
+                "session_created_at": str(
+                    item.get(
+                        "session_created_at"
+                    )
+                    or ""
+                ),
+                "session_last_seen_at": str(
+                    item.get(
+                        "session_last_seen_at"
+                    )
+                    or ""
+                ),
+                "session_expires_at": str(
+                    item.get(
+                        "session_expires_at"
+                    )
+                    or ""
+                ),
+                "device_label": str(
+                    item.get("device_label")
+                    or ""
+                ),
+                "evidence": evidence,
+            }
+        )
+
+        return result
+
+    historical_rows = conn.execute(
+        """
+        SELECT
+            l.user_id,
+            l.username_snapshot,
+            MAX(l.created_at) AS last_login_seen,
+            u.display_name,
+            u.role,
+            u.status AS user_status
+        FROM v158_login_logs l
+        LEFT JOIN v158_users u
+          ON u.id = l.user_id
+        WHERE l.ip_address=?
+          AND l.user_id IS NOT NULL
+        GROUP BY
+            l.user_id,
+            l.username_snapshot,
+            u.display_name,
+            u.role,
+            u.status
+        ORDER BY last_login_seen DESC
+        """,
+        (ip,),
+    ).fetchall()
+
+    historical_users = {}
+
+    for row in historical_rows:
+        item = dict(row)
+        uid = int(item["user_id"])
+
+        if uid not in historical_users:
+            historical_users[uid] = item
+
+    history = list(
+        historical_users.values()
+    )
+
+    if len(history) == 1:
+        item = history[0]
+
+        result = dict(empty)
+        result.update(
+            {
+                "confidence": "historical",
+                "confidence_label": "历史登录关联",
+                "user_id": int(
+                    item["user_id"]
+                ),
+                "username": str(
+                    item.get(
+                        "username_snapshot"
+                    )
+                    or ""
+                ),
+                "display_name": str(
+                    item.get("display_name")
+                    or ""
+                ),
+                "role": str(
+                    item.get("role")
+                    or ""
+                ),
+                "user_status": str(
+                    item.get("user_status")
+                    or ""
+                ),
+                "candidate_count": 1,
+                "candidate_users": [
+                    {
+                        "user_id": int(
+                            item["user_id"]
+                        ),
+                        "username": str(
+                            item.get(
+                                "username_snapshot"
+                            )
+                            or ""
+                        ),
+                        "display_name": str(
+                            item.get(
+                                "display_name"
+                            )
+                            or ""
+                        ),
+                        "role": str(
+                            item.get("role")
+                            or ""
+                        ),
+                    }
+                ],
+                "evidence": (
+                    "该IP存在单一账号历史登录记录；"
+                    "当前访问未命中明确会话时间窗口"
+                ),
+            }
+        )
+
+        return result
+
+    if len(history) > 1:
+        result = dict(empty)
+        result.update(
+            {
+                "confidence": "ambiguous",
+                "confidence_label": "多账号历史共享IP",
+                "candidate_count": len(history),
+                "candidate_users": [
+                    {
+                        "user_id": int(
+                            item["user_id"]
+                        ),
+                        "username": str(
+                            item.get(
+                                "username_snapshot"
+                            )
+                            or ""
+                        ),
+                        "display_name": str(
+                            item.get(
+                                "display_name"
+                            )
+                            or ""
+                        ),
+                        "role": str(
+                            item.get("role")
+                            or ""
+                        ),
+                    }
+                    for item in history
+                ],
+                "evidence": (
+                    "该IP存在多个账号历史登录记录，"
+                    "不能安全归属给单一用户"
+                ),
+            }
+        )
+
+        return result
+
+    return empty
+
+
+
 def get_security_report_paginated(
     conn: sqlite3.Connection,
     page: int = 1,
@@ -615,6 +1243,20 @@ def get_security_report_paginated(
             watch_count += 1
 
         item.update(risk)
+
+        attribution = (
+            get_security_identity_attribution(
+                conn,
+                item.get("ip", ""),
+                observed_at=item.get(
+                    "last_seen",
+                    "",
+                ),
+            )
+        )
+
+        item["identity"] = attribution
+
         all_items.append(item)
 
     report["top_ips"] = all_items[offset:offset + per_page]
@@ -1076,6 +1718,47 @@ def get_ip_detail_report(conn: sqlite3.Connection, ip: str, limit: int = 300) ->
                 "reason": "存在少量异常记录，暂不需要处理。"
             }
 
+    latest_log_row = conn.execute(
+        """
+        SELECT
+            user_agent,
+            created_at
+        FROM v155_security_access_logs
+        WHERE ip=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (ip,),
+    ).fetchone()
+
+    attribution = (
+        get_security_identity_attribution(
+            conn,
+            ip,
+            user_agent=(
+                str(
+                    latest_log_row[
+                        "user_agent"
+                    ]
+                    or ""
+                )
+                if latest_log_row
+                else ""
+            ),
+            observed_at=(
+                str(
+                    latest_log_row[
+                        "created_at"
+                    ]
+                    or ""
+                )
+                if latest_log_row
+                else ""
+            ),
+        )
+    )
+
+
     return {
         "ip": ip,
         "summary": {
@@ -1095,6 +1778,7 @@ def get_ip_detail_report(conn: sqlite3.Connection, ip: str, limit: int = 300) ->
             "is_admin_access": 1 if is_admin_access else 0,
             "scanner_hits": scanner_hits,
         },
+        "identity": attribution,
         "risk": risk,
         "recommendation": recommendation,
         "whitelist": dict(whitelist_row) if whitelist_row else None,
