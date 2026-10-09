@@ -295,9 +295,13 @@ document.addEventListener("DOMContentLoaded", function () {
 {% set lc = report.v14_leader_center %}
 {% set lf = report.v14_leader_filter %}
 
-<h1>🧭 组长协同驾驶舱</h1>
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='leader_dashboard.css') }}?v=leader-a2-r2-20261009">
 
-<div style="
+<div class="leader-dashboard-page">
+<h1 class="leader-dashboard-title">组长协同驾驶舱</h1>
+
+<div class="leader-dashboard-summary" style="
 background:#eef6ff;
 border-left:6px solid #2563eb;
 border-radius:18px;
@@ -306,82 +310,68 @@ margin-bottom:24px;
 box-shadow:0 8px 24px rgba(15,23,42,0.08);
 ">
 
-    <h2>① 分组责任总览</h2>
+    <h2 class="leader-dashboard-section-title">① 分组责任总览</h2>
 
     <p>
-        <b>摘要：</b>{{ lc.summary }}
+        <b>责任状态：</b>
+        当前识别 {{ lc.stats.group_count }} 个分组，
+        {{ lc.stats.member_count }} 名成员；
+        高压分组 {{ lc.stats.high_pressure_group_count }} 个，
+        待指定组长 {{ lc.stats.unassigned_group_count }} 个，
+        待反馈 {{ lc.stats.pending_task_count }} 项，
+        异常反馈 {{ lc.stats.abnormal_task_count }} 项。
     </p>
 
-    <div style="
+    <div class="leader-dashboard-metrics" style="
     display:grid;
-    grid-template-columns:repeat(6,1fr);
+    grid-template-columns:repeat(4,minmax(0,1fr));
     gap:14px;
     margin-top:18px;
     ">
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>分组数</div>
             <h2>{{ lc.stats.group_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>成员数</div>
             <h2>{{ lc.stats.member_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>关联任务</div>
             <h2>{{ lc.stats.task_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>高压分组</div>
             <h2>{{ lc.stats.high_pressure_group_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>待反馈</div>
             <h2>{{ lc.stats.pending_task_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>异常反馈</div>
             <h2>{{ lc.stats.abnormal_task_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>待指定组长</div>
             <h2>{{ lc.stats.unassigned_group_count }}</h2>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card leader-dashboard-stat">
             <div>手动指定</div>
             <h2>{{ lc.stats.manual_mapping_count }}</h2>
         </div>
 
     </div>
 
-    <div style="
-    margin-top:18px;
-    background:#fff;
-    border:1px solid #bfdbfe;
-    border-radius:14px;
-    padding:16px;
-    ">
-        <h3>🎯 当前判断</h3>
-        <p>
-            <b>结论：</b>
-            {% if lc.decision.level == "warning" %}
-                <span style="color:#dc2626;font-weight:bold;">{{ lc.decision.label }}</span>
-            {% elif lc.decision.level == "safe" %}
-                <span style="color:#16a34a;font-weight:bold;">{{ lc.decision.label }}</span>
-            {% else %}
-                <span style="color:#2563eb;font-weight:bold;">{{ lc.decision.label }}</span>
-            {% endif %}
-        </p>
-        <p><b>可信度：</b>{{ (lc.decision.confidence * 100)|round(1) }}%</p>
-        <p><b>原因：</b>{{ lc.decision.reason }}</p>
-    </div>
+
 
 </div>
 
@@ -394,7 +384,7 @@ margin-bottom:24px;
 ">
 
     
-<div style="
+<div class="leader-dashboard-core" style="
 background:#fff7ed;
 border-left:6px solid #f97316;
 border-radius:18px;
@@ -405,27 +395,26 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 grid-column: 1 / -1;
 width: 100%;">
 
-    <h2>② 高压分组处置清单</h2>
+    <h2 class="leader-dashboard-section-title">② 高压分组责任异常</h2>
 
     <p style="color:#475569;line-height:1.7;margin-bottom:14px;">
-        说明：本模块已合并原「高压分组 TOP」「真实负责人压力」「异常摘要」信息。
-        管理处置优先级用于安排盟务处理顺序；清理复核优先级用于安排建议清理名单的人工核查顺序。
-        两套优先级独立计算，具体异常人员下沉到分组详情页。
+        说明：本区用于快速定位高压分组的责任归属、风险摘要与反馈缺口。
+        具体风险成员进入分组详情查看；每日盟务处置顺序由「盟务指挥」统一安排。
     </p>
 
     {% if lc.high_pressure_groups %}
 
-    <div style="max-height:620px;overflow:auto;border:1px solid #fed7aa;border-radius:14px;background:#fff;">
-        <table style="width:100%;min-width:1180px;border-collapse:collapse;table-layout:auto;">
+    <div class="leader-dashboard-table-wrap" style="max-height:620px;overflow:auto;border:1px solid #fed7aa;border-radius:14px;background:#fff;">
+        <table class="leader-dashboard-table" style="width:100%;min-width:980px;border-collapse:collapse;table-layout:auto;">
             <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
                 <tr>
-                    <th style="padding:9px;text-align:left;">优先级</th>
+                    <th style="padding:9px;text-align:left;">责任优先级</th>
                     <th style="padding:9px;text-align:left;">分组</th>
                     <th style="padding:9px;text-align:left;">负责人</th>
                     <th style="padding:9px;text-align:left;">压力</th>
-                    <th style="padding:9px;text-align:left;">风险成员</th>
+                    <th style="padding:9px;text-align:left;">风险摘要</th>
                     <th style="padding:9px;text-align:left;">待反馈</th>
-                    <th style="padding:9px;text-align:left;">建议</th>
+
                     <th style="padding:9px;text-align:left;">操作</th>
                 </tr>
             </thead>
@@ -535,15 +524,12 @@ width: 100%;">
                         {{ pending_count }}
                     </td>
 
-                    <td class="leader-dark-body"
-                        style="padding:9px;line-height:1.7;color:#374151;">
-                        {{ g.suggestion or g.suggest or g.advice or "建议盟主优先点名该组，要求负责人确认风险成员与待反馈任务。" }}
-                    </td>
+
 
                     <td style="padding:9px;white-space:nowrap;">
                         <a href="/leaders/group/{{ g.group_name|urlencode }}"
                            style="display:inline-block;margin:2px;padding:6px 10px;background:#ffedd5;border-radius:10px;color:#c2410c;text-decoration:none;font-size:13px;">
-                            查看异常人员
+                            查看风险成员
                         </a>
 
                         {% if g.leader_display and g.leader_display not in ["待指定", "-", ""] %}
@@ -574,7 +560,7 @@ width: 100%;">
 
 </div>
 
-<div style="
+<div class="leader-dashboard-filter" style="
 background:#f5f3ff;
 border-left:6px solid #8b5cf6;
 border-radius:18px;
@@ -585,11 +571,11 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 grid-column: 1 / -1;
 width: 100%;">
 
-    <h2>③ 分组筛选器</h2>
+    <h2 class="leader-dashboard-section-title">③ 分组筛选器</h2>
 
     <p><b>筛选摘要：</b>{{ lf.summary }}</p>
 
-    <div style="margin:14px 0;">
+    <div class="leader-dashboard-quick-filters" style="margin:14px 0;">
         <b>快捷筛选：</b>
         {% for item in lf.quick_filters %}
             <a href="{{ item.url }}"
@@ -600,7 +586,7 @@ width: 100%;">
         {% endfor %}
     </div>
 
-    <form method="get"
+    <form class="leader-dashboard-filter-form" method="get"
           action="/leaders"
           style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto auto;gap:12px;align-items:end;">
 
@@ -666,7 +652,7 @@ width: 100%;">
     </form>
 
     
-<div style="
+<div class="leader-dashboard-owner" style="
 background:#f8fafc;
 border-left:6px solid #64748b;
 border-radius:18px;
@@ -677,14 +663,14 @@ grid-column:1 / -1;
 width:100%;
 ">
 
-    <h2>④ 分组责任卡片明细</h2>
+    <h2 class="leader-dashboard-section-title">④ 负责人维护</h2>
 
     <p style="color:#475569;line-height:1.7;margin-bottom:16px;">
-        说明：本模块用于查看和维护各分组负责人。已从横向大表格改为卡片布局，避免负责人表单和指标被压缩。
+        说明：用于查看和维护各分组负责人、角色与备注；默认收起，需要调整负责人时再展开。
     </p>
 
     
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0;">
+    <div class="leader-dashboard-owner-toolbar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0;">
         <div class="v15-e44-muted">
             默认收起负责人维护区，避免页面信息过载。需要维护负责人时再展开。
         </div>
@@ -701,11 +687,11 @@ width:100%;
         负责人维护区已收起。这里包含各分组负责人编辑、风险摘要和快捷入口。
     </div>
 
-    <div id="leader-card-detail-panel" style="display:none;">
+    <div id="leader-card-detail-panel" class="leader-dashboard-owner-panel" style="display:none;">
 
 {% if lc.filter_cards %}
 
-    <div style="
+    <div class="leader-dashboard-owner-grid" style="
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
     gap:16px;
@@ -985,7 +971,7 @@ width:100%;
     </div>
 </div>
 
-<div class="leader-audit-section" style="
+<div class="leader-audit-section leader-dashboard-audit" style="
 background:#f0fdfa;
 border-left:6px solid #0f766e;
 border-radius:18px;
@@ -996,7 +982,7 @@ box-shadow:0 8px 24px rgba(15,23,42,0.06);
 grid-column: 1 / -1;
 width: 100%;">
 
-    <h2 class="leader-audit-title">⑤ 最近负责人变更</h2>
+    <h2 class="leader-audit-title leader-dashboard-section-title">⑤ 最近负责人变更</h2>
 
     <p class="leader-audit-muted" style="color:#475569;">
         默认只展示最近 3 条负责人变更记录，点击可展开完整记录。
@@ -1004,7 +990,7 @@ width: 100%;">
 
     {% if lc.mapping_logs %}
 
-    <div style="max-height:420px;overflow:auto;border:1px solid #99f6e4;border-radius:14px;background:#fff;">
+    <div class="leader-dashboard-audit-table" style="max-height:420px;overflow:auto;border:1px solid #99f6e4;border-radius:14px;background:#fff;">
         <table style="width:100%;border-collapse:collapse;">
             <thead style="position:sticky;top:0;background:#f3f4f6;z-index:2;">
                 <tr>
@@ -1050,5 +1036,7 @@ width: 100%;">
 </div>
 
 
+
+</div>
 
 {% endblock %}
