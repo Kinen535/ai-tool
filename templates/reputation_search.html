@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="rf-flow rf-legacy">
+    {% include "reputation_flow_nav.html" %}
 
 <style>
 .reputation-search-risk-card {
@@ -41,8 +43,8 @@ html[data-theme="dark"] .reputation-search-risk-muted {
 }
 </style>
 
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+<div class="rf-legacy-shell" style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div class="rf-legacy-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
         <h1>🔎 信誉检索</h1>
         <a href="/reputation"
            style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
@@ -210,18 +212,18 @@ html[data-theme="dark"] .reputation-search-risk-muted {
     <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:18px;margin-bottom:18px;">
         <h2>快速处理</h2>
         <p style="color:#475569;line-height:1.7;margin:6px 0 12px 0;">
-            当前关键词：<b>{{ q }}</b>。可以直接带入关键词新增主体、事件，或者把当前匹配到的主体和事件快速建立/更新关联。已有关系时只会更新，不会重复新增。
+            当前关键词：<b>{{ q }}</b>。可以直接带入关键词新建档案、事件，或者把当前匹配到的主体和事件快速建立/更新关联。已有关系时只会更新，不会重复新增。
         </p>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
             <a href="/reputation/subjects/new?prefill={{ q|urlencode }}"
                style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                新增为信誉主体 →
+                以此关键词新建档案 →
             </a>
 
             <a href="/reputation/events/new?prefill={{ q|urlencode }}"
                style="background:#fff7ed;color:#f97316;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                新增为信誉事件 →
+                以此关键词记录事件 →
             </a>
         </div>
 
@@ -474,4 +476,5 @@ html[data-theme="dark"] .reputation-search-risk-muted {
     </div>
 </div>
 
+</div>
 {% endblock %}

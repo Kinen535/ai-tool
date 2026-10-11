@@ -1,324 +1,119 @@
 {% extends "base.html" %}
-
 {% block content %}
-
-{# V15.6-A37 reputation home chinese status mapping #}
-{% set trust_map = {
-    "unknown": "未知",
-    "trusted": "可信",
-    "risky": "风险",
-    "black": "黑名单"
-} %}
-
-{% set risk_map = {
-    "normal": "正常",
-    "warning": "预警",
-    "danger": "高危",
-    "black": "黑名单"
-} %}
-
-{% set impact_map = {
-    "low": "低",
-    "medium": "中",
-    "high": "高",
-    "severe": "严重",
-    "critical": "极严重"
-} %}
-
-{% set status_map = {
-    "pending": "待核实",
-    "disputed": "有争议",
-    "recorded": "已记录",
-    "verified": "已核实",
-    "resolved": "已处理",
-    "voided": "已作废",
-    "archived": "已归档"
-} %}
-
-
-<!-- V15.6-A33 reputation backup status entry -->
-<div style="
-    background:#fff;
-    border-radius:14px;
-    padding:18px;
-    margin:18px 0;
-    box-shadow:0 8px 24px rgba(0,0,0,.06);
-">
-    <h2 style="margin-top:0;">🛡️ 安全备份</h2>
-    <p style="color:#555;line-height:1.8;">
-        查看信誉档案库是否已经安全备份，包括最近一次备份、可恢复备份包、档案数据数量和旧格式备份提示。
-    </p>
-    <span style="display:inline-block;padding:10px 16px;background:#e5e7eb;color:#374151;border-radius:10px;font-weight:600;">维护页已保护，仅限服务器端访问</span>
-</div>
-
-
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <h1>🧭 信誉档案库</h1>
-
-    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 模块定位</h2>
-        <p style="color:#475569;line-height:1.8;">
-            信誉档案库独立于当前战场、当前同盟和当前赛季成员数据。这里用于记录长期可信主体、风险主体、游戏编号、历史事件和证据备注。
-        </p>
-
-        <form method="GET" action="/reputation/search" style="display:flex;gap:10px;margin-top:14px;">
-            <input name="q"
-                   placeholder="输入游戏编号 / 玩家名称 / 曾用名 / 事件关键词"
-                   style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;">
-            <button type="submit"
-                    style="background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;">
-                信誉检索
-            </button>
+{% set trust_map = {'unknown':'未知','trusted':'可信','risky':'存疑','black':'黑名单'} %}
+{% set risk_map = {'normal':'正常','warning':'预警','danger':'高危','black':'黑名单'} %}
+{% set impact_map = {'low':'低','normal':'普通','medium':'中','high':'高','severe':'严重','critical':'极严重'} %}
+{% set status_map = {'pending':'待核实','disputed':'有争议','recorded':'已记录','verified':'已核实','resolved':'已处理','voided':'已作废','archived':'已归档'} %}
+{% set empty_library = report.stats.subject_total == 0 and report.stats.event_total == 0 %}
+<div class="rf-flow">
+    {% include "reputation_flow_nav.html" %}
+    <header class="rf-page-title">
+        <div>
+            <h1>信誉档案库</h1>
+            <p class="rf-muted">先记录对象资料，再补充事件与证据；已有资料可随时查阅、编辑。</p>
+        </div>
+        <div class="rf-actions">
+            <a class="rf-button rf-primary" href="/reputation/subjects/new">新建档案</a>
+            <a class="rf-button" href="/reputation/events/new">记录事件</a>
+        </div>
+    </header>
+    {% if empty_library %}
+    <section class="rf-card rf-start" aria-labelledby="rf-start-title">
+        <h2 id="rf-start-title">从第一份档案开始</h2>
+        <p class="rf-muted">当前还没有资料。点击“新建档案”，填写名称或游戏编号即可保存。</p>
+        <div class="rf-steps">
+            <div class="rf-step"><strong>1 · 记录基本资料</strong><p class="rf-muted">保存玩家、账号、同盟或团体的信息。</p></div>
+            <div class="rf-step"><strong>2 · 补充事件与证据</strong><p class="rf-muted">从档案详情记录事件，保存时一并建立关联。</p></div>
+            <div class="rf-step"><strong>3 · 查阅与管理</strong><p class="rf-muted">资料积累后，再按需要检索、编辑或处理风险。</p></div>
+        </div>
+    </section>
+    {% else %}
+    <div class="rf-stats" aria-label="资料概况">
+        <div class="rf-stat"><span>档案数</span><strong>{{ report.stats.subject_total }}</strong></div>
+        <div class="rf-stat"><span>事件数</span><strong>{{ report.stats.event_total }}</strong></div>
+        <div class="rf-stat"><span>待核实事件</span><strong>{{ report.stats.pending_event_total }}</strong></div>
+        <div class="rf-stat"><span>待关联事件</span><strong>{{ report.stats.unlinked_event_total }}</strong></div>
+    </div>
+    {% endif %}
+    <section class="rf-card">
+        <form class="rf-search" method="GET" action="/reputation/search">
+            <input name="q" aria-label="检索已有资料" placeholder="搜索名称、游戏编号、曾用名或事件关键词">
+            <button class="rf-button" type="submit">检索资料</button>
         </form>
-    </div>
-
-    <div style="background:white;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>② 档案概况</h2>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:14px;">
-            <div style="background:#f8fafc;border-radius:14px;padding:18px;text-align:center;">
-                <div>信誉主体</div>
-                <h2>{{ report.stats.subject_total }}</h2>
-            </div>
-
-            <div style="background:#fef2f2;border-radius:14px;padding:18px;text-align:center;">
-                <div>风险主体</div>
-                <h2 style="color:#dc2626;">{{ report.stats.risk_subject_total }}</h2>
-            </div>
-
-            <div style="background:#fee2e2;border-radius:14px;padding:18px;text-align:center;">
-                <div>黑名单主体</div>
-                <h2 style="color:#dc2626;">{{ report.stats.black_subject_total }}</h2>
-            </div>
-
-            <div style="background:#fff7ed;border-radius:14px;padding:18px;text-align:center;">
-                <div>信誉事件</div>
-                <h2>{{ report.stats.event_total }}</h2>
-            </div>
-
-            <div style="background:#ffedd5;border-radius:14px;padding:18px;text-align:center;">
-                <div>高影响事件</div>
-                <h2 style="color:#f97316;">{{ report.stats.severe_event_total }}</h2>
-            </div>
-
-            <div style="background:#ecfdf5;border-radius:14px;padding:18px;text-align:center;">
-                <div>已关联事件</div>
-                <h2>{{ report.stats.relation_total }}</h2>
-            </div>
-
-            <div style="background:#fef2f2;border-radius:14px;padding:18px;text-align:center;">
-                <div>未关联事件</div>
-                <h2 style="color:#dc2626;">{{ report.stats.unlinked_event_total }}</h2>
-            </div>
-
-            <div style="background:#fff7ed;border-radius:14px;padding:18px;text-align:center;">
-                <div>待核实事件</div>
-                <h2 style="color:#f97316;">{{ report.stats.pending_event_total }}</h2>
-            </div>
-
-            <div style="background:#eef2ff;border-radius:14px;padding:18px;text-align:center;">
-                <div>证据链完整率</div>
-                <h2 style="color:#4f46e5;">{{ report.stats.evidence_complete_rate }}%</h2>
-            </div>
-        </div>
-    </div>
-
-    <!-- V15.6-A36 reputation home business dashboard -->
-    <div style="background:#f8fafc;border-left:6px solid #475569;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>③ 今日处理重点</h2>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;align-items:start;">
-            <div style="background:white;border-radius:14px;padding:16px;">
-                <h3 style="margin-top:0;">未关联事件</h3>
-                <p style="color:#64748b;line-height:1.7;">
-                    这些事件还没有绑定具体主体，证据链不完整，建议优先补关联对象。
-                </p>
-
-                {% if report.unlinked_events %}
-                    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-                        <tr style="background:#f3f4f6;">
-                            <th style="padding:8px;text-align:left;">事件</th>
-                            <th style="padding:8px;text-align:left;">影响</th>
-                            <th style="padding:8px;text-align:left;">入口</th>
-                        </tr>
-                        {% for e in report.unlinked_events %}
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
-                            <td style="padding:8px;color:#f97316;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</td>
-                            <td style="padding:8px;">
-                                <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">处理 →</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                {% else %}
-                    <div style="background:#ecfdf5;border-radius:12px;padding:12px;color:#166534;margin-top:10px;">
-                        当前没有未关联事件。
-                    </div>
-                {% endif %}
-            </div>
-
-            <div style="background:white;border-radius:14px;padding:16px;">
-                <h3 style="margin-top:0;">待核实事件</h3>
-                <p style="color:#64748b;line-height:1.7;">
-                    这些事件还处于待确认状态，建议补充证据、备注或确认状态。
-                </p>
-
-                {% if report.pending_events %}
-                    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-                        <tr style="background:#f3f4f6;">
-                            <th style="padding:8px;text-align:left;">事件</th>
-                            <th style="padding:8px;text-align:left;">状态</th>
-                            <th style="padding:8px;text-align:left;">入口</th>
-                        </tr>
-                        {% for e in report.pending_events %}
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding:8px;font-weight:bold;">{{ e.title or '-' }}</td>
-                            <td style="padding:8px;color:#f97316;">{{ status_map.get(e.status, e.status or '-') }}</td>
-                            <td style="padding:8px;">
-                                <a href="/reputation/events/{{ e.id }}" style="color:#2563eb;text-decoration:none;font-weight:bold;">核实 →</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                {% else %}
-                    <div style="background:#ecfdf5;border-radius:12px;padding:12px;color:#166534;margin-top:10px;">
-                        当前没有待核实事件。
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;">
-        <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
-            <h2>④ 高风险主体</h2>
-
-            {% if report.high_risk_subjects %}
-                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
-                    <tr style="background:#f3f4f6;">
-                        <th style="padding:10px;text-align:left;">主体</th>
-                        <th style="padding:10px;text-align:left;">编号</th>
-                        <th style="padding:10px;text-align:left;">信任</th>
-                        <th style="padding:10px;text-align:left;">风险</th>
-                        <th style="padding:10px;text-align:left;">入口</th>
-                    </tr>
-
-                    {% for s in report.high_risk_subjects %}
-                    <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:10px;font-weight:bold;">
-                            {{ s.display_name or '-' }}
-                            {% if s.alias_names %}
-                                <div style="font-size:12px;color:#64748b;margin-top:4px;">{{ s.alias_names }}</div>
-                            {% endif %}
-                        </td>
-                        <td style="padding:10px;color:#64748b;">{{ s.game_id or '-' }}</td>
-                        <td style="padding:10px;color:#64748b;">{{ trust_map.get(s.trust_level, s.trust_level or '-') }}</td>
-                        <td style="padding:10px;color:#dc2626;font-weight:bold;">{{ risk_map.get(s.risk_level, s.risk_level or '-') }}</td>
-                        <td style="padding:10px;">
-                            <a href="/reputation/subjects/{{ s.id }}"
-                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
-                                查看 →
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            {% else %}
-                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
-                    暂无高风险主体。
-                </div>
-            {% endif %}
-        </div>
-
-        <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;">
-            <h2>⑤ 最近信誉事件</h2>
-
+    </section>
+    {% if not empty_library %}
+    <div class="rf-grid">
+        <section class="rf-card">
+            <h2>最近更新的档案</h2>
+            {% if report.recent_subjects %}
+            <ul class="rf-list">
+                {% for s in report.recent_subjects %}
+                <li><div><a href="/reputation/subjects/{{ s.id }}">{{ s.display_name or s.game_id or '未命名档案' }}</a>
+                    <small>编号 {{ s.game_id or '未填写' }} · {{ risk_map.get(s.risk_level, s.risk_level or '未填写') }}</small></div>
+                    <time>{{ (s.updated_at or s.created_at or '')[:10] }}</time></li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="rf-muted">还没有档案，可先为已有事件建立对象资料。</p>{% endif %}
+            <a class="rf-button" href="/reputation/subjects">管理全部档案</a>
+        </section>
+        <section class="rf-card">
+            <h2>最近记录的事件</h2>
             {% if report.recent_events %}
-                <table style="width:100%;border-collapse:collapse;margin-top:12px;">
-                    <tr style="background:#f3f4f6;">
-                        <th style="padding:10px;text-align:left;">事件</th>
-                        <th style="padding:10px;text-align:left;">影响</th>
-                        <th style="padding:10px;text-align:left;">状态</th>
-                        <th style="padding:10px;text-align:left;">入口</th>
-                    </tr>
-
-                    {% for e in report.recent_events %}
-                    <tr style="border-bottom:1px solid #e5e7eb;">
-                        <td style="padding:10px;font-weight:bold;max-width:260px;word-break:break-all;">
-                            {{ e.title or '-' }}
-                            {% if e.summary %}
-                                <div style="font-size:12px;color:#64748b;margin-top:4px;">
-                                    {{ e.summary[:50] }}{% if e.summary|length > 50 %}...{% endif %}
-                                </div>
-                            {% endif %}
-                        </td>
-
-                        <td style="padding:10px;">
-                            {% if e.impact_level in ["high", "severe"] %}
-                                <span style="color:#f97316;font-weight:bold;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</span>
-                            {% else %}
-                                <span style="color:#64748b;">{{ impact_map.get(e.impact_level, e.impact_level or '-') }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td style="padding:10px;color:#64748b;">{{ status_map.get(e.status, e.status or '-') }}</td>
-
-                        <td style="padding:10px;">
-                            <a href="/reputation/events/{{ e.id }}"
-                               style="color:#2563eb;text-decoration:none;font-weight:bold;">
-                                查看 →
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            {% else %}
-                <div style="background:white;border-radius:12px;padding:14px;color:#64748b;margin-top:12px;">
-                    暂无信誉事件。
-                </div>
+            <ul class="rf-list">
+                {% for e in report.recent_events[:6] %}
+                <li><div><a href="/reputation/events/{{ e.id }}">{{ e.title or '未命名事件' }}</a>
+                    <small>{{ status_map.get(e.status, e.status or '未填写') }} · 影响 {{ impact_map.get(e.impact_level, e.impact_level or '未填写') }}</small></div>
+                    <time>{{ (e.updated_at or e.created_at or '')[:10] }}</time></li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="rf-muted">还没有事件。进入一份档案，可为它补充事件和证据。</p>{% endif %}
+            <a class="rf-button" href="/reputation/events">管理全部事件</a>
+        </section>
+    </div>
+    {% if report.unlinked_events or report.pending_events %}
+    <section class="rf-card">
+        <h2>需要补充的资料</h2>
+        <div class="rf-grid">
+            {% if report.unlinked_events %}
+            <div><h3>待关联对象</h3><ul class="rf-list">
+                {% for e in report.unlinked_events %}
+                <li><a href="/reputation/events/{{ e.id }}/edit#relations">{{ e.title or '未命名事件' }}</a><small>补关联 →</small></li>
+                {% endfor %}
+            </ul></div>
+            {% endif %}
+            {% if report.pending_events %}
+            <div><h3>待核实事件</h3><ul class="rf-list">
+                {% for e in report.pending_events %}
+                <li><a href="/reputation/events/{{ e.id }}">{{ e.title or '未命名事件' }}</a><small>{{ status_map.get(e.status, e.status or '-') }}</small></li>
+                {% endfor %}
+            </ul></div>
             {% endif %}
         </div>
-    </div>
-
-    <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-top:18px;">
-        <h2>⑥ 当前建议阶段</h2>
-        <p style="color:#475569;line-height:1.8;">{{ report.stage_tip }}</p>
-
-        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
-            <!-- V15.7-A6 reputation workbench entry -->
-            <a href="/reputation/workbench"
-               style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                进入风险处置工作台 →
-            </a>
-
-            <!-- V15.7-A7-1B reputation task entry -->
-            <a href="/reputation/tasks"
-               style="background:#fff7ed;color:#f97316;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                查看处置任务 →
-            </a>
-
-            <a href="/reputation/search"
-               style="background:#eff6ff;color:#2563eb;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                进入检索 →
-            </a>
-
-            <a href="/reputation/subjects"
-               style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                进入主体库 →
-            </a>
-
-            <a href="/reputation/events"
-               style="background:#fff7ed;color:#f97316;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                进入事件库 →
-            </a>
-
-            <a href="/reputation/duplicates"
-               style="background:#f8fafc;color:#334155;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                重复检测 →
-            </a>
+    </section>
+    {% endif %}
+    {% if report.high_risk_subjects %}
+    <details class="rf-fold">
+        <summary>风险档案 · 查看与复核</summary>
+        <p class="rf-muted">{{ report.stage_tip }}</p>
+        <ul class="rf-list">
+            {% for s in report.high_risk_subjects %}
+            <li><a href="/reputation/subjects/{{ s.id }}">{{ s.display_name or s.game_id or '未命名档案' }}</a>
+                <small>信任 {{ trust_map.get(s.trust_level, s.trust_level or '-') }} · 风险 {{ risk_map.get(s.risk_level, s.risk_level or '-') }}</small></li>
+            {% endfor %}
+        </ul>
+        <a class="rf-button" href="/reputation/workbench">进入风险处理</a>
+    </details>
+    {% endif %}
+    <details class="rf-fold">
+        <summary>查看完整统计</summary>
+        <div class="rf-stats">
+            <div class="rf-stat"><span>风险档案</span><strong>{{ report.stats.risk_subject_total }}</strong></div>
+            <div class="rf-stat"><span>黑名单档案</span><strong>{{ report.stats.black_subject_total }}</strong></div>
+            <div class="rf-stat"><span>高影响事件</span><strong>{{ report.stats.severe_event_total }}</strong></div>
+            <div class="rf-stat"><span>关联记录</span><strong>{{ report.stats.relation_total }}</strong></div>
+            <div class="rf-stat"><span>已有事件关联的档案占比</span><strong>{% if report.stats.subject_total %}{{ report.stats.evidence_complete_rate }}%{% else %}尚无记录{% endif %}</strong></div>
         </div>
-    </div>
+    </details>
+    {% endif %}
 </div>
-
 {% endblock %}

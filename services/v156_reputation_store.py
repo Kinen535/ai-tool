@@ -5,7 +5,7 @@ import sqlite3
 from typing import Any
 
 
-def ensure_reputation_tables(conn: sqlite3.Connection) -> None:
+def _a4_legacy_ensure_reputation_tables(conn: sqlite3.Connection) -> None:
     """
     V15.6 信誉档案库基础表。
     注意：这是独立于当前战场 battle_id 的私有信誉档案库。
@@ -2781,1050 +2781,37 @@ def _v155_reputation_rows_dict(rows):
     return result
 
 
-def get_reputation_event_scoped(conn, event_id, *, battle_id):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
 
-    row = conn.execute(
-        """
-        SELECT *
-        FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchone()
 
-    return _v155_reputation_row_dict(row)
 
 
-def update_reputation_event_scoped(
-    conn,
-    event_id,
-    data,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
 
-    row = conn.execute(
-        """
-        SELECT *
-        FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchone()
 
-    if row is None:
-        return False
 
-    current = _v155_reputation_row_dict(row)
 
-    fields = (
-        "title",
-        "event_type",
-        "impact_level",
-        "status",
-        "event_time",
-        "summary",
-        "evidence_note",
-    )
 
-    values = [
-        data.get(
-            field,
-            current.get(
-                field,
-                "",
-            ),
-        )
-        for field
-        in fields
-    ]
 
-    cur = conn.execute(
-        """
-        UPDATE v156_reputation_events
-        SET title = ?,
-            event_type = ?,
-            impact_level = ?,
-            status = ?,
-            event_time = ?,
-            summary = ?,
-            evidence_note = ?,
-            updated_at = datetime('now','localtime')
-        WHERE id = ?
-          AND battle_id = ?
-        """,
-        tuple(values)
-        + (
-            event_id,
-            battle_id,
-        ),
-    )
 
-    conn.commit()
 
-    return cur.rowcount == 1
 
 
-def list_reputation_event_relations_scoped(
-    conn,
-    event_id,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
 
-    rows = conn.execute(
-        """
-        SELECT
-            r.*,
-            s.display_name,
-            s.game_id,
-            s.alias_names,
-            s.trust_level,
-            s.risk_level,
-            s.status AS subject_status
-        FROM v156_reputation_event_relations AS r
-        LEFT JOIN v156_reputation_subjects AS s
-          ON s.id = r.subject_id
-         AND s.battle_id = r.battle_id
-        WHERE r.event_id = ?
-          AND r.battle_id = ?
-        ORDER BY r.id DESC
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchall()
 
-    return _v155_reputation_rows_dict(rows)
 
 
-def list_reputation_subjects_scoped(
-    conn,
-    q="",
-    limit=100,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
 
-    try:
-        limit = int(limit)
-    except (TypeError, ValueError):
-        limit = 100
 
-    limit = max(
-        1,
-        min(
-            limit,
-            5000,
-        ),
-    )
-
-    q = str(
-        q or ""
-    ).strip()
-
-    if q:
-        like = "%" + q + "%"
-
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM v156_reputation_subjects
-            WHERE battle_id = ?
-              AND (
-                    display_name LIKE ?
-                 OR game_id LIKE ?
-                 OR alias_names LIKE ?
-                 OR note LIKE ?
-              )
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (
-                battle_id,
-                like,
-                like,
-                like,
-                like,
-                limit,
-            ),
-        ).fetchall()
-
-    else:
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM v156_reputation_subjects
-            WHERE battle_id = ?
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (
-                battle_id,
-                limit,
-            ),
-        ).fetchall()
-
-    return _v155_reputation_rows_dict(rows)
-
-
-def create_reputation_subject_scoped(
-    conn,
-    data,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    cur = conn.execute(
-        """
-        INSERT INTO v156_reputation_subjects (
-            battle_id,
-            subject_type,
-            display_name,
-            game_id,
-            alias_names,
-            trust_level,
-            risk_level,
-            status,
-            source_type,
-            note
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            battle_id,
-            data.get("subject_type", "player"),
-            data.get("display_name", ""),
-            data.get("game_id", ""),
-            data.get("alias_names", ""),
-            data.get("trust_level", "unknown"),
-            data.get("risk_level", "normal"),
-            data.get("status", "active"),
-            data.get("source_type", "manual"),
-            data.get("note", ""),
-        ),
-    )
-
-    conn.commit()
-
-    return cur.lastrowid
-
-
-def create_reputation_event_scoped(
-    conn,
-    data,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    cur = conn.execute(
-        """
-        INSERT INTO v156_reputation_events (
-            battle_id,
-            title,
-            event_type,
-            impact_level,
-            status,
-            event_time,
-            summary,
-            evidence_note
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            battle_id,
-            data.get("title", ""),
-            data.get("event_type", "general"),
-            data.get("impact_level", "normal"),
-            data.get("status", "recorded"),
-            data.get("event_time", ""),
-            data.get("summary", ""),
-            data.get("evidence_note", ""),
-        ),
-    )
-
-    conn.commit()
-
-    return cur.lastrowid
-
-
-def add_reputation_event_relation_scoped(
-    conn,
-    event_id,
-    subject_id,
-    relation_role="",
-    note="",
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    event = conn.execute(
-        """
-        SELECT id
-        FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    subject = conn.execute(
-        """
-        SELECT id
-        FROM v156_reputation_subjects
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            subject_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if (
-        event is None
-        or subject is None
-    ):
-        return None
-
-    existing = conn.execute(
-        """
-        SELECT id
-        FROM v156_reputation_event_relations
-        WHERE event_id = ?
-          AND subject_id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            subject_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if existing is not None:
-
-        try:
-            relation_id = int(
-                existing["id"]
-            )
-        except Exception:
-            relation_id = int(
-                existing[0]
-            )
-
-        conn.execute(
-            """
-            UPDATE v156_reputation_event_relations
-            SET relation_role = ?,
-                note = ?
-            WHERE id = ?
-              AND event_id = ?
-              AND subject_id = ?
-              AND battle_id = ?
-            """,
-            (
-                relation_role,
-                note,
-                relation_id,
-                event_id,
-                subject_id,
-                battle_id,
-            ),
-        )
-
-        conn.commit()
-
-        return relation_id
-
-    cur = conn.execute(
-        """
-        INSERT INTO v156_reputation_event_relations (
-            battle_id,
-            event_id,
-            subject_id,
-            relation_role,
-            note
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            battle_id,
-            event_id,
-            subject_id,
-            relation_role,
-            note,
-        ),
-    )
-
-    conn.commit()
-
-    return cur.lastrowid
-
-
-def delete_reputation_event_relation_scoped(
-    conn,
-    relation_id,
-    *,
-    event_id,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    cur = conn.execute(
-        """
-        DELETE FROM v156_reputation_event_relations
-        WHERE id = ?
-          AND event_id = ?
-          AND battle_id = ?
-        """,
-        (
-            relation_id,
-            event_id,
-            battle_id,
-        ),
-    )
-
-    conn.commit()
-
-    return cur.rowcount == 1
-
-
-def update_reputation_event_status_quick_scoped(
-    conn,
-    event_id,
-    status,
-    note="",
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    current = conn.execute(
-        """
-        SELECT id
-        FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if current is None:
-        return {
-            "ok": False,
-            "message": "事件不存在或不属于当前战场",
-        }
-
-    status = str(
-        status or ""
-    ).strip()
-
-    note = str(
-        note or ""
-    ).strip()
-
-    if not status:
-        return {
-            "ok": False,
-            "message": "状态不能为空",
-        }
-
-    cur = conn.execute(
-        """
-        UPDATE v156_reputation_events
-        SET status = ?,
-            evidence_note = CASE
-                WHEN ? = '' THEN evidence_note
-                WHEN COALESCE(evidence_note, '') = '' THEN ?
-                ELSE evidence_note || char(10) || ?
-            END,
-            updated_at = datetime('now','localtime')
-        WHERE id = ?
-          AND battle_id = ?
-        """,
-        (
-            status,
-            note,
-            note,
-            note,
-            event_id,
-            battle_id,
-        ),
-    )
-
-    conn.commit()
-
-    return {
-        "ok": (
-            cur.rowcount
-            == 1
-        ),
-        "message": (
-            "状态已更新"
-            if cur.rowcount == 1
-            else "状态更新失败"
-        ),
-    }
-
-
-def delete_reputation_event_safely_scoped(
-    conn,
-    event_id,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    row = conn.execute(
-        """
-        SELECT
-            id,
-            title,
-            event_type,
-            impact_level,
-            status
-        FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if row is None:
-        return {
-            "ok": False,
-            "blocked": False,
-            "event_id": event_id,
-        }
-
-    current = _v155_reputation_row_dict(
-        row
-    )
-
-    relation_count = int(
-        conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM v156_reputation_event_relations
-            WHERE event_id = ?
-              AND battle_id = ?
-            """,
-            (
-                event_id,
-                battle_id,
-            ),
-        ).fetchone()[0]
-        or 0
-    )
-
-    if relation_count > 0:
-        return {
-            "ok": False,
-            "blocked": True,
-            "event_id": event_id,
-            "title": current.get(
-                "title",
-                "",
-            ),
-            "relation_count":
-                relation_count,
-        }
-
-    cur = conn.execute(
-        """
-        DELETE FROM v156_reputation_events
-        WHERE id = ?
-          AND battle_id = ?
-        """,
-        (
-            event_id,
-            battle_id,
-        ),
-    )
-
-    conn.commit()
-
-    return {
-        "ok": (
-            cur.rowcount
-            == 1
-        ),
-        "blocked": False,
-        "event_id": event_id,
-        "title": current.get(
-            "title",
-            "",
-        ),
-        "relation_count": 0,
-    }
-
-
-def delete_reputation_subject_safely_scoped(
-    conn,
-    subject_id,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    row = conn.execute(
-        """
-        SELECT
-            id,
-            display_name,
-            game_id
-        FROM v156_reputation_subjects
-        WHERE id = ?
-          AND battle_id = ?
-        LIMIT 1
-        """,
-        (
-            subject_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if row is None:
-        return {
-            "ok": False,
-            "blocked": False,
-            "subject_id": subject_id,
-        }
-
-    current = _v155_reputation_row_dict(
-        row
-    )
-
-    relation_count = int(
-        conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM v156_reputation_event_relations
-            WHERE subject_id = ?
-              AND battle_id = ?
-            """,
-            (
-                subject_id,
-                battle_id,
-            ),
-        ).fetchone()[0]
-        or 0
-    )
-
-    first_event = conn.execute(
-        """
-        SELECT event_id
-        FROM v156_reputation_event_relations
-        WHERE subject_id = ?
-          AND battle_id = ?
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (
-            subject_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    first_event_id = 0
-
-    if first_event is not None:
-        try:
-            first_event_id = int(
-                first_event["event_id"]
-            )
-        except Exception:
-            first_event_id = int(
-                first_event[0]
-            )
-
-    if relation_count > 0:
-        return {
-            "ok": False,
-            "blocked": True,
-            "subject_id": subject_id,
-            "display_name": current.get(
-                "display_name",
-                "",
-            ),
-            "relation_count":
-                relation_count,
-            "first_event_id":
-                first_event_id,
-        }
-
-    cur = conn.execute(
-        """
-        DELETE FROM v156_reputation_subjects
-        WHERE id = ?
-          AND battle_id = ?
-        """,
-        (
-            subject_id,
-            battle_id,
-        ),
-    )
-
-    conn.commit()
-
-    return {
-        "ok": (
-            cur.rowcount
-            == 1
-        ),
-        "blocked": False,
-        "subject_id": subject_id,
-        "display_name": current.get(
-            "display_name",
-            "",
-        ),
-        "relation_count": 0,
-        "first_event_id": 0,
-    }
 
 # ============================================================
 # V15.5-A5-P0-S08 battle-scoped reputation helpers
 # ============================================================
 
-def get_reputation_subject_scoped(conn: sqlite3.Connection, subject_id: int, *, battle_id):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-    ensure_reputation_tables(conn)
-    return conn.execute('\n        SELECT *\n        FROM v156_reputation_subjects\n        WHERE id=?\n          AND battle_id = ?\n        ', (subject_id, battle_id)).fetchone()
 
-def update_reputation_subject_scoped(conn: sqlite3.Connection, subject_id: int, data: dict[str, Any], *, battle_id) -> bool:
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-    ensure_reputation_tables(conn)
-    display_name = (data.get('display_name') or '').strip()
-    game_id = (data.get('game_id') or '').strip()
-    if not display_name and (not game_id):
-        return False
-    conn.execute("\n        UPDATE v156_reputation_subjects\n        SET\n            subject_type=?,\n            display_name=?,\n            game_id=?,\n            alias_names=?,\n            trust_level=?,\n            risk_level=?,\n            status=?,\n            source_type=?,\n            note=?,\n            updated_at=datetime('now','localtime')\n        WHERE id=?\n          AND battle_id = ?\n        ", ((data.get('subject_type') or 'player').strip(), display_name, game_id, (data.get('alias_names') or '').strip(), (data.get('trust_level') or 'unknown').strip(), (data.get('risk_level') or 'normal').strip(), (data.get('status') or 'active').strip(), (data.get('source_type') or 'manual').strip(), (data.get('note') or '').strip(), subject_id, battle_id))
-    conn.commit()
-    return True
 
-def get_reputation_task_scoped(conn: sqlite3.Connection, task_id: int, *, battle_id):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-    ensure_reputation_tables(conn)
-    return conn.execute('\n        SELECT *\n        FROM v157_reputation_tasks\n        WHERE id=?\n          AND battle_id = ?\n        ', (task_id, battle_id)).fetchone()
 
-def update_reputation_task_scoped(conn: sqlite3.Connection, task_id: int, data: dict[str, Any], *, battle_id) -> dict[str, Any]:
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-    ensure_reputation_tables(conn)
-    row = get_reputation_task_scoped(conn, task_id, battle_id=battle_id)
-    if not row:
-        return {'ok': False, 'not_found': True, 'message': '处置任务不存在。'}
-    priority = (data.get('priority') or row['priority'] or 'P3').strip().upper()
-    status = (data.get('status') or row['status'] or 'pending').strip().lower()
-    owner = data.get('owner') if data.get('owner') is not None else row['owner']
-    result_note = data.get('result_note') if data.get('result_note') is not None else row['result_note']
-    owner = (owner or '').strip()
-    result_note = (result_note or '').strip()
-    if priority not in _REPUTATION_TASK_PRIORITIES:
-        return {'ok': False, 'message': '任务优先级无效。'}
-    if status not in _REPUTATION_TASK_STATUSES:
-        return {'ok': False, 'message': '任务状态无效。'}
-    if len(owner) > 100:
-        return {'ok': False, 'message': '负责人名称不能超过100个字符。'}
-    if len(result_note) > 2000:
-        return {'ok': False, 'message': '处置结果不能超过2000个字符。'}
-    if status in _REPUTATION_TASK_CLOSED_STATUSES and (not result_note):
-        return {'ok': False, 'result_required': True, 'message': '完成或忽略任务前，必须填写处置结果。'}
-    try:
-        if status in _REPUTATION_TASK_CLOSED_STATUSES:
-            conn.execute("\n                UPDATE v157_reputation_tasks\n                SET\n                    priority=?,\n                    owner=?,\n                    status=?,\n                    result_note=?,\n                    updated_at=datetime(\n                        'now',\n                        'localtime'\n                    ),\n                    completed_at=CASE\n                        WHEN IFNULL(\n                            completed_at,\n                            ''\n                        )=''\n                        THEN datetime(\n                            'now',\n                            'localtime'\n                        )\n                        ELSE completed_at\n                    END\n                WHERE id=?\n          AND battle_id = ?\n                ", (priority, owner, status, result_note, task_id, battle_id))
-        else:
-            conn.execute("\n                UPDATE v157_reputation_tasks\n                SET\n                    priority=?,\n                    owner=?,\n                    status=?,\n                    result_note=?,\n                    updated_at=datetime(\n                        'now',\n                        'localtime'\n                    ),\n                    completed_at=''\n                WHERE id=?\n          AND battle_id = ?\n                ", (priority, owner, status, result_note, task_id, battle_id))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        return {'ok': False, 'duplicate': True, 'message': '该对象已经存在另一条未闭环任务。'}
-    updated = get_reputation_task_scoped(conn, task_id, battle_id=battle_id)
-    return {'ok': True, 'task': updated, 'message': '处置任务已更新。'}
 
-def list_reputation_events_scoped(
-    conn,
-    q="",
-    limit=100,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
 
-    ensure_reputation_tables(conn)
 
-    try:
-        limit = int(limit)
-    except (TypeError, ValueError):
-        limit = 100
-
-    limit = max(
-        1,
-        min(
-            limit,
-            5000,
-        ),
-    )
-
-    q = str(
-        q or ""
-    ).strip()
-
-    cols = {
-        str(row[1])
-        for row in conn.execute(
-            "PRAGMA table_info(v156_reputation_events)"
-        ).fetchall()
-    }
-
-    search_cols = [
-        name
-        for name in (
-            "title",
-            "event_type",
-            "summary",
-            "evidence_note",
-            "note",
-        )
-        if name in cols
-    ]
-
-    where_parts = [
-        "battle_id = ?",
-    ]
-
-    params = [
-        battle_id,
-    ]
-
-    if q and search_cols:
-        where_parts.append(
-            "("
-            + " OR ".join(
-                "IFNULL(" + name + ", '') LIKE ?"
-                for name in search_cols
-            )
-            + ")"
-        )
-
-        params.extend(
-            ["%" + q + "%"]
-            * len(search_cols)
-        )
-
-    if "updated_at" in cols:
-        order_sql = "updated_at DESC, id DESC"
-    elif "created_at" in cols:
-        order_sql = "created_at DESC, id DESC"
-    elif "event_time" in cols:
-        order_sql = "event_time DESC, id DESC"
-    else:
-        order_sql = "id DESC"
-
-    sql = (
-        "SELECT * "
-        "FROM v156_reputation_events "
-        "WHERE "
-        + " AND ".join(where_parts)
-        + " ORDER BY "
-        + order_sql
-        + " LIMIT ?"
-    )
-
-    params.append(limit)
-
-    rows = conn.execute(
-        sql,
-        params,
-    ).fetchall()
-
-    return _v155_reputation_rows_dict(rows)
-
-def build_reputation_duplicate_report_scoped(
-    conn,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    ensure_reputation_tables(conn)
-
-    scoped_conn = sqlite3.connect(":memory:")
-    scoped_conn.row_factory = sqlite3.Row
-
-    try:
-        ensure_reputation_tables(scoped_conn)
-
-        source_cols = [
-            str(row[1])
-            for row in conn.execute(
-                "PRAGMA table_info(v156_reputation_subjects)"
-            ).fetchall()
-        ]
-
-        target_cols = {
-            str(row[1])
-            for row in scoped_conn.execute(
-                "PRAGMA table_info(v156_reputation_subjects)"
-            ).fetchall()
-        }
-
-        cols = [
-            name
-            for name in source_cols
-            if name in target_cols
-        ]
-
-        if not cols:
-            return build_reputation_duplicate_report(
-                scoped_conn
-            )
-
-        quoted = ", ".join(
-            '"' + name.replace('"', '""') + '"'
-            for name in cols
-        )
-
-        rows = conn.execute(
-            "SELECT "
-            + quoted
-            + " FROM v156_reputation_subjects "
-              "WHERE battle_id = ?",
-            (
-                battle_id,
-            ),
-        ).fetchall()
-
-        placeholders = ", ".join(
-            ["?"] * len(cols)
-        )
-
-        if rows:
-            scoped_conn.executemany(
-                "INSERT INTO v156_reputation_subjects ("
-                + quoted
-                + ") VALUES ("
-                + placeholders
-                + ")",
-                [
-                    tuple(row)
-                    for row in rows
-                ],
-            )
-
-        scoped_conn.commit()
-
-        return build_reputation_duplicate_report(
-            scoped_conn
-        )
-
-    finally:
-        scoped_conn.close()
-
-def merge_reputation_subjects_scoped(
-    conn,
-    keep_id,
-    merge_id,
-    *,
-    battle_id,
-):
-    battle_id = _v155_reputation_positive_battle_id(battle_id)
-
-    try:
-        keep_id = int(keep_id)
-        merge_id = int(merge_id)
-    except (TypeError, ValueError):
-        return False
-
-    if (
-        keep_id <= 0
-        or merge_id <= 0
-        or keep_id == merge_id
-    ):
-        return False
-
-    keep_row = get_reputation_subject_scoped(
-        conn,
-        keep_id,
-        battle_id=battle_id,
-    )
-
-    merge_row = get_reputation_subject_scoped(
-        conn,
-        merge_id,
-        battle_id=battle_id,
-    )
-
-    if (
-        keep_row is None
-        or merge_row is None
-    ):
-        return False
-
-    unsafe_relation = conn.execute(
-        """
-        SELECT 1
-        FROM v156_reputation_event_relations AS r
-        LEFT JOIN v156_reputation_events AS e
-          ON e.id = r.event_id
-         AND e.battle_id = r.battle_id
-        WHERE r.subject_id IN (?, ?)
-          AND (
-                r.battle_id IS NULL
-             OR r.battle_id <> ?
-             OR e.id IS NULL
-             OR e.battle_id IS NULL
-             OR e.battle_id <> ?
-          )
-        LIMIT 1
-        """,
-        (
-            keep_id,
-            merge_id,
-            battle_id,
-            battle_id,
-        ),
-    ).fetchone()
-
-    if unsafe_relation is not None:
-        return False
-
-    return merge_reputation_subjects(
-        conn,
-        keep_id=keep_id,
-        merge_id=merge_id,
-    )
 
 
 # ============================================================
@@ -3970,68 +2957,2570 @@ def make_reputation_battle_scoped_connection(
     )
 
 
-def build_reputation_home_report_scoped(
+
+
+
+
+
+
+
+
+# =====================================================================
+# REPUTATION_GLOBAL_KNOWLEDGE_MODEL_A4
+#
+# Ownership:
+#   reputation knowledge -> workspace_id
+#
+# Context:
+#   battle_id -> occurrence / event / operational context
+#
+# Compatibility:
+#   existing public battle_id arguments are preserved.
+# =====================================================================
+
+_A4_REPUTATION_KNOWLEDGE_TABLES = (
+    "v156_reputation_subjects",
+    "v156_reputation_events",
+    "v156_reputation_event_relations",
+    "v156_reputation_merge_logs",
+    "v156_reputation_subject_battles",
+)
+
+_A4_REPUTATION_OPERATIONAL_TABLES = (
+    "v157_reputation_tasks",
+)
+
+
+def _v156_a4_base_conn(conn):
+    return getattr(
+        conn,
+        "_conn",
+        conn,
+    )
+
+
+def _v156_a4_workspace_id_for_battle(
+    conn,
+    battle_id,
+):
+    battle_id = _v155_reputation_positive_battle_id(
+        battle_id
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    row = base.execute(
+        """
+        SELECT workspace_id
+        FROM v155_workspace_battles
+        WHERE battle_id = ?
+        LIMIT 1
+        """,
+        (
+            battle_id,
+        ),
+    ).fetchone()
+
+    if row is None:
+        raise ValueError(
+            "workspace mapping required for battle_id"
+        )
+
+    workspace_id = int(
+        row[0]
+    )
+
+    if workspace_id <= 0:
+        raise ValueError(
+            "positive workspace_id required"
+        )
+
+    return workspace_id
+
+
+def _v156_a4_link_subject_battle(
     conn,
     *,
-    battle_id: int,
+    workspace_id,
+    subject_id,
+    battle_id,
+    source_type="application",
 ):
-    scoped_conn = make_reputation_battle_scoped_connection(
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    base.execute(
+        """
+        INSERT OR IGNORE INTO
+        v156_reputation_subject_battles (
+            workspace_id,
+            subject_id,
+            battle_id,
+            first_seen_at,
+            last_seen_at,
+            source_type,
+            updated_at
+        )
+        VALUES (
+            ?, ?, ?,
+            datetime('now','localtime'),
+            datetime('now','localtime'),
+            ?,
+            datetime('now','localtime')
+        )
+        """,
+        (
+            int(workspace_id),
+            int(subject_id),
+            int(battle_id),
+            str(
+                source_type
+                or "application"
+            ),
+        ),
+    )
+
+    base.execute(
+        """
+        UPDATE
+            v156_reputation_subject_battles
+        SET
+            last_seen_at =
+                datetime('now','localtime'),
+            updated_at =
+                datetime('now','localtime')
+        WHERE workspace_id = ?
+          AND subject_id = ?
+          AND battle_id = ?
+        """,
+        (
+            int(workspace_id),
+            int(subject_id),
+            int(battle_id),
+        ),
+    )
+
+
+
+
+def ensure_reputation_tables(
+    conn,
+):
+    """
+    A4 additive bootstrap.
+
+    Existing populated pre-A3 databases fail closed instead of
+    silently guessing workspace ownership.
+    """
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    _a4_legacy_ensure_reputation_tables(
+        base
+    )
+
+    try:
+        ensure_reputation_merge_log_table(
+            base
+        )
+    except NameError:
+        pass
+
+    scope_tables = (
+        "v156_reputation_subjects",
+        "v156_reputation_events",
+        "v156_reputation_event_relations",
+        "v156_reputation_merge_logs",
+        "v157_reputation_tasks",
+    )
+
+    for table in scope_tables:
+
+        columns = {
+            str(row[1])
+            for row in base.execute(
+                'PRAGMA table_info("'
+                + table
+                + '")'
+            ).fetchall()
+        }
+
+        if "workspace_id" in columns:
+            continue
+
+        row_count = int(
+            base.execute(
+                'SELECT COUNT(*) FROM "'
+                + table
+                + '"'
+            ).fetchone()[0]
+        )
+
+        if row_count:
+            raise RuntimeError(
+                "A3 migration required before A4: "
+                + table
+            )
+
+        base.execute(
+            'ALTER TABLE "'
+            + table
+            + '" ADD COLUMN workspace_id INTEGER'
+        )
+
+    base.execute(
+        """
+        CREATE TABLE IF NOT EXISTS
+        v156_reputation_subject_battles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workspace_id INTEGER NOT NULL,
+            subject_id INTEGER NOT NULL,
+            battle_id INTEGER NOT NULL,
+            first_seen_at TEXT,
+            last_seen_at TEXT,
+            source_type TEXT NOT NULL
+                DEFAULT 'application',
+            created_at TEXT NOT NULL
+                DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL
+                DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (
+                workspace_id,
+                subject_id,
+                battle_id
+            )
+        )
+        """
+    )
+
+    index_sql = (
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_subjects_workspace
+        ON v156_reputation_subjects(workspace_id)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_subjects_workspace_game
+        ON v156_reputation_subjects(
+            workspace_id,
+            game_id
+        )
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_events_workspace
+        ON v156_reputation_events(workspace_id)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_event_relations_workspace
+        ON v156_reputation_event_relations(workspace_id)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_merge_logs_workspace
+        ON v156_reputation_merge_logs(workspace_id)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v157_reputation_tasks_workspace
+        ON v157_reputation_tasks(workspace_id)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_subject_battles_workspace
+        ON v156_reputation_subject_battles(
+            workspace_id
+        )
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_subject_battles_subject
+        ON v156_reputation_subject_battles(
+            workspace_id,
+            subject_id
+        )
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_v156_reputation_subject_battles_battle
+        ON v156_reputation_subject_battles(
+            workspace_id,
+            battle_id
+        )
+        """,
+    )
+
+    for sql in index_sql:
+        base.execute(sql)
+
+    base.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+        trg_rep_subject_workspace_bridge
+        AFTER INSERT ON v156_reputation_subjects
+        WHEN
+            NEW.workspace_id IS NULL
+            AND NEW.battle_id IS NOT NULL
+        BEGIN
+            UPDATE v156_reputation_subjects
+            SET workspace_id = (
+                SELECT workspace_id
+                FROM v155_workspace_battles
+                WHERE battle_id = NEW.battle_id
+            )
+            WHERE id = NEW.id;
+
+            INSERT OR IGNORE INTO
+            v156_reputation_subject_battles (
+                workspace_id,
+                subject_id,
+                battle_id,
+                first_seen_at,
+                last_seen_at,
+                source_type
+            )
+            SELECT
+                workspace_id,
+                NEW.id,
+                NEW.battle_id,
+                NEW.created_at,
+                NEW.updated_at,
+                'legacy_bridge'
+            FROM v155_workspace_battles
+            WHERE battle_id = NEW.battle_id;
+        END
+        """
+    )
+
+    base.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+        trg_rep_event_workspace_bridge
+        AFTER INSERT ON v156_reputation_events
+        WHEN
+            NEW.workspace_id IS NULL
+            AND NEW.battle_id IS NOT NULL
+        BEGIN
+            UPDATE v156_reputation_events
+            SET workspace_id = (
+                SELECT workspace_id
+                FROM v155_workspace_battles
+                WHERE battle_id = NEW.battle_id
+            )
+            WHERE id = NEW.id;
+        END
+        """
+    )
+
+    base.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+        trg_rep_relation_workspace_bridge
+        AFTER INSERT ON v156_reputation_event_relations
+        WHEN NEW.workspace_id IS NULL
+        BEGIN
+            UPDATE v156_reputation_event_relations
+            SET workspace_id = COALESCE(
+                (
+                    SELECT workspace_id
+                    FROM v155_workspace_battles
+                    WHERE battle_id = NEW.battle_id
+                ),
+                (
+                    SELECT workspace_id
+                    FROM v156_reputation_subjects
+                    WHERE id = NEW.subject_id
+                ),
+                (
+                    SELECT workspace_id
+                    FROM v156_reputation_events
+                    WHERE id = NEW.event_id
+                )
+            )
+            WHERE id = NEW.id;
+        END
+        """
+    )
+
+    base.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+        trg_rep_merge_workspace_bridge
+        AFTER INSERT ON v156_reputation_merge_logs
+        WHEN
+            NEW.workspace_id IS NULL
+            AND NEW.battle_id IS NOT NULL
+        BEGIN
+            UPDATE v156_reputation_merge_logs
+            SET workspace_id = (
+                SELECT workspace_id
+                FROM v155_workspace_battles
+                WHERE battle_id = NEW.battle_id
+            )
+            WHERE id = NEW.id;
+        END
+        """
+    )
+
+    base.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS
+        trg_rep_task_workspace_bridge
+        AFTER INSERT ON v157_reputation_tasks
+        WHEN NEW.workspace_id IS NULL
+        BEGIN
+            UPDATE v157_reputation_tasks
+            SET workspace_id = COALESCE(
+                (
+                    SELECT workspace_id
+                    FROM v155_workspace_battles
+                    WHERE battle_id = NEW.battle_id
+                ),
+                (
+                    SELECT workspace_id
+                    FROM v156_reputation_subjects
+                    WHERE
+                        NEW.entity_type = 'subject'
+                        AND id = NEW.entity_id
+                ),
+                (
+                    SELECT workspace_id
+                    FROM v156_reputation_events
+                    WHERE
+                        NEW.entity_type = 'event'
+                        AND id = NEW.entity_id
+                )
+            )
+            WHERE id = NEW.id;
+        END
+        """
+    )
+
+    base.commit()
+
+
+class _V156A4WorkspaceScopedConnection:
+    """
+    Long-term knowledge boundary.
+
+    Knowledge tables:
+        workspace_id
+
+    Task table:
+        workspace_id + current battle_id
+    """
+
+    _TABLES = (
+        "v156_reputation_subjects",
+        "v156_reputation_events",
+        "v156_reputation_event_relations",
+        "v156_reputation_merge_logs",
+        "v156_reputation_subject_battles",
+        "v157_reputation_tasks",
+    )
+
+    def __init__(
+        self,
+        conn,
+        battle_id,
+    ):
+        self._conn = _v156_a4_base_conn(
+            conn
+        )
+
+        self._battle_id = (
+            _v155_reputation_positive_battle_id(
+                battle_id
+            )
+        )
+
+        self._workspace_id = (
+            _v156_a4_workspace_id_for_battle(
+                self._conn,
+                self._battle_id,
+            )
+        )
+
+    def __getattr__(
+        self,
+        name,
+    ):
+        return getattr(
+            self._conn,
+            name,
+        )
+
+    @staticmethod
+    def _is_read_statement(
+        sql,
+    ):
+        return bool(
+            re.match(
+                r"^(SELECT|WITH)\b",
+                str(sql or "").lstrip(),
+                flags=re.I,
+            )
+        )
+
+    def _scope_select(
+        self,
+        sql,
+        params=(),
+    ):
+        text = str(
+            sql or ""
+        )
+
+        if not self._is_read_statement(
+            text
+        ):
+            return (
+                text,
+                params,
+            )
+
+        stripped = text.lstrip()
+
+        if re.match(
+            r"^WITH\b",
+            stripped,
+            flags=re.I,
+        ):
+            raise RuntimeError(
+                "A4 workspace adapter refuses nested WITH "
+                "without explicit review"
+            )
+
+        tables = [
+            table
+            for table in self._TABLES
+            if re.search(
+                r"(?<![A-Za-z0-9_])"
+                + re.escape(table)
+                + r"(?![A-Za-z0-9_])",
+                text,
+                flags=re.I,
+            )
+        ]
+
+        if not tables:
+            return (
+                text,
+                params,
+            )
+
+        ctes = []
+        scope_params = []
+
+        for table in tables:
+
+            if (
+                table
+                == "v157_reputation_tasks"
+            ):
+                ctes.append(
+                    table
+                    + " AS ("
+                    + "SELECT * FROM main."
+                    + table
+                    + " WHERE workspace_id=? "
+                    + "AND battle_id=?"
+                    + ")"
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            else:
+                ctes.append(
+                    table
+                    + " AS ("
+                    + "SELECT * FROM main."
+                    + table
+                    + " WHERE workspace_id=?"
+                    + ")"
+                )
+
+                scope_params.append(
+                    self._workspace_id
+                )
+
+        scoped_sql = (
+            "WITH "
+            + ", ".join(ctes)
+            + " "
+            + stripped
+        )
+
+        if params is None:
+            params = ()
+
+        if isinstance(
+            params,
+            tuple,
+        ):
+            scoped_params = (
+                tuple(scope_params)
+                + params
+            )
+
+        elif isinstance(
+            params,
+            list,
+        ):
+            scoped_params = (
+                list(scope_params)
+                + params
+            )
+
+        else:
+            raise TypeError(
+                "A4 workspace adapter accepts "
+                "tuple/list positional bindings only"
+            )
+
+        return (
+            scoped_sql,
+            scoped_params,
+        )
+
+    def execute(
+        self,
+        sql,
+        params=(),
+    ):
+        sql2, params2 = (
+            self._scope_select(
+                sql,
+                params,
+            )
+        )
+
+        return self._conn.execute(
+            sql2,
+            params2,
+        )
+
+
+def make_reputation_workspace_scoped_connection(
+    conn,
+    battle_id,
+):
+    return _V156A4WorkspaceScopedConnection(
         conn,
         battle_id,
     )
 
+
+class _V155S09BattleScopedConnection:
+    _TENANT_TABLES = (
+        "v156_reputation_subjects",
+        "v156_reputation_events",
+        "v156_reputation_event_relations",
+        "v157_reputation_tasks",
+        "v156_reputation_merge_logs",
+        "v156_reputation_subject_battles",
+    )
+
+    def __init__(
+        self,
+        conn,
+        battle_id,
+    ):
+        self._conn = _v156_a4_base_conn(
+            conn
+        )
+
+        self._battle_id = (
+            _v155_reputation_positive_battle_id(
+                battle_id
+            )
+        )
+
+        self._workspace_id = (
+            _v156_a4_workspace_id_for_battle(
+                self._conn,
+                self._battle_id,
+            )
+        )
+
+    def __getattr__(
+        self,
+        name,
+    ):
+        return getattr(
+            self._conn,
+            name,
+        )
+
+    @staticmethod
+    def _is_read_statement(
+        sql,
+    ):
+        return bool(
+            re.match(
+                r"^(SELECT|WITH)\b",
+                str(sql or "").lstrip(),
+                flags=re.I,
+            )
+        )
+
+    def _scope_select(
+        self,
+        sql,
+        params=(),
+    ):
+        text = str(
+            sql or ""
+        )
+
+        if not self._is_read_statement(
+            text
+        ):
+            return (
+                text,
+                params,
+            )
+
+        stripped = text.lstrip()
+
+        if re.match(
+            r"^WITH\b",
+            stripped,
+            flags=re.I,
+        ):
+            raise RuntimeError(
+                "A4 operational adapter refuses nested WITH "
+                "without explicit review"
+            )
+
+        tables = [
+            table
+            for table in self._TENANT_TABLES
+            if re.search(
+                r"(?<![A-Za-z0-9_])"
+                + re.escape(table)
+                + r"(?![A-Za-z0-9_])",
+                text,
+                flags=re.I,
+            )
+        ]
+
+        if not tables:
+            return (
+                text,
+                params,
+            )
+
+        ctes = []
+        scope_params = []
+
+        for table in tables:
+
+            if (
+                table
+                == "v156_reputation_subjects"
+            ):
+                ctes.append(
+                    """
+                    v156_reputation_subjects AS (
+                        SELECT *
+                        FROM main.v156_reputation_subjects
+                        WHERE workspace_id=?
+                          AND id IN (
+                              SELECT subject_id
+                              FROM main.v156_reputation_subject_battles
+                              WHERE workspace_id=?
+                                AND battle_id=?
+                          )
+                    )
+                    """
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            elif (
+                table
+                == "v156_reputation_event_relations"
+            ):
+                ctes.append(
+                    """
+                    v156_reputation_event_relations AS (
+                        SELECT *
+                        FROM main.v156_reputation_event_relations
+                        WHERE workspace_id=?
+                          AND subject_id IN (
+                              SELECT subject_id
+                              FROM main.v156_reputation_subject_battles
+                              WHERE workspace_id=?
+                                AND battle_id=?
+                          )
+                    )
+                    """
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            elif (
+                table
+                == "v156_reputation_events"
+            ):
+                ctes.append(
+                    """
+                    v156_reputation_events AS (
+                        SELECT *
+                        FROM main.v156_reputation_events
+                        WHERE workspace_id=?
+                          AND (
+                              battle_id=?
+                              OR id IN (
+                                  SELECT event_id
+                                  FROM main.v156_reputation_event_relations
+                                  WHERE workspace_id=?
+                                    AND subject_id IN (
+                                        SELECT subject_id
+                                        FROM main.v156_reputation_subject_battles
+                                        WHERE workspace_id=?
+                                          AND battle_id=?
+                                    )
+                              )
+                          )
+                    )
+                    """
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._battle_id,
+                        self._workspace_id,
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            elif (
+                table
+                == "v157_reputation_tasks"
+            ):
+                ctes.append(
+                    """
+                    v157_reputation_tasks AS (
+                        SELECT *
+                        FROM main.v157_reputation_tasks
+                        WHERE workspace_id=?
+                          AND battle_id=?
+                    )
+                    """
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            elif (
+                table
+                == "v156_reputation_subject_battles"
+            ):
+                ctes.append(
+                    """
+                    v156_reputation_subject_battles AS (
+                        SELECT *
+                        FROM main.v156_reputation_subject_battles
+                        WHERE workspace_id=?
+                          AND battle_id=?
+                    )
+                    """
+                )
+
+                scope_params.extend(
+                    [
+                        self._workspace_id,
+                        self._battle_id,
+                    ]
+                )
+
+            else:
+                ctes.append(
+                    table
+                    + " AS ("
+                    + "SELECT * FROM main."
+                    + table
+                    + " WHERE workspace_id=?"
+                    + ")"
+                )
+
+                scope_params.append(
+                    self._workspace_id
+                )
+
+        scoped_sql = (
+            "WITH "
+            + ", ".join(
+                ctes
+            )
+            + " "
+            + stripped
+        )
+
+        if params is None:
+            params = ()
+
+        if isinstance(
+            params,
+            tuple,
+        ):
+            scoped_params = (
+                tuple(
+                    scope_params
+                )
+                + params
+            )
+
+        elif isinstance(
+            params,
+            list,
+        ):
+            scoped_params = (
+                list(
+                    scope_params
+                )
+                + params
+            )
+
+        else:
+            raise TypeError(
+                "A4 operational adapter accepts "
+                "tuple/list positional bindings only"
+            )
+
+        return (
+            scoped_sql,
+            scoped_params,
+        )
+
+    def execute(
+        self,
+        sql,
+        params=(),
+    ):
+        sql2, params2 = (
+            self._scope_select(
+                sql,
+                params,
+            )
+        )
+
+        return self._conn.execute(
+            sql2,
+            params2,
+        )
+
+
+def get_reputation_event_scoped(
+    conn,
+    event_id,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    row = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(event_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+    return _v155_reputation_row_dict(
+        row
+    )
+
+
+def get_reputation_subject_scoped(
+    conn,
+    subject_id,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    return _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(subject_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+
+def list_reputation_subjects_scoped(
+    conn,
+    q="",
+    limit=100,
+    offset=0,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    try:
+        limit = int(limit)
+    except (
+        TypeError,
+        ValueError,
+    ):
+        limit = 100
+
+    limit = max(
+        1,
+        min(
+            limit,
+            5000,
+        ),
+    )
+
+    try:
+        offset = int(offset)
+    except (
+        TypeError,
+        ValueError,
+    ):
+        offset = 0
+
+    offset = max(
+        0,
+        offset,
+    )
+
+    q = str(
+        q or ""
+    ).strip()
+
+    params = [
+        workspace_id,
+    ]
+
+    where = [
+        "workspace_id=?",
+    ]
+
+    if q:
+        like = (
+            "%"
+            + q
+            + "%"
+        )
+
+        where.append(
+            """
+            (
+                   display_name LIKE ?
+                OR game_id LIKE ?
+                OR alias_names LIKE ?
+                OR note LIKE ?
+            )
+            """
+        )
+
+        params.extend(
+            [
+                like,
+                like,
+                like,
+                like,
+            ]
+        )
+
+    params.extend(
+        [
+            limit,
+            offset,
+        ]
+    )
+
+    rows = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE
+        """
+        + " AND ".join(
+            where
+        )
+        + """
+        ORDER BY id DESC
+        LIMIT ?
+        OFFSET ?
+        """,
+        params,
+    ).fetchall()
+
+    return _v155_reputation_rows_dict(
+        rows
+    )
+
+
+def count_reputation_subjects_scoped(
+    conn,
+    q="",
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    q = str(
+        q or ""
+    ).strip()
+
+    params = [
+        workspace_id,
+    ]
+
+    where = [
+        "workspace_id=?",
+    ]
+
+    if q:
+        like = (
+            "%"
+            + q
+            + "%"
+        )
+
+        where.append(
+            """
+            (
+                   display_name LIKE ?
+                OR game_id LIKE ?
+                OR alias_names LIKE ?
+                OR note LIKE ?
+            )
+            """
+        )
+
+        params.extend(
+            [
+                like,
+                like,
+                like,
+                like,
+            ]
+        )
+
+    row = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT COUNT(*)
+        FROM v156_reputation_subjects
+        WHERE
+        """
+        + " AND ".join(
+            where
+        ),
+        params,
+    ).fetchone()
+
+    return int(
+        row[0]
+        if row
+        else 0
+    )
+
+
+
+def list_reputation_events_scoped(
+    conn,
+    q="",
+    limit=100,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    try:
+        limit = int(limit)
+    except (
+        TypeError,
+        ValueError,
+    ):
+        limit = 100
+
+    limit = max(
+        1,
+        min(
+            limit,
+            5000,
+        ),
+    )
+
+    q = str(
+        q or ""
+    ).strip()
+
+    columns = {
+        str(row[1])
+        for row in _v156_a4_base_conn(
+            conn
+        ).execute(
+            """
+            PRAGMA table_info(
+                v156_reputation_events
+            )
+            """
+        ).fetchall()
+    }
+
+    search_columns = [
+        name
+        for name in (
+            "title",
+            "event_type",
+            "summary",
+            "evidence_note",
+            "note",
+        )
+        if name in columns
+    ]
+
+    where = [
+        "workspace_id=?",
+    ]
+
+    params = [
+        workspace_id,
+    ]
+
+    if q and search_columns:
+        where.append(
+            "("
+            + " OR ".join(
+                "IFNULL("
+                + name
+                + ", '') LIKE ?"
+                for name
+                in search_columns
+            )
+            + ")"
+        )
+
+        params.extend(
+            [
+                "%"
+                + q
+                + "%"
+            ]
+            * len(
+                search_columns
+            )
+        )
+
+    if "updated_at" in columns:
+        order_sql = (
+            "updated_at DESC, id DESC"
+        )
+
+    elif "created_at" in columns:
+        order_sql = (
+            "created_at DESC, id DESC"
+        )
+
+    elif "event_time" in columns:
+        order_sql = (
+            "event_time DESC, id DESC"
+        )
+
+    else:
+        order_sql = (
+            "id DESC"
+        )
+
+    params.append(
+        limit
+    )
+
+    rows = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE
+        """
+        + " AND ".join(
+            where
+        )
+        + " ORDER BY "
+        + order_sql
+        + " LIMIT ?",
+        params,
+    ).fetchall()
+
+    return _v155_reputation_rows_dict(
+        rows
+    )
+
+
+def list_reputation_event_relations_scoped(
+    conn,
+    event_id,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    rows = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT
+            r.*,
+            s.display_name,
+            s.game_id,
+            s.alias_names,
+            s.trust_level,
+            s.risk_level,
+            s.status AS subject_status
+        FROM v156_reputation_event_relations AS r
+        LEFT JOIN v156_reputation_subjects AS s
+          ON s.id = r.subject_id
+         AND s.workspace_id = r.workspace_id
+        WHERE r.event_id=?
+          AND r.workspace_id=?
+        ORDER BY r.id DESC
+        """,
+        (
+            int(event_id),
+            workspace_id,
+        ),
+    ).fetchall()
+
+    return _v155_reputation_rows_dict(
+        rows
+    )
+
+
+def build_reputation_home_report_scoped(
+    conn,
+    *,
+    battle_id,
+):
+    scoped = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
+    )
+
     return build_reputation_home_report(
-        scoped_conn
+        scoped
     )
 
 
 def search_reputation_scoped(
     conn,
-    q: str,
+    q,
     *,
-    battle_id: int,
+    battle_id,
 ):
-    scoped_conn = make_reputation_battle_scoped_connection(
-        conn,
-        battle_id,
+    scoped = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
     )
 
     return search_reputation(
-        scoped_conn,
+        scoped,
         q,
     )
 
 
 def list_reputation_events_by_subject_scoped(
     conn,
-    subject_id: int,
+    subject_id,
     *,
-    battle_id: int,
+    battle_id,
 ):
-    scoped_conn = make_reputation_battle_scoped_connection(
-        conn,
-        battle_id,
+    scoped = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
     )
 
     return list_reputation_events_by_subject(
-        scoped_conn,
+        scoped,
         subject_id,
     )
 
 
 def list_reputation_merge_logs_scoped(
     conn,
-    *args,
-    battle_id: int,
-    **kwargs,
+    limit=100,
+    *,
+    battle_id,
 ):
-    scoped_conn = make_reputation_battle_scoped_connection(
-        conn,
-        battle_id,
+    scoped = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
     )
 
     return list_reputation_merge_logs(
-        scoped_conn,
-        *args,
-        **kwargs,
+        scoped,
+        limit=limit,
+    )
+
+
+def build_reputation_duplicate_report_scoped(
+    conn,
+    *,
+    battle_id,
+):
+    scoped = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
+    )
+
+    return build_reputation_duplicate_report(
+        scoped
+    )
+
+
+def create_reputation_subject_scoped(
+    conn,
+    data,
+    *,
+    battle_id,
+):
+    battle_id = (
+        _v155_reputation_positive_battle_id(
+            battle_id
+        )
+    )
+
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    game_id = str(
+        data.get(
+            "game_id",
+            "",
+        )
+        or ""
+    ).strip()
+
+    if game_id:
+        existing = base.execute(
+            """
+            SELECT id
+            FROM v156_reputation_subjects
+            WHERE workspace_id=?
+              AND TRIM(game_id)=?
+            LIMIT 1
+            """,
+            (
+                workspace_id,
+                game_id,
+            ),
+        ).fetchone()
+
+        if existing is not None:
+            subject_id = int(
+                existing[0]
+            )
+
+            _v156_a4_link_subject_battle(
+                base,
+                workspace_id=workspace_id,
+                subject_id=subject_id,
+                battle_id=battle_id,
+                source_type="game_id_reuse",
+            )
+
+            base.commit()
+
+            return subject_id
+
+    cursor = base.execute(
+        """
+        INSERT INTO v156_reputation_subjects (
+            workspace_id,
+            battle_id,
+            subject_type,
+            display_name,
+            game_id,
+            alias_names,
+            trust_level,
+            risk_level,
+            status,
+            source_type,
+            note,
+            updated_at
+        )
+        VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            datetime('now','localtime')
+        )
+        """,
+        (
+            workspace_id,
+            battle_id,
+            (
+                data.get(
+                    "subject_type"
+                )
+                or "player"
+            ).strip(),
+            (
+                data.get(
+                    "display_name"
+                )
+                or ""
+            ).strip(),
+            game_id,
+            (
+                data.get(
+                    "alias_names"
+                )
+                or ""
+            ).strip(),
+            (
+                data.get(
+                    "trust_level"
+                )
+                or "unknown"
+            ).strip(),
+            (
+                data.get(
+                    "risk_level"
+                )
+                or "normal"
+            ).strip(),
+            (
+                data.get(
+                    "status"
+                )
+                or "active"
+            ).strip(),
+            (
+                data.get(
+                    "source_type"
+                )
+                or data.get(
+                    "source"
+                )
+                or "manual"
+            ).strip(),
+            (
+                data.get(
+                    "note"
+                )
+                or ""
+            ).strip(),
+        ),
+    )
+
+    subject_id = int(
+        cursor.lastrowid
+    )
+
+    _v156_a4_link_subject_battle(
+        base,
+        workspace_id=workspace_id,
+        subject_id=subject_id,
+        battle_id=battle_id,
+        source_type="subject_create",
+    )
+
+    base.commit()
+
+    return subject_id
+
+
+def update_reputation_subject_scoped(
+    conn,
+    subject_id,
+    data,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    row = base.execute(
+        """
+        SELECT *
+        FROM v156_reputation_subjects
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(subject_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+    if row is None:
+        return False
+
+    current = dict(row)
+
+    game_id = str(
+        data.get(
+            "game_id",
+            current.get(
+                "game_id",
+                "",
+            ),
+        )
+        or ""
+    ).strip()
+
+    if game_id:
+        duplicate = base.execute(
+            """
+            SELECT id
+            FROM v156_reputation_subjects
+            WHERE workspace_id=?
+              AND TRIM(game_id)=?
+              AND id<>?
+            LIMIT 1
+            """,
+            (
+                workspace_id,
+                game_id,
+                int(subject_id),
+            ),
+        ).fetchone()
+
+        if duplicate is not None:
+            return False
+
+    cursor = base.execute(
+        """
+        UPDATE v156_reputation_subjects
+        SET
+            subject_type=?,
+            display_name=?,
+            game_id=?,
+            alias_names=?,
+            trust_level=?,
+            risk_level=?,
+            status=?,
+            source_type=?,
+            note=?,
+            updated_at=datetime(
+                'now',
+                'localtime'
+            )
+        WHERE id=?
+          AND workspace_id=?
+        """,
+        (
+            (
+                data.get(
+                    "subject_type"
+                )
+                or current.get(
+                    "subject_type"
+                )
+                or "player"
+            ).strip(),
+            (
+                data.get(
+                    "display_name"
+                )
+                if data.get(
+                    "display_name"
+                ) is not None
+                else current.get(
+                    "display_name"
+                )
+            )
+            or "",
+            game_id,
+            (
+                data.get(
+                    "alias_names"
+                )
+                if data.get(
+                    "alias_names"
+                ) is not None
+                else current.get(
+                    "alias_names"
+                )
+            )
+            or "",
+            (
+                data.get(
+                    "trust_level"
+                )
+                or current.get(
+                    "trust_level"
+                )
+                or "unknown"
+            ).strip(),
+            (
+                data.get(
+                    "risk_level"
+                )
+                or current.get(
+                    "risk_level"
+                )
+                or "normal"
+            ).strip(),
+            (
+                data.get(
+                    "status"
+                )
+                or current.get(
+                    "status"
+                )
+                or "active"
+            ).strip(),
+            (
+                data.get(
+                    "source_type"
+                )
+                or data.get(
+                    "source"
+                )
+                or current.get(
+                    "source_type"
+                )
+                or "manual"
+            ).strip(),
+            (
+                data.get(
+                    "note"
+                )
+                if data.get(
+                    "note"
+                ) is not None
+                else current.get(
+                    "note"
+                )
+            )
+            or "",
+            int(subject_id),
+            workspace_id,
+        ),
+    )
+
+    base.commit()
+
+    return (
+        cursor.rowcount
+        == 1
+    )
+
+
+def create_reputation_event_scoped(
+    conn,
+    data,
+    *,
+    battle_id,
+):
+    battle_id = (
+        _v155_reputation_positive_battle_id(
+            battle_id
+        )
+    )
+
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    cursor = base.execute(
+        """
+        INSERT INTO v156_reputation_events (
+            workspace_id,
+            battle_id,
+            title,
+            event_type,
+            impact_level,
+            status,
+            event_time,
+            summary,
+            evidence_note,
+            updated_at
+        )
+        VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            datetime('now','localtime')
+        )
+        """,
+        (
+            workspace_id,
+            battle_id,
+            (
+                data.get(
+                    "title"
+                )
+                or ""
+            ).strip(),
+            (
+                data.get(
+                    "event_type"
+                )
+                or "general"
+            ).strip(),
+            (
+                data.get(
+                    "impact_level"
+                )
+                or "normal"
+            ).strip(),
+            (
+                data.get(
+                    "status"
+                )
+                or "recorded"
+            ).strip(),
+            (
+                data.get(
+                    "event_time"
+                )
+                or ""
+            ).strip(),
+            (
+                data.get(
+                    "summary"
+                )
+                or ""
+            ).strip(),
+            (
+                data.get(
+                    "evidence_note"
+                )
+                or ""
+            ).strip(),
+        ),
+    )
+
+    base.commit()
+
+    return int(
+        cursor.lastrowid
+    )
+
+
+def update_reputation_event_scoped(
+    conn,
+    event_id,
+    data,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    row = base.execute(
+        """
+        SELECT *
+        FROM v156_reputation_events
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(event_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+    if row is None:
+        return False
+
+    current = dict(row)
+
+    fields = (
+        "title",
+        "event_type",
+        "impact_level",
+        "status",
+        "event_time",
+        "summary",
+        "evidence_note",
+    )
+
+    values = [
+        data.get(
+            field,
+            current.get(
+                field,
+                "",
+            ),
+        )
+        for field
+        in fields
+    ]
+
+    cursor = base.execute(
+        """
+        UPDATE v156_reputation_events
+        SET
+            title=?,
+            event_type=?,
+            impact_level=?,
+            status=?,
+            event_time=?,
+            summary=?,
+            evidence_note=?,
+            updated_at=datetime(
+                'now',
+                'localtime'
+            )
+        WHERE id=?
+          AND workspace_id=?
+        """,
+        tuple(values)
+        + (
+            int(event_id),
+            workspace_id,
+        ),
+    )
+
+    base.commit()
+
+    return (
+        cursor.rowcount
+        == 1
+    )
+
+
+def add_reputation_event_relation_scoped(
+    conn,
+    event_id,
+    subject_id,
+    relation_role="",
+    note="",
+    *,
+    battle_id,
+):
+    battle_id = (
+        _v155_reputation_positive_battle_id(
+            battle_id
+        )
+    )
+
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    event = base.execute(
+        """
+        SELECT id
+        FROM v156_reputation_events
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(event_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+    subject = base.execute(
+        """
+        SELECT id
+        FROM v156_reputation_subjects
+        WHERE id=?
+          AND workspace_id=?
+        LIMIT 1
+        """,
+        (
+            int(subject_id),
+            workspace_id,
+        ),
+    ).fetchone()
+
+    if (
+        event is None
+        or subject is None
+    ):
+        raise ValueError(
+            "event and subject must belong "
+            "to the same workspace"
+        )
+
+    existing = base.execute(
+        """
+        SELECT id
+        FROM v156_reputation_event_relations
+        WHERE workspace_id=?
+          AND event_id=?
+          AND subject_id=?
+        LIMIT 1
+        """,
+        (
+            workspace_id,
+            int(event_id),
+            int(subject_id),
+        ),
+    ).fetchone()
+
+    if existing is not None:
+        relation_id = int(
+            existing[0]
+        )
+
+    else:
+        cursor = base.execute(
+            """
+            INSERT INTO
+            v156_reputation_event_relations (
+                workspace_id,
+                battle_id,
+                event_id,
+                subject_id,
+                relation_role,
+                note
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?
+            )
+            """,
+            (
+                workspace_id,
+                battle_id,
+                int(event_id),
+                int(subject_id),
+                str(
+                    relation_role
+                    or ""
+                ).strip(),
+                str(
+                    note
+                    or ""
+                ).strip(),
+            ),
+        )
+
+        relation_id = int(
+            cursor.lastrowid
+        )
+
+    _v156_a4_link_subject_battle(
+        base,
+        workspace_id=workspace_id,
+        subject_id=int(
+            subject_id
+        ),
+        battle_id=battle_id,
+        source_type="event_relation",
+    )
+
+    base.commit()
+
+    return relation_id
+
+
+def delete_reputation_event_relation_scoped(
+    conn,
+    event_id,
+    relation_id,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    cursor = _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        DELETE FROM
+            v156_reputation_event_relations
+        WHERE id=?
+          AND event_id=?
+          AND workspace_id=?
+        """,
+        (
+            int(relation_id),
+            int(event_id),
+            workspace_id,
+        ),
+    )
+
+    _v156_a4_base_conn(
+        conn
+    ).commit()
+
+    return (
+        cursor.rowcount
+        == 1
+    )
+
+
+def update_reputation_event_status_quick_scoped(
+    conn,
+    event_id,
+    *,
+    status,
+    note="",
+    battle_id,
+):
+    row = get_reputation_event_scoped(
+        conn,
+        event_id,
+        battle_id=battle_id,
+    )
+
+    if not row:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "事件不存在。",
+        }
+
+    return update_reputation_event_status_quick(
+        _v156_a4_base_conn(
+            conn
+        ),
+        event_id=event_id,
+        status=status,
+        note=note,
+    )
+
+
+def delete_reputation_event_safely_scoped(
+    conn,
+    event_id,
+    *,
+    battle_id,
+):
+    row = get_reputation_event_scoped(
+        conn,
+        event_id,
+        battle_id=battle_id,
+    )
+
+    if not row:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "事件不存在。",
+        }
+
+    return delete_reputation_event_safely(
+        _v156_a4_base_conn(
+            conn
+        ),
+        event_id,
+    )
+
+
+def delete_reputation_subject_safely_scoped(
+    conn,
+    subject_id,
+    *,
+    battle_id,
+):
+    row = get_reputation_subject_scoped(
+        conn,
+        subject_id,
+        battle_id=battle_id,
+    )
+
+    if not row:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "主体不存在。",
+        }
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    result = delete_reputation_subject_safely(
+        base,
+        subject_id,
+    )
+
+    if (
+        not isinstance(
+            result,
+            dict,
+        )
+        or result.get(
+            "ok",
+            True,
+        )
+    ):
+        base.execute(
+            """
+            DELETE FROM
+                v156_reputation_subject_battles
+            WHERE subject_id=?
+              AND workspace_id=?
+            """,
+            (
+                int(subject_id),
+                int(
+                    row[
+                        "workspace_id"
+                    ]
+                ),
+            ),
+        )
+
+        base.commit()
+
+    return result
+
+
+def merge_reputation_subjects_scoped(
+    conn,
+    keep_id,
+    merge_id,
+    *,
+    battle_id,
+):
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    base = _v156_a4_base_conn(
+        conn
+    )
+
+    owned = base.execute(
+        """
+        SELECT id
+        FROM v156_reputation_subjects
+        WHERE workspace_id=?
+          AND id IN (?, ?)
+        ORDER BY id
+        """,
+        (
+            workspace_id,
+            int(keep_id),
+            int(merge_id),
+        ),
+    ).fetchall()
+
+    if len(owned) != 2:
+        return {
+            "ok": False,
+            "message":
+                "主体不存在或不属于当前工作区。",
+        }
+
+    result = merge_reputation_subjects(
+        base,
+        keep_id=int(
+            keep_id
+        ),
+        merge_id=int(
+            merge_id
+        ),
+        battle_id=int(
+            battle_id
+        ),
+    )
+
+    failed = (
+        isinstance(
+            result,
+            dict,
+        )
+        and result.get(
+            "ok"
+        )
+        is False
+    )
+
+    if failed:
+        return result
+
+    base.execute(
+        """
+        INSERT OR IGNORE INTO
+        v156_reputation_subject_battles (
+            workspace_id,
+            subject_id,
+            battle_id,
+            first_seen_at,
+            last_seen_at,
+            source_type,
+            created_at,
+            updated_at
+        )
+        SELECT
+            workspace_id,
+            ?,
+            battle_id,
+            first_seen_at,
+            last_seen_at,
+            'merge_preserved',
+            created_at,
+            datetime('now','localtime')
+        FROM v156_reputation_subject_battles
+        WHERE workspace_id=?
+          AND subject_id=?
+        """,
+        (
+            int(keep_id),
+            workspace_id,
+            int(merge_id),
+        ),
+    )
+
+    base.execute(
+        """
+        DELETE FROM
+            v156_reputation_subject_battles
+        WHERE workspace_id=?
+          AND subject_id=?
+        """,
+        (
+            workspace_id,
+            int(merge_id),
+        ),
+    )
+
+    base.execute(
+        """
+        UPDATE v156_reputation_merge_logs
+        SET workspace_id=?
+        WHERE workspace_id IS NULL
+          AND keep_subject_id=?
+          AND merge_subject_id=?
+        """,
+        (
+            workspace_id,
+            int(keep_id),
+            int(merge_id),
+        ),
+    )
+
+    base.commit()
+
+    return result
+
+
+def get_reputation_task_scoped(
+    conn,
+    task_id,
+    *,
+    battle_id,
+):
+    battle_id = (
+        _v155_reputation_positive_battle_id(
+            battle_id
+        )
+    )
+
+    workspace_id = (
+        _v156_a4_workspace_id_for_battle(
+            conn,
+            battle_id,
+        )
+    )
+
+    ensure_reputation_tables(
+        conn
+    )
+
+    return _v156_a4_base_conn(
+        conn
+    ).execute(
+        """
+        SELECT *
+        FROM v157_reputation_tasks
+        WHERE id=?
+          AND workspace_id=?
+          AND battle_id=?
+        """,
+        (
+            int(task_id),
+            workspace_id,
+            battle_id,
+        ),
+    ).fetchone()
+
+
+def update_reputation_task_scoped(
+    conn,
+    task_id,
+    data,
+    *,
+    battle_id,
+):
+    row = get_reputation_task_scoped(
+        conn,
+        task_id,
+        battle_id=battle_id,
+    )
+
+    if not row:
+        return {
+            "ok": False,
+            "not_found": True,
+            "message": "处置任务不存在。",
+        }
+
+    return update_reputation_task(
+        _v156_a4_base_conn(
+            conn
+        ),
+        task_id,
+        data,
     )

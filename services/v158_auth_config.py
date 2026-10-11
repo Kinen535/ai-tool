@@ -238,7 +238,7 @@ def build_v158_flask_session_config(
         environment.get(
             SESSION_COOKIE_SECURE_ENV
         ),
-        default=False,
+        default=True,
     )
 
     config = {

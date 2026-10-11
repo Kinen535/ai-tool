@@ -1,0 +1,196 @@
+/*
+ * DARK MODE A3.4 FINAL VISIBLE RESIDUAL SEAL
+ *
+ * Exact screenshot-confirmed components only.
+ * No business logic or previous theme layer is modified.
+ */
+
+
+/* ============================================================
+   /security
+   ============================================================ */
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.console-title {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.signal-item,
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.metric-card,
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.secondary-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.signal-item span,
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.metric-card span,
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.secondary-item {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security"]
+.secondary-item strong {
+    color: var(--theme-text) !important;
+}
+
+
+/* ============================================================
+   /security/access-center
+   A3.4-R1: direct runtime detail selector.
+   ============================================================ */
+
+html[data-theme="dark"]
+body[data-page-path="/security/access-center"]
+.ac-a2-detail,
+
+html[data-theme="dark"]
+body[data-page-path="/security/access-center"]
+.ac-a2-detail.is-open {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/access-center"]
+.ac-a2-detail
+.ac-state,
+
+html[data-theme="dark"]
+body[data-page-path="/security/access-center"]
+.ac-a2-detail
+.ac-actions {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+
+/* ============================================================
+   /security/guard
+   ============================================================ */
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-title,
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-section-head h2,
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-policy-card h3 {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-more-metrics,
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-whitelist-form,
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-empty {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-more-metrics summary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-empty {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-metric__value {
+    color: var(--theme-text) !important;
+}
+
+/* Preserve semantic state colours. */
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-metric__value--safe {
+    color: var(--guard-green) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/guard"]
+.guard-metric__value--danger {
+    color: var(--guard-red) !important;
+}
+
+
+/* ============================================================
+   /reputation/subjects
+   ============================================================ */
+
+html[data-theme="dark"]
+body[data-page-path="/reputation/subjects"]
+.rf-subject-page-size select {
+    background: var(--theme-input-bg) !important;
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/reputation/subjects"]
+.rf-subject-reset-button {
+    background: var(--theme-surface-2) !important;
+    background-color: var(--theme-surface-2) !important;
+    border: 1px solid var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/reputation/subjects"]
+.rf-subject-table-wrap tr:first-child {
+    background: var(--theme-table-head) !important;
+    background-color: var(--theme-table-head) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/reputation/subjects"]
+.rf-subject-table-wrap th {
+    background: var(--theme-table-head) !important;
+    background-color: var(--theme-table-head) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+    box-shadow: 0 1px 0 var(--theme-border) !important;
+}

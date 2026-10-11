@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* A5-A1-R3 import-page convergence */
+
+.rep-import-shell {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+}
+
+.rep-import-head {
+    margin-top: 22px;
+    margin-bottom: 22px;
+}
+
+.rep-import-head h1 {
+    letter-spacing: -0.02em;
+}
+
+.rep-import-card {
+    box-shadow: none;
+}
+
+.rep-import-card h3 {
+    margin-top: 0;
+}
+
+.rep-import-card input[type="file"] {
+    display: block;
+    width: 100%;
+    max-width: 620px;
+    padding: 8px;
+    border: 1px solid #d8e1ec;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 14px;
+}
+
+.rep-import-card input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid #d8e1ec;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rep-import-card input[type="file"]::file-selector-button:hover {
+    background: #f1f5f9;
+}
+
+.rep-import-table-wrap {
+    position: relative;
+}
+
+.rep-import-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+@media (max-width: 900px) {
+    .rep-import-head {
+        flex-direction: column;
+    }
+
+    .rep-import-head .rep-import-actions {
+        width: 100%;
+    }
+}
+</style>
+
+<style>
+.rep-import-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+.rep-import-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 18px 0 20px;
+}
+.rep-import-head h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+}
+.rep-import-muted {
+    color: #718096;
+    line-height: 1.7;
+}
+.rep-import-card {
+    background: #fff;
+    border: 1px solid #dde5f0;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 18px;
+}
+.rep-import-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.rep-import-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 9px;
+    text-decoration: none;
+    border: 1px solid #d8e0ea;
+    background: #fff;
+    color: #27364b;
+    cursor: pointer;
+}
+.rep-import-btn.primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+.rep-import-btn.success {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+.rep-import-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+.rep-import-stat {
+    padding: 14px 16px;
+    border: 1px solid #e1e7ef;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.rep-import-stat strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 23px;
+}
+.rep-import-table-wrap {
+    overflow: auto;
+    max-height: 560px;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+}
+.rep-import-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+}
+.rep-import-table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f1f5f9;
+}
+.rep-import-table th,
+.rep-import-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e8edf3;
+    text-align: left;
+    vertical-align: top;
+}
+.rep-import-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+.rep-import-tag.create {
+    background: #dcfce7;
+    color: #15803d;
+}
+.rep-import-tag.reuse {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.rep-import-tag.error {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.rep-import-result {
+    border-left: 4px solid #16a34a;
+    background: #f0fdf4;
+}
+@media (max-width: 900px) {
+    .rep-import-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+</style>
+
+<div class="rf-flow rep-import-shell">
+
+    {% include "reputation_flow_nav.html" %}
+
+    <div class="rep-import-head">
+        <div>
+            <h1>批量导入档案</h1>
+            <div class="rep-import-muted">
+                当前战场：Battle {{ battle_id }}。
+                上传后先预览，不会立即写入正式档案。
+            </div>
+        </div>
+
+        <div class="rep-import-actions">
+            <a
+                class="rep-import-btn"
+                href="{{ url_for('v156_reputation_subjects') }}"
+            >
+                返回档案管理
+            </a>
+
+            <a
+                class="rep-import-btn"
+                href="{{ url_for('v156_reputation_subject_import_template') }}"
+            >
+                下载 CSV 模板
+            </a>
+        </div>
+    </div>
+
+    {% if result %}
+    <div class="rep-import-card rep-import-result">
+        <h3>导入完成</h3>
+        <div class="rep-import-grid">
+            <div class="rep-import-stat">
+                已处理
+                <strong>{{ result.processed }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                新增档案
+                <strong>{{ result.created }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                复用旧档案
+                <strong>{{ result.reused }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                新增战场关联
+                <strong>{{ result.battle_links_added }}</strong>
+            </div>
+        </div>
+
+        <a
+            class="rep-import-btn primary"
+            href="{{ url_for('v156_reputation_subjects') }}"
+        >
+            查看档案列表
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="rep-import-card">
+        <h3>1. 上传资料</h3>
+
+        <p class="rep-import-muted">
+            最简只需要填写“名称”和“游戏编号”。
+            CSV 模板可以直接使用 Excel 打开、编辑并保存。
+            现有档案不会因为批量导入而覆盖信任、风险、备注或历史事件。
+        </p>
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('v156_reputation_subject_import') }}"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token }}"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="preview"
+            >
+
+            <input
+                type="file"
+                name="import_file"
+                accept=".csv,text/csv"
+                required
+            >
+
+            <div
+                class="rep-import-actions"
+                style="margin-top:16px;"
+            >
+                <button
+                    type="submit"
+                    class="rep-import-btn primary"
+                >
+                    上传并预览
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if preview %}
+
+    <div class="rep-import-card">
+        <h3>2. 导入预览</h3>
+
+        <div class="rep-import-grid">
+            <div class="rep-import-stat">
+                总行数
+                <strong>{{ preview.counts.total }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                将新增
+                <strong>{{ preview.counts.create }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                复用档案
+                <strong>{{ preview.counts.reuse }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                异常行
+                <strong>{{ preview.counts.error }}</strong>
+            </div>
+
+            <div class="rep-import-stat">
+                新战场关联
+                <strong>{{ preview.counts.new_battle_link }}</strong>
+            </div>
+        </div>
+
+        <div class="rep-import-table-wrap">
+            <table class="rep-import-table">
+                <thead>
+                    <tr>
+                        <th>Excel 行</th>
+                        <th>名称</th>
+                        <th>游戏编号</th>
+                        <th>处理方式</th>
+                        <th>现有档案</th>
+                        <th>战场关联</th>
+                        <th>提示</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for row in preview.rows %}
+                    <tr>
+                        <td>
+                            {{ row.source_row }}
+                        </td>
+
+                        <td>
+                            {{ row.display_name }}
+                        </td>
+
+                        <td>
+                            {{ row.game_id }}
+                        </td>
+
+                        <td>
+                            <span
+                                class="rep-import-tag {{ row.action }}"
+                            >
+                                {% if row.action == 'create' %}
+                                    新增
+                                {% elif row.action == 'reuse' %}
+                                    复用
+                                {% else %}
+                                    错误
+                                {% endif %}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if row.existing_name %}
+                                {{ row.existing_name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ row.battle_link or '-' }}
+                        </td>
+
+                        <td>
+                            {{ row.message or '-' }}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if preview.counts.create + preview.counts.reuse > 0 %}
+        <form
+            method="post"
+            action="{{ url_for('v156_reputation_subject_import') }}"
+            style="margin-top:18px;"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token }}"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="confirm"
+            >
+
+            <input
+                type="hidden"
+                name="rows_json"
+                value='{{ rows_json | e }}'
+            >
+
+            <div class="rep-import-actions">
+                <button
+                    type="submit"
+                    class="rep-import-btn success"
+                >
+                    确认导入
+                </button>
+
+                <a
+                    class="rep-import-btn"
+                    href="{{ url_for('v156_reputation_subject_import') }}"
+                >
+                    重新上传
+                </a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

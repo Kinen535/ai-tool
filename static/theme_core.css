@@ -1,0 +1,435 @@
+
+/*
+ * 三战幕僚分析系统 · Theme Core A3
+ *
+ * Contract:
+ * - State authority: html[data-theme="dark"]
+ * - No JavaScript.
+ * - No permission-model changes.
+ * - No modification of accepted Access Center assets.
+ * - First adapter batch is explicitly route-scoped.
+ */
+
+/* ==========================================================
+   1. Semantic dark-theme tokens
+   ========================================================== */
+
+html[data-theme="dark"] {
+    --theme-page-bg: #08111f;
+    --theme-surface-1: #0f172a;
+    --theme-surface-2: #111c2f;
+    --theme-surface-3: #172236;
+
+    --theme-border: #2b3a50;
+    --theme-border-strong: #3b4c64;
+
+    --theme-text: #e8eef8;
+    --theme-text-muted: #9eacc1;
+    --theme-text-faint: #718096;
+
+    --theme-input-bg: #0b1424;
+    --theme-input-border: #34445c;
+
+    --theme-table-head: #142033;
+    --theme-table-row: #0f192a;
+    --theme-table-hover: #17253a;
+
+    --theme-link: #8ab4ff;
+    --theme-focus: #60a5fa;
+
+    --theme-shadow:
+        0 14px 36px rgba(0, 0, 0, .24);
+}
+
+
+/* ==========================================================
+   2. First-batch page shell
+   ========================================================== */
+
+html[data-theme="dark"] :is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+) {
+    background-color: var(--theme-page-bg) !important;
+    color: var(--theme-text);
+}
+
+
+/* ==========================================================
+   3. Generic neutral surfaces
+   Preserve semantic alert / badge / button colors.
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    .card,
+    [class*="-card"],
+    [class*="card-"],
+    .panel,
+    [class*="-panel"],
+    [class*="panel-"],
+    [class*="toolbar"],
+    [class*="filter"],
+    [class*="search"],
+    [class*="summary"],
+    [class*="stat"],
+    [class*="metric"]
+)
+:not(button)
+:not([class*="btn"])
+:not([class*="button"])
+:not([class*="badge"])
+:not([class*="success"])
+:not([class*="warning"])
+:not([class*="danger"])
+:not([class*="error"]) {
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text);
+}
+
+
+/* ==========================================================
+   4. Forms
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    input,
+    select,
+    textarea
+) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    input,
+    textarea
+)::placeholder {
+    color: var(--theme-text-faint) !important;
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    input,
+    select,
+    textarea
+):focus {
+    border-color: var(--theme-focus) !important;
+    box-shadow:
+        0 0 0 3px rgba(96, 165, 250, .16) !important;
+}
+
+
+/* ==========================================================
+   5. Tables
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+table {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+thead th {
+    background-color: var(--theme-table-head) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+tbody
+tr
+:not(
+    [class*="success"],
+    [class*="warning"],
+    [class*="danger"],
+    [class*="error"]
+)
+> td {
+    background-color: var(--theme-table-row);
+    border-color: var(--theme-border) !important;
+    color: inherit;
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+tbody
+tr:hover
+> td {
+    background-color: var(--theme-table-hover);
+}
+
+
+/* ==========================================================
+   6. Neutral structural controls
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    details,
+    summary,
+    fieldset
+) {
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+hr {
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+a:not(
+    [class*="btn"],
+    [class*="button"],
+    [class*="badge"]
+) {
+    color: var(--theme-link);
+}
+
+
+/* ==========================================================
+   7. Known inline light-background compatibility
+   Scoped only to the first adapter batch.
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    [style*="background:#fff"],
+    [style*="background: #fff"],
+    [style*="background:#ffffff"],
+    [style*="background: #ffffff"],
+    [style*="background:white"],
+    [style*="background: white"],
+    [style*="background-color:#fff"],
+    [style*="background-color: #fff"],
+    [style*="background-color:#ffffff"],
+    [style*="background-color: #ffffff"],
+    [style*="background:#f8fafc"],
+    [style*="background: #f8fafc"],
+    [style*="background:#f9fafb"],
+    [style*="background: #f9fafb"],
+    [style*="background:#f1f5f9"],
+    [style*="background: #f1f5f9"]
+)
+:not(button)
+:not([class*="btn"])
+:not([class*="button"])
+:not([class*="badge"])
+:not([class*="success"])
+:not([class*="warning"])
+:not([class*="danger"])
+:not([class*="error"]) {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+
+/* ==========================================================
+   8. Known inline dark-text compatibility
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    [style*="color:#0f172a"],
+    [style*="color: #0f172a"],
+    [style*="color:#111827"],
+    [style*="color: #111827"],
+    [style*="color:#1f2937"],
+    [style*="color: #1f2937"],
+    [style*="color:#334155"],
+    [style*="color: #334155"],
+    [style*="color:#374151"],
+    [style*="color: #374151"]
+)
+:not([class*="badge"])
+:not([class*="success"])
+:not([class*="warning"])
+:not([class*="danger"])
+:not([class*="error"]) {
+    color: var(--theme-text) !important;
+}
+
+
+/* ==========================================================
+   9. Secondary text
+   ========================================================== */
+
+html[data-theme="dark"]
+:is(
+    body[data-page-path="/compare"],
+    body[data-page-path="/security/accounts"],
+    body[data-page-path="/security/guard"],
+    body[data-page-path="/security"],
+    body[data-page-path="/risk"],
+    body[data-page-path="/security/audit"],
+    body[data-page-path="/usage"],
+    body[data-page-path="/rules"],
+    body[data-page-path="/members"]
+)
+:is(
+    small,
+    .muted,
+    .text-muted,
+    [class*="subtitle"],
+    [class*="description"],
+    [class*="helper"],
+    [class*="hint"]
+) {
+    color: var(--theme-text-muted) !important;
+}

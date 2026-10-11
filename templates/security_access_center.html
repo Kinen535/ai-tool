@@ -107,7 +107,13 @@
 </style>
 
 {% macro action_form(permission, effect, label, css_class) -%}
+{% if effect in ['grant', 'allow'] %}
+<form method="post" action="{{ url_for('v155_security_access_center') }}" onsubmit="return confirm('确认单独授予该成员此权限？操作后将以成员级覆盖为准。');">
+{% elif effect == 'deny' %}
+<form method="post" action="{{ url_for('v155_security_access_center') }}" onsubmit="return confirm('确认单独禁止该成员使用此权限？操作后将以成员级覆盖为准。');">
+{% else %}
 <form method="post" action="{{ url_for('v155_security_access_center') }}">
+{% endif %}
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <input type="hidden" name="action" value="set_membership_permission_override">
   <input type="hidden" name="target_membership_id" value="{{ selected_membership_id }}">
@@ -118,7 +124,7 @@
 {%- endmacro %}
 
 {% macro clear_form(permission) -%}
-<form method="post" action="{{ url_for('v155_security_access_center') }}">
+<form method="post" action="{{ url_for('v155_security_access_center') }}" onsubmit="return confirm('确认清除该成员对此权限的单独覆盖？清除后将恢复角色基线结果。');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <input type="hidden" name="action" value="clear_membership_permission_override">
   <input type="hidden" name="target_membership_id" value="{{ selected_membership_id }}">
@@ -352,4 +358,22 @@
   }));
 })();
 </script>
+
+<!-- ACCESS_CENTER_UX_CONVERGED_BEGIN -->
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='security_access_center_ui.css') }}?v=ddc46548a45f"
+>
+
+<div
+    id="ac-ux-toast"
+    role="status"
+    aria-live="polite"
+></div>
+
+<script
+    src="{{ url_for('static', filename='security_access_center_ui.js') }}?v=537ea6e29f21"
+></script>
+<!-- ACCESS_CENTER_UX_CONVERGED_END -->
+
 {% endblock %}

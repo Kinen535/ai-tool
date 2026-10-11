@@ -1103,6 +1103,8 @@ def harness(
     def fake_validate_auth_session(
         conn,
         session_data,
+        *,
+        idle_timeout_seconds=None,
     ):
         user = auth["user"]
 
@@ -1321,10 +1323,10 @@ def test_super_admin_get_and_existing_report_intact(
     body = response.get_data(as_text=True)
 
     assert "权限中心" in body
-    assert "用户权限" in body
-    assert "角色权限" in body
+    assert "成员最终权限" in body
+    assert "角色权限矩阵" in body
     assert "工作区" in body
-    assert "成员权限覆盖" in body
+    assert "请选择一名工作区成员" in body
 
 
 def test_membership_selector_validation_and_render(
@@ -1353,7 +1355,8 @@ def test_membership_selector_validation_and_render(
 
     body = response.get_data(as_text=True)
 
-    assert "MiniQ" in body
+    assert "折柳" in body
+    assert f"membership #{TARGET_MEMBERSHIP_ID}" in body
     assert "membership #2" in body
 
 

@@ -896,3 +896,96 @@ def revoke_all_registry_sessions_in_transaction(
     )
 
     return int(cursor.rowcount)
+
+def extend_registered_session_expiry(
+    conn,
+    *,
+    raw_session_id: str,
+    user_id: int,
+    expires_at,
+    now=None,
+) -> bool:
+    """
+    Extend the absolute registry expiry for a validated,
+    active session.
+
+    This is intentionally separate from
+    touch_registered_session so the existing activity
+    throttling and device/session validation behavior
+    remain unchanged.
+    """
+
+    raw_session_id = str(
+        raw_session_id
+        or ""
+    ).strip()
+
+    if not raw_session_id:
+        raise ValueError(
+            "raw_session_id is required"
+        )
+
+    uid = int(
+        user_id
+    )
+
+    if uid <= 0:
+        raise ValueError(
+            "user_id must be >= 1"
+        )
+
+    now_dt = _coerce_datetime(
+        now
+    )
+
+    expires_dt = _coerce_datetime(
+        expires_at
+    )
+
+    if expires_dt <= now_dt:
+        raise ValueError(
+            "expires_at must be future"
+        )
+
+    session_key_hash = (
+        hash_session_identifier(raw_session_id)
+    )
+
+    _begin_owned_write(
+        conn
+    )
+
+    try:
+        cursor = conn.execute(
+            """
+            UPDATE v155_user_sessions
+            SET expires_at=?
+            WHERE session_key_hash=?
+              AND user_id=?
+              AND status='active'
+            """,
+            (
+                _timestamp(
+                    expires_dt
+                ),
+                session_key_hash,
+                uid,
+            ),
+        )
+
+        conn.commit()
+
+        return (
+            int(
+                cursor.rowcount
+                or 0
+            )
+            > 0
+        )
+
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+
+        raise
+

@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="rf-flow rf-legacy">
+    {% include "reputation_flow_nav.html" %}
 
 <!-- V15.7-A6 reputation risk workbench page -->
 <style>
@@ -300,7 +302,7 @@ html[data-theme="dark"] .reputation-workbench-muted {
 </div>
 {% endmacro %}
 
-<div class="reputation-workbench">
+<div class="reputation-workbench rf-legacy-shell">
     <div class="reputation-workbench-header"
          style="
             display:flex;
@@ -311,7 +313,7 @@ html[data-theme="dark"] .reputation-workbench-muted {
          ">
         <div>
             <h1 style="margin:0 0 6px 0;">
-                🧭 信誉风险处置工作台
+                风险工作台
             </h1>
 
             <div class="reputation-workbench-muted"
@@ -330,7 +332,7 @@ html[data-theme="dark"] .reputation-workbench-muted {
                   text-decoration:none;
                   font-weight:bold;
                ">
-                返回信誉档案库
+                返回录入首页
             </a>
 
             <!-- V15.7-A7-1B reputation task entry -->
@@ -398,6 +400,7 @@ html[data-theme="dark"] .reputation-workbench-muted {
     </div>
     {% endif %}
 
+    {% if report.stats.total_count %}
     <div class="reputation-workbench-hero">
         <h2 style="margin-top:0;">工作台定位</h2>
 
@@ -489,6 +492,7 @@ html[data-theme="dark"] .reputation-workbench-muted {
         </div>
     </div>
 
+    {% if report.queues["P1"] %}
     {{ render_queue(
         "P1",
         "紧急处置",
@@ -498,7 +502,9 @@ html[data-theme="dark"] .reputation-workbench-muted {
         "#fef2f2",
         "🔴"
     ) }}
+    {% endif %}
 
+    {% if report.queues["P2"] %}
     {{ render_queue(
         "P2",
         "重点复核",
@@ -508,7 +514,9 @@ html[data-theme="dark"] .reputation-workbench-muted {
         "#fff7ed",
         "🟠"
     ) }}
+    {% endif %}
 
+    {% if report.queues["P3"] %}
     {{ render_queue(
         "P3",
         "待完善",
@@ -518,6 +526,19 @@ html[data-theme="dark"] .reputation-workbench-muted {
         "#fffbeb",
         "🟡"
     ) }}
+    {% endif %}
+    {% else %}
+    <section class="rf-card" aria-labelledby="rf-workbench-empty-title">
+        <h2 id="rf-workbench-empty-title">当前没有待处理项目</h2>
+        <p class="rf-muted">先录入档案和事件；需要核实、补证据或处理的事项会在这里显示。</p>
+        <div class="rf-actions" style="margin-top:16px;">
+            <a class="rf-button rf-primary" href="/reputation/subjects/new">新建档案</a>
+            <a class="rf-button" href="/reputation/events/new">记录事件</a>
+            <a class="rf-button" href="/reputation/subjects">查阅已有档案</a>
+        </div>
+    </section>
+    {% endif %}
 </div>
 
+</div>
 {% endblock %}

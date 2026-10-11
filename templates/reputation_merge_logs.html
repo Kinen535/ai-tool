@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="rf-flow rf-legacy">
+    {% include "reputation_flow_nav.html" %}
 
-<div style="max-width:1500px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h1>📜 主体合并日志</h1>
+<div class="rf-legacy-shell" style="max-width:1500px;margin:0 auto;padding:24px;">
+    <div class="rf-legacy-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>档案合并日志</h1>
 
         <div style="display:flex;gap:10px;">
             <a href="/reputation/duplicates"
@@ -111,4 +113,5 @@
     </div>
 </div>
 
+</div>
 {% endblock %}

@@ -1,0 +1,277 @@
+/*
+ * DARK MODE A3.3 VISIBLE RESIDUAL ADAPTER
+ *
+ * Screenshot-grounded final visual convergence.
+ * No business template or prior theme layer is modified.
+ */
+
+html[data-theme="dark"] body[data-page-path="/security"] .console-button.neutral {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .risk-configuration {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .configuration-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .console-section {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .secondary-metrics {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .task-group {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .task-link {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-link {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-link:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-stat {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-field select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-search {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-button-deny {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-count {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-filter button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group summary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group summary::after {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice summary::after {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-advanced {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-role-card {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-hero {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-policy-card {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-link-button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-link-button:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-button:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-metric {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-secondary-metric {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field label {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field input {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-whitelist-row {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-remove-confirm {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-record {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-detail-box__value {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-quota-row {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/reputation/subjects"] .rf-subject-search-input,
+html[data-theme="dark"] body[data-page-path="/reputation/subjects"] .rf-subject-page-size {
+    background: var(--theme-input-bg) !important;
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/reputation/subjects"] .rf-subject-table-wrap thead th,
+html[data-theme="dark"] body[data-page-path="/reputation/subjects"] .rf-table-wrap thead th {
+    background: var(--theme-table-head) !important;
+    background-color: var(--theme-table-head) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}

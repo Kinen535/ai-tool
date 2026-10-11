@@ -1,0 +1,469 @@
+/* ACCESS CENTER UI CONVERGENCE
+ * Extracted byte-for-byte from accepted A1 / A2 / A2.1 / A2.2 style bodies.
+ */
+
+/* ===== A1 ===== */
+
+    .ac-ux-a1 .ac-ux-statusbar {
+        position: sticky;
+        top: 8px;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 10px 0 18px;
+        padding: 11px 14px;
+        border: 1px solid #dbe5f3;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .96);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+        backdrop-filter: blur(8px);
+    }
+
+    .ac-ux-a1 .ac-ux-statusbar-main {
+        min-width: 0;
+    }
+
+    .ac-ux-a1 .ac-ux-statusbar-title {
+        color: #172033;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .ac-ux-a1 .ac-ux-statusbar-sub {
+        margin-top: 2px;
+        color: #718096;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .ac-ux-a1 .ac-ux-statusbar-badge {
+        flex: 0 0 auto;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #edf7f0;
+        color: #16803a;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .ac-ux-a1 form.ac-permission-async-form {
+        position: relative;
+    }
+
+    .ac-ux-a1 form.ac-permission-async-form.ac-saving {
+        opacity: .72;
+    }
+
+    .ac-ux-a1 .ac-inline-save-state {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #edf7f0;
+        color: #16803a;
+        font-size: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+
+    .ac-ux-a1 .ac-inline-save-state.is-error {
+        background: #fff0f0;
+        color: #c53030;
+    }
+
+    #ac-ux-toast {
+        position: fixed;
+        right: 28px;
+        bottom: 28px;
+        z-index: 9999;
+        display: none;
+        max-width: 360px;
+        padding: 11px 15px;
+        border: 1px solid #d8e6dd;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #166534;
+        box-shadow: 0 12px 36px rgba(15, 23, 42, .14);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    #ac-ux-toast.is-visible {
+        display: block;
+    }
+
+    #ac-ux-toast.is-error {
+        border-color: #f3d0d0;
+        color: #b42318;
+    }
+
+    @media (max-width: 900px) {
+        .ac-ux-a1 .ac-ux-statusbar {
+            position: static;
+        }
+
+        #ac-ux-toast {
+            right: 16px;
+            bottom: 16px;
+            left: 16px;
+            max-width: none;
+        }
+    }
+
+/* ===== A2 ===== */
+
+    .ac-ux-a2 .ac-panel-title h2 {
+        margin-bottom: 4px;
+    }
+
+    .ac-ux-a2 .ac-legend {
+        margin: 0;
+    }
+
+    .ac-ux-a2 .ac-a2-help {
+        margin: 8px 0 16px;
+    }
+
+    .ac-ux-a2 .ac-a2-help > summary {
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 600;
+        list-style: none;
+        user-select: none;
+    }
+
+    .ac-ux-a2 .ac-a2-help > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .ac-ux-a2 .ac-a2-help > summary::before {
+        content: "＋";
+        margin-right: 5px;
+        color: #98a2b3;
+    }
+
+    .ac-ux-a2 .ac-a2-help[open] > summary::before {
+        content: "－";
+    }
+
+    .ac-ux-a2 .ac-a2-help .ac-legend {
+        margin-top: 10px;
+    }
+
+    .ac-ux-a2 .ac-permission {
+        display: grid;
+        grid-template-columns:
+            minmax(220px, 1fr)
+            auto
+            auto;
+        align-items: center;
+        gap: 12px 18px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+
+    .ac-ux-a2 .ac-permission-name {
+        min-width: 0;
+    }
+
+    .ac-ux-a2 .ac-permission-name strong,
+    .ac-ux-a2 .ac-permission-name > div:first-child {
+        color: #172033;
+    }
+
+    .ac-ux-a2 .ac-a2-summary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        min-width: 155px;
+    }
+
+    .ac-ux-a2 .ac-a2-final,
+    .ac-ux-a2 .ac-a2-source {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .ac-ux-a2 .ac-a2-final.is-on {
+        background: #e9f8ef;
+        color: #16803a;
+    }
+
+    .ac-ux-a2 .ac-a2-final.is-off {
+        background: #fff0f0;
+        color: #c53030;
+    }
+
+    .ac-ux-a2 .ac-a2-source {
+        background: #f2f5f9;
+        color: #667085;
+        font-weight: 600;
+    }
+
+    .ac-ux-a2 .ac-a2-source.is-adjusted {
+        background: #edf4ff;
+        color: #2563eb;
+    }
+
+    .ac-ux-a2 .ac-a2-adjust {
+        min-width: 66px;
+        padding: 7px 13px;
+        border: 1px solid #d7e0ed;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .ac-ux-a2 .ac-a2-adjust:hover {
+        border-color: #b9c9df;
+        background: #f8fafc;
+    }
+
+    .ac-ux-a2 .ac-a2-adjust[aria-expanded="true"] {
+        border-color: #b8c9ff;
+        background: #eef3ff;
+        color: #315bd6;
+    }
+
+    .ac-ux-a2 .ac-a2-detail {
+        display: none;
+        grid-column: 1 / -1;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 20px;
+        margin-top: 2px;
+        padding: 12px 14px;
+        border: 1px solid #e6ebf2;
+        border-radius: 10px;
+        background: #f9fbfd;
+    }
+
+    .ac-ux-a2 .ac-a2-detail.is-open {
+        display: flex;
+    }
+
+    .ac-ux-a2 .ac-a2-detail .ac-state {
+        margin: 0;
+    }
+
+    .ac-ux-a2 .ac-a2-detail .ac-actions {
+        margin: 0;
+    }
+
+    .ac-ux-a2 .ac-a2-detail .ac-button {
+        min-height: 34px;
+    }
+
+    .ac-ux-a2 .ac-group-metrics .ac-count[data-ac-a2-grantable="1"] {
+        display: none;
+    }
+
+    .ac-ux-a2 .ac-group {
+        overflow: hidden;
+    }
+
+    .ac-ux-a2 .ac-group > summary {
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+
+    .ac-ux-a2 .ac-a2-hidden {
+        display: none !important;
+    }
+
+    .ac-ux-a2 .ac-a2-filter-active {
+        border-color: #4f63ff !important;
+        color: #3548dc !important;
+        background: #f3f5ff !important;
+    }
+
+    .ac-ux-a2 .ac-a2-empty-filter {
+        padding: 22px;
+        text-align: center;
+        color: #8a94a6;
+        font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+        .ac-ux-a2 .ac-permission {
+            grid-template-columns: 1fr auto;
+        }
+
+        .ac-ux-a2 .ac-a2-summary {
+            grid-column: 1 / 2;
+            justify-content: flex-start;
+        }
+
+        .ac-ux-a2 .ac-a2-adjust {
+            grid-column: 2 / 3;
+            grid-row: 1 / 3;
+        }
+
+        .ac-ux-a2 .ac-a2-detail.is-open {
+            display: block;
+        }
+
+        .ac-ux-a2 .ac-a2-detail .ac-actions {
+            margin-top: 10px;
+        }
+    }
+
+/* ===== A2_1 ===== */
+
+    /*
+     * A2.1:
+     * 减少后台内部信息常驻显示，
+     * 保留真正影响日常配置判断的状态。
+     */
+
+    .ac-ux-a21 .ac-ux-statusbar {
+        display: none !important;
+    }
+
+    .ac-ux-a21 .ac-stat[data-ac-a21-hidden="1"] {
+        display: none !important;
+    }
+
+    .ac-ux-a21 .ac-group-metrics
+    [data-ac-a21-hidden="1"] {
+        display: none !important;
+    }
+
+    .ac-ux-a21 .ac-counts {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+    }
+
+    .ac-ux-a21 .ac-member-meta {
+        line-height: 1.45;
+    }
+
+    .ac-ux-a21 .ac-a2-adjust {
+        min-width: 62px;
+    }
+
+    @media (max-width: 720px) {
+        .ac-ux-a21 .ac-counts {
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                ) !important;
+        }
+    }
+
+/* ===== A2_2 ===== */
+
+    /*
+     * A2.2 Final Polish
+     *
+     * 权限中心局部处理全局主题按钮：
+     * 1. 缩为图标按钮，减少对右侧权限操作区的遮挡；
+     * 2. 保留 title / aria-label，不改变主题切换能力；
+     * 3. 保存 toast 移至主题按钮上方，避免两个 fixed 控件重叠。
+     */
+
+    html.ac-ux-a21
+    .theme-toggle-button {
+        right: 16px !important;
+        bottom: 16px !important;
+
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+
+        height: 44px !important;
+        min-height: 44px !important;
+
+        padding: 0 !important;
+        gap: 0 !important;
+
+        justify-content: center !important;
+
+        border-radius: 999px !important;
+    }
+
+    html.ac-ux-a21
+    .theme-toggle-button
+    .theme-toggle-text {
+        position: absolute !important;
+
+        width: 1px !important;
+        height: 1px !important;
+
+        padding: 0 !important;
+        margin: -1px !important;
+
+        overflow: hidden !important;
+
+        clip: rect(
+            0,
+            0,
+            0,
+            0
+        ) !important;
+
+        white-space: nowrap !important;
+
+        border: 0 !important;
+    }
+
+    html.ac-ux-a21
+    .theme-toggle-button
+    #themeToggleIcon {
+        margin: 0 !important;
+        line-height: 1 !important;
+    }
+
+    html.ac-ux-a21
+    #ac-ux-toast {
+        right: 16px !important;
+        bottom: 72px !important;
+
+        max-width: min(
+            360px,
+            calc(
+                100vw
+                - 32px
+            )
+        ) !important;
+    }
+
+    @media (max-width: 720px) {
+        html.ac-ux-a21
+        .theme-toggle-button {
+            right: 12px !important;
+            bottom: 12px !important;
+        }
+
+        html.ac-ux-a21
+        #ac-ux-toast {
+            right: 12px !important;
+            bottom: 68px !important;
+            left: 12px !important;
+
+            max-width: none !important;
+        }
+    }

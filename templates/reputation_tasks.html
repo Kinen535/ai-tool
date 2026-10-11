@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="rf-flow rf-legacy">
+    {% include "reputation_flow_nav.html" %}
 
 <!-- V15.7-A7-1B reputation task list page -->
 {% set status_map = {
@@ -213,7 +215,7 @@ html[data-theme="dark"] .reputation-task-filter select {
 }
 </style>
 
-<div class="reputation-task-page">
+<div class="reputation-task-page rf-legacy-shell">
     <div class="reputation-task-header">
         <div>
             <h1 style="margin:0 0 7px 0;">
@@ -615,4 +617,5 @@ html[data-theme="dark"] .reputation-task-filter select {
     </div>
 </div>
 
+</div>
 {% endblock %}

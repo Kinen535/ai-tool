@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* A5-A1-R3 import-page convergence */
+
+.rep-import-shell {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+}
+
+.rep-import-head {
+    margin-top: 22px;
+    margin-bottom: 22px;
+}
+
+.rep-import-head h1 {
+    letter-spacing: -0.02em;
+}
+
+.rep-import-card {
+    box-shadow: none;
+}
+
+.rep-import-card h3 {
+    margin-top: 0;
+}
+
+.rep-import-card input[type="file"] {
+    display: block;
+    width: 100%;
+    max-width: 620px;
+    padding: 8px;
+    border: 1px solid #d8e1ec;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 14px;
+}
+
+.rep-import-card input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid #d8e1ec;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rep-import-card input[type="file"]::file-selector-button:hover {
+    background: #f1f5f9;
+}
+
+.rep-import-table-wrap {
+    position: relative;
+}
+
+.rep-import-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+@media (max-width: 900px) {
+    .rep-import-head {
+        flex-direction: column;
+    }
+
+    .rep-import-head .rep-import-actions {
+        width: 100%;
+    }
+}
+</style>
+
+<style>
+.rep-import-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+.rep-import-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 18px 0 20px;
+}
+.rep-import-head h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+}
+.rep-import-muted {
+    color: #718096;
+    line-height: 1.7;
+}
+.rep-import-card {
+    background: #fff;
+    border: 1px solid #dde5f0;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 18px;
+}
+.rep-import-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.rep-import-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 9px;
+    text-decoration: none;
+    border: 1px solid #d8e0ea;
+    background: #fff;
+    color: #27364b;
+    cursor: pointer;
+}
+.rep-import-btn.primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+.rep-import-btn.success {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+.rep-import-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+.rep-import-stat {
+    padding: 14px 16px;
+    border: 1px solid #e1e7ef;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.rep-import-stat strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 23px;
+}
+.rep-import-table-wrap {
+    overflow: auto;
+    max-height: 560px;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+}
+.rep-import-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+}
+.rep-import-table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f1f5f9;
+}
+.rep-import-table th,
+.rep-import-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e8edf3;
+    text-align: left;
+    vertical-align: top;
+}
+.rep-import-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+.rep-import-tag.create {
+    background: #dcfce7;
+    color: #15803d;
+}
+.rep-import-tag.reuse {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.rep-import-tag.error {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.rep-import-result {
+    border-left: 4px solid #16a34a;
+    background: #f0fdf4;
+}
+@media (max-width: 900px) {
+    .rep-import-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+</style>
+
+
+<div class="rf-flow rep-import-shell">
+    {% include "reputation_flow_nav.html" %}
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-top:20px;">
+        <div>
+            <h1 style="margin:0 0 8px;">批量导入事件</h1>
+            <div style="color:#64748b;">
+                当前战场：Battle {{ battle_id }}。
+                上传后先预览，不会立即写入正式事件库。
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;">
+            <a href="{{ url_for('v156_reputation_events') }}"
+               style="padding:9px 14px;border:1px solid #dbe3ee;border-radius:10px;background:white;color:#334155;text-decoration:none;">
+                返回事件记录
+            </a>
+
+            <a href="{{ url_for('v156_reputation_event_import_template') }}"
+               style="padding:9px 14px;border:1px solid #dbe3ee;border-radius:10px;background:white;color:#334155;text-decoration:none;">
+                下载 CSV 模板
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div style="margin-top:18px;padding:12px 14px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#b91c1c;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div style="margin-top:20px;background:white;border:1px solid #dbe3ee;border-radius:16px;padding:20px;">
+        <h2 style="margin:0 0 8px;font-size:18px;">
+            1. 上传资料
+        </h2>
+
+        <div style="color:#64748b;line-height:1.7;margin-bottom:12px;">
+            必填：“事件标题”和“游戏编号”。
+            游戏编号必须已经存在于当前信誉档案库；
+            找不到档案时会标记异常，不会自动创建主体。
+        </div>
+
+        <form method="POST"
+              enctype="multipart/form-data"
+              action="{{ url_for('v156_reputation_event_import') }}">
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token }}">
+
+            <input type="hidden"
+                   name="action"
+                   value="preview">
+
+            <div style="max-width:620px;padding:8px;border:1px solid #dbe3ee;border-radius:11px;background:#f8fafc;">
+                <input type="file"
+                       name="import_file"
+                       accept=".csv,text/csv"
+                       required>
+            </div>
+
+            <button type="submit"
+                    style="margin-top:14px;border:0;border-radius:10px;padding:10px 18px;background:#2563eb;color:white;font-weight:bold;cursor:pointer;">
+                上传并预览
+            </button>
+        </form>
+    </div>
+
+    {% if preview %}
+    <div style="margin-top:18px;background:white;border:1px solid #dbe3ee;border-radius:16px;padding:20px;">
+        <h2 style="margin:0 0 16px;font-size:18px;">
+            2. 导入预览
+        </h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;">
+                <div style="color:#64748b;font-size:13px;">总行数</div>
+                <strong style="font-size:22px;">{{ preview.counts.total }}</strong>
+            </div>
+
+            <div style="padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;">
+                <div style="color:#64748b;font-size:13px;">将新增事件</div>
+                <strong style="font-size:22px;">{{ preview.counts.create }}</strong>
+            </div>
+
+            <div style="padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;">
+                <div style="color:#64748b;font-size:13px;">已匹配档案</div>
+                <strong style="font-size:22px;">{{ preview.counts.matched }}</strong>
+            </div>
+
+            <div style="padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;">
+                <div style="color:#64748b;font-size:13px;">异常行</div>
+                <strong style="font-size:22px;">{{ preview.counts.error }}</strong>
+            </div>
+        </div>
+
+        <div style="max-height:430px;overflow:auto;border:1px solid #dbe3ee;border-radius:12px;">
+            <table style="width:100%;min-width:1180px;border-collapse:collapse;">
+                <tr>
+                    {% for label in ["CSV 行","事件标题","游戏编号","匹配档案","事件类型","影响级别","状态","事件时间","处理结果"] %}
+                    <th style="position:sticky;top:0;z-index:2;padding:10px;text-align:left;background:#f1f5f9;border-bottom:1px solid #dbe3ee;">
+                        {{ label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+
+                {% for row in preview.rows %}
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;">{{ row.source_row }}</td>
+                    <td style="padding:10px;font-weight:bold;">{{ row.title }}</td>
+                    <td style="padding:10px;">{{ row.game_id }}</td>
+                    <td style="padding:10px;">{{ row.subject_name or '-' }}</td>
+                    <td style="padding:10px;">{{ row.event_type or '-' }}</td>
+                    <td style="padding:10px;">{{ row.impact_level or '-' }}</td>
+                    <td style="padding:10px;">{{ row.status or '-' }}</td>
+                    <td style="padding:10px;">{{ row.event_time or '-' }}</td>
+                    <td style="padding:10px;">
+                        {% if row.action == "create" %}
+                        <span style="color:#16a34a;font-weight:bold;">新增事件</span>
+                        {% else %}
+                        <span style="color:#dc2626;font-weight:bold;">
+                            {{ row.error or "异常" }}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            {% if preview.counts.error == 0 %}
+            <form method="POST"
+                  action="{{ url_for('v156_reputation_event_import') }}">
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token }}">
+
+                <input type="hidden"
+                       name="action"
+                       value="confirm">
+
+                <input type="hidden"
+                       name="rows_json"
+                       value="{{ rows_json|e }}">
+
+                <button type="submit"
+                        style="border:0;border-radius:10px;padding:10px 18px;background:#16a34a;color:white;font-weight:bold;cursor:pointer;">
+                    确认导入
+                </button>
+            </form>
+            {% else %}
+            <div style="padding:10px 14px;border-radius:10px;background:#fff7ed;color:#c2410c;">
+                存在异常行，请修正 CSV 后重新上传。
+                当前不会写入任何事件。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

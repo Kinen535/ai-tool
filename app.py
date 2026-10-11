@@ -10371,6 +10371,17 @@ def reputation_backup_status():
     return resp
 
 
+
+# ================================================================
+# A5-A4 R3.2 — authenticated session UX policy
+# Active authenticated sessions use an 8-hour sliding window.
+# Flask cookie expiry and registry expiry are refreshed while
+# activity continues.  Explicit logout/session revocation still
+# terminates access immediately.
+# ================================================================
+app.config["PERMANENT_SESSION_LIFETIME"] = 8 * 60 * 60
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
 
@@ -11426,6 +11437,12 @@ def v158_login():
                             user=result["user"],
                         )
 
+                        # A5-A4 R3.2:
+                        # keep the signed Flask session across
+                        # browser restarts and refresh its expiry
+                        # while the user remains active.
+                        session.permanent = True
+
                         if enforcement_enabled:
                             session[
                                 V155_SESSION_ID
@@ -11778,12 +11795,17 @@ def v158_authentication_before_request():
     )
     from services.v155_session_registry_service import (
         SessionRegistryError,
+        extend_registered_session_expiry,
         mark_current_session_expired,
         touch_registered_session,
         validate_registered_session,
     )
 
     g.v158_current_user = None
+
+    # Default-deny the maintenance navigation until
+    # an authenticated kinen super-admin is confirmed.
+    g.v156_reputation_maintenance_allowed = False
 
     path = str(
         request.path
@@ -11842,6 +11864,9 @@ def v158_authentication_before_request():
                 validate_auth_session(
                     conn,
                     session,
+                    idle_timeout_seconds=(
+                        8 * 60 * 60
+                    ),
                 )
             )
 
@@ -11893,21 +11918,46 @@ def v158_authentication_before_request():
                     }
 
                 else:
-                    touch_registered_session(
-                        conn,
-                        raw_session_id=str(
-                            session.get(
-                                V155_SESSION_ID
-                            )
-                            or ""
-                        ),
-                        user_id=int(
-                            user["id"]
-                        ),
-                        last_ip=(
-                            _v158_request_ip()
-                        ),
+                    session_touched = (
+                        touch_registered_session(
+                            conn,
+                            raw_session_id=str(
+                                session.get(
+                                    V155_SESSION_ID
+                                )
+                                or ""
+                            ),
+                            user_id=int(
+                                user["id"]
+                            ),
+                            last_ip=(
+                                _v158_request_ip()
+                            ),
+                        )
                     )
+
+                    # Extend registry expiry only when
+                    # touch_registered_session actually
+                    # advances last_seen_at.  This keeps
+                    # the existing write-throttling behavior.
+                    if session_touched:
+                        extend_registered_session_expiry(
+                            conn,
+                            raw_session_id=str(
+                                session.get(
+                                    V155_SESSION_ID
+                                )
+                                or ""
+                            ),
+                            user_id=int(
+                                user["id"]
+                            ),
+                            expires_at=(
+                                datetime.now()
+                                .astimezone()
+                                + app.permanent_session_lifetime
+                            ),
+                        )
 
         except (
             sqlite3.Error,
@@ -12063,6 +12113,41 @@ def v158_authentication_before_request():
         user = auth_result["user"]
 
         g.v158_current_user = user
+
+        # Reputation maintenance is deliberately narrower
+        # than generic super-admin access:
+        # only the kinen super-admin account may see/use it.
+        g.v156_reputation_maintenance_allowed = (
+            str(
+                user.get("username")
+                or ""
+            )
+            .strip()
+            .casefold()
+            == "kinen"
+            and role_allows(
+                str(
+                    user.get("role")
+                    or ""
+                ),
+                "super_admin",
+            )
+        )
+
+        if (
+            path
+            in {
+                "/reputation/backup-status",
+                "/reputation/duplicates",
+                "/reputation/merge-logs",
+            }
+            and not (
+                g.v156_reputation_maintenance_allowed
+            )
+        ):
+            # Hide the existence of maintenance endpoints
+            # from ordinary child accounts.
+            abort(404)
 
         requires_super_admin = (
             path
@@ -13042,6 +13127,68 @@ def v155_security_access_center():
                         permission_key=permission_key,
                         audit=audit,
                     )
+                )
+
+            if (
+                str(
+                    request.headers.get(
+                        "X-Requested-With"
+                    )
+                    or ""
+                )
+                .strip()
+                .lower()
+                == "xmlhttprequest"
+            ):
+                from flask import jsonify
+
+                effect_value = (
+                    str(
+                        request.form.get(
+                            "effect"
+                        )
+                        or ""
+                    ).strip()
+                    if action
+                    == "set_membership_permission_override"
+                    else "inherit"
+                )
+
+                payload = {
+                    "ok":
+                        bool(
+                            result.get("ok")
+                        ),
+
+                    "action":
+                        action,
+
+                    "target_membership_id":
+                        target_membership_id,
+
+                    "permission_key":
+                        permission_key,
+
+                    "effect":
+                        effect_value,
+
+                    "message":
+                        str(
+                            result.get("message")
+                            or result.get("error")
+                            or ""
+                        ),
+                }
+
+                return (
+                    jsonify(
+                        payload
+                    ),
+                    (
+                        200
+                        if payload["ok"]
+                        else 400
+                    ),
                 )
 
             if result.get("ok"):
@@ -14049,28 +14196,8 @@ def v155_security_console():
 @app.route("/reputation")
 @app.route('/reputation')
 def v156_reputation_home():
-    import sqlite3
-    from flask import render_template
-    from services.v156_reputation_store import build_reputation_home_report_scoped
-    conn = sqlite3.connect('data/snapshots.db')
-    conn.row_factory = sqlite3.Row
-    from flask import g, abort
-    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import make_reputation_battle_scoped_connection
-    try:
-        _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
-    except WorkspaceDataBoundaryError:
-        abort(403)
-    try:
-        battle_id = int(_v155_boundary.current_battle_id)
-    except (AttributeError, TypeError, ValueError):
-        abort(403)
-    if battle_id <= 0:
-        abort(403)
-    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
-    report = build_reputation_home_report_scoped(conn, battle_id=battle_id)
-    conn.close()
-    return render_template('reputation_home.html', report=report, title='信誉档案库')
+    from services.reputation_flow_ui import home
+    return home()
 
 
 # =========================
@@ -14302,7 +14429,7 @@ def v156_reputation_search():
     conn.row_factory = sqlite3.Row
     from flask import g, abort
     from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    from services.v156_reputation_store import make_reputation_workspace_scoped_connection
     try:
         _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
     except WorkspaceDataBoundaryError:
@@ -14313,7 +14440,7 @@ def v156_reputation_search():
         abort(403)
     if battle_id <= 0:
         abort(403)
-    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    scoped_conn = make_reputation_workspace_scoped_connection(conn, battle_id)
     result = search_reputation_scoped(conn, q, battle_id=battle_id)
     subject_evidence_map = {}
     event_subject_summary_map = {}
@@ -14463,11 +14590,19 @@ def v156_reputation_subjects():
         abort(403)
     if battle_id <= 0:
         abort(403)
+    from services.v156_reputation_store import (
+        make_reputation_workspace_scoped_connection,
+    )
+    workspace_conn = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
+    )
     if request.method == 'POST':
-        data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': 'manual', 'note': request.form.get('note', '')}
-        create_reputation_subject_scoped(conn, data, battle_id=battle_id)
         conn.close()
-        return redirect('/reputation/subjects')
+        from services.reputation_flow_ui import subject_new
+        return subject_new()
     q = request.args.get('q', '').strip()
     prefill_raw = request.args.get('prefill', '').strip()
     prefill = {'display_name': '', 'game_id': ''}
@@ -14476,16 +14611,71 @@ def v156_reputation_subjects():
             prefill['game_id'] = prefill_raw
         else:
             prefill['display_name'] = prefill_raw
-    rows = list_reputation_subjects_scoped(conn, q=q, limit=100, battle_id=battle_id)
+    from services.v156_reputation_store import count_reputation_subjects_scoped
+
+    page_size_raw = request.args.get('page_size', '25').strip()
+    try:
+        page_size = int(page_size_raw)
+    except (TypeError, ValueError):
+        page_size = 25
+    if page_size not in (25, 50, 100):
+        page_size = 25
+
+    page_raw = request.args.get('page', '1').strip()
+    try:
+        page = int(page_raw)
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, page)
+
+    total_count = count_reputation_subjects_scoped(
+        conn,
+        q=q,
+        battle_id=battle_id,
+    )
+
+    total_pages = max(
+        1,
+        (total_count + page_size - 1) // page_size,
+    )
+
+    page = min(
+        page,
+        total_pages,
+    )
+
+    offset = (
+        (page - 1)
+        * page_size
+    )
+
+    rows = list_reputation_subjects_scoped(
+        conn,
+        q=q,
+        limit=page_size,
+        offset=offset,
+        battle_id=battle_id,
+    )
     subject_event_stats = {}
     subject_ids = [int(row['id']) for row in rows]
     if subject_ids:
         placeholders = ','.join(['?'] * len(subject_ids))
-        stat_rows = conn.execute(f"\n            SELECT\n                r.subject_id,\n                COUNT(DISTINCT r.event_id) AS event_count,\n                GROUP_CONCAT(\n                    IFNULL(e.title, '未知事件') || '｜' ||\n                    CASE IFNULL(e.impact_level, '')\n                        WHEN 'low' THEN '低'\n                        WHEN 'normal' THEN '普通'\n                        WHEN 'medium' THEN '中'\n                        WHEN 'high' THEN '高'\n                        WHEN 'severe' THEN '严重'\n                        WHEN 'critical' THEN '极严重'\n                        ELSE IFNULL(e.impact_level, '-')\n                    END,\n                    '；'\n                ) AS events\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_events e ON e.id = r.event_id AND e.battle_id = r.battle_id\n            WHERE r.subject_id IN ({placeholders})\n            AND r.battle_id = ?\n            GROUP BY r.subject_id\n            ", list(subject_ids) + [battle_id]).fetchall()
+        stat_rows = workspace_conn.execute(f"\n            SELECT\n                r.subject_id,\n                COUNT(DISTINCT r.event_id) AS event_count,\n                GROUP_CONCAT(\n                    IFNULL(e.title, '未知事件') || '｜' ||\n                    CASE IFNULL(e.impact_level, '')\n                        WHEN 'low' THEN '低'\n                        WHEN 'normal' THEN '普通'\n                        WHEN 'medium' THEN '中'\n                        WHEN 'high' THEN '高'\n                        WHEN 'severe' THEN '严重'\n                        WHEN 'critical' THEN '极严重'\n                        ELSE IFNULL(e.impact_level, '-')\n                    END,\n                    '；'\n                ) AS events\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_events e ON e.id = r.event_id\n            WHERE r.subject_id IN ({placeholders})\n            \n            GROUP BY r.subject_id\n            ", list(subject_ids)).fetchall()
         for item in stat_rows:
             subject_event_stats[int(item['subject_id'])] = {'count': int(item['event_count'] or 0), 'events': item['events'] or ''}
     conn.close()
-    return render_template('reputation_subjects.html', rows=rows, q=q, prefill=prefill, title='信誉主体', subject_event_stats=subject_event_stats)
+    return render_template(
+        'reputation_subjects.html',
+        rows=rows,
+        q=q,
+        prefill=prefill,
+        title='信誉主体',
+        subject_event_stats=subject_event_stats,
+        page=page,
+        page_size=page_size,
+        total_count=total_count,
+        total_pages=total_pages,
+    )
 
 
 @app.route("/reputation/subjects/<int:subject_id>/edit", methods=["GET", "POST"])
@@ -14511,10 +14701,16 @@ def v156_reputation_subject_edit(subject_id):
         abort(404)
     return_to = _v157_reputation_return_to(request.values.get('return_to', ''))
     if request.method == 'POST':
-        data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': 'manual', 'note': request.form.get('note', '')}
-        update_reputation_subject_scoped(conn, subject_id, data, battle_id=battle_id)
+        data = {'subject_type': request.form.get('subject_type', 'player'), 'display_name': request.form.get('display_name', ''), 'game_id': request.form.get('game_id', ''), 'alias_names': request.form.get('alias_names', ''), 'trust_level': request.form.get('trust_level', 'unknown'), 'risk_level': request.form.get('risk_level', 'normal'), 'status': request.form.get('status', 'active'), 'source_type': (request.form.get('source', row['source_type']) or 'manual').strip() or 'manual', 'note': request.form.get('note', '')}
+        updated = update_reputation_subject_scoped(conn, subject_id, data, battle_id=battle_id)
         conn.close()
-        return redirect(return_to or '/reputation/subjects')
+        if not updated:
+            submitted = dict(row)
+            submitted.update(data)
+            return render_template('reputation_subject_edit.html', row=submitted,
+                                   return_to=return_to, title='编辑档案',
+                                   form_error='名称和游戏编号至少填写一项。'), 400
+        return redirect(return_to or f'/reputation/subjects/{subject_id}?saved=1')
     conn.close()
     return render_template('reputation_subject_edit.html', row=row, return_to=return_to, title='编辑信誉主体')
 
@@ -14646,7 +14842,7 @@ def v156_reputation_event_edit(event_id):
 
         conn.close()
         return redirect(
-            return_to or "/reputation/events"
+            return_to or f"/reputation/events/{event_id}?saved=1"
         )
 
     # V15.6-A5 event relation edit context
@@ -14854,7 +15050,7 @@ def v156_reputation_subject_detail(subject_id):
     conn.row_factory = sqlite3.Row
     from flask import g, abort
     from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    from services.v156_reputation_store import make_reputation_workspace_scoped_connection
     try:
         _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
     except WorkspaceDataBoundaryError:
@@ -14865,7 +15061,7 @@ def v156_reputation_subject_detail(subject_id):
         abort(403)
     if battle_id <= 0:
         abort(403)
-    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    scoped_conn = make_reputation_workspace_scoped_connection(conn, battle_id)
     row = get_reputation_subject_scoped(conn, subject_id, battle_id=battle_id)
     if not row:
         conn.close()
@@ -14875,7 +15071,7 @@ def v156_reputation_subject_detail(subject_id):
     conn.close()
     conn = sqlite3.connect('data/snapshots.db')
     conn.row_factory = sqlite3.Row
-    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    scoped_conn = make_reputation_workspace_scoped_connection(conn, battle_id)
     evidence_summary = {'event_count': 0, 'high_impact_count': 0, 'latest_event_title': '', 'latest_event_time': '', 'is_complete': False}
     evidence_row = scoped_conn.execute("\n        SELECT\n            COUNT(DISTINCT e.id) AS event_count,\n            SUM(\n                CASE\n                    WHEN e.impact_level IN ('high', 'severe', 'critical') THEN 1\n                    ELSE 0\n                END\n            ) AS high_impact_count,\n            MAX(IFNULL(e.event_time, e.created_at)) AS latest_event_time\n        FROM v156_reputation_event_relations r\n        LEFT JOIN v156_reputation_events e ON e.id = r.event_id\n        WHERE r.subject_id = ?\n          AND e.id IS NOT NULL\n        ", (subject_id,)).fetchone()
     if evidence_row:
@@ -15004,7 +15200,7 @@ def v156_reputation_event_detail(event_id):
     conn.row_factory = sqlite3.Row
     from flask import g, abort
     from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import make_reputation_battle_scoped_connection
+    from services.v156_reputation_store import make_reputation_workspace_scoped_connection
     try:
         _v155_boundary = resolve_workspace_data_boundary(getattr(g, 'v155_access_context', None))
     except WorkspaceDataBoundaryError:
@@ -15015,7 +15211,7 @@ def v156_reputation_event_detail(event_id):
         abort(403)
     if battle_id <= 0:
         abort(403)
-    scoped_conn = make_reputation_battle_scoped_connection(conn, battle_id)
+    scoped_conn = make_reputation_workspace_scoped_connection(conn, battle_id)
     row = get_reputation_event_scoped(conn, event_id, battle_id=battle_id)
     if not row:
         conn.close()
@@ -15203,12 +15399,19 @@ def v156_reputation_events():
         abort(403)
     if battle_id <= 0:
         abort(403)
+    from services.v156_reputation_store import (
+        make_reputation_workspace_scoped_connection,
+    )
+    workspace_conn = (
+        make_reputation_workspace_scoped_connection(
+            conn,
+            battle_id,
+        )
+    )
     if request.method == 'POST':
-        data = {'title': (request.form.get('title', '') or request.form.get('event_title', '')).strip(), 'event_type': request.form.get('event_type', '').strip(), 'impact_level': request.form.get('impact_level', '').strip(), 'status': request.form.get('status', '').strip(), 'event_time': request.form.get('event_time', '').strip(), 'summary': (request.form.get('summary', '') or request.form.get('event_summary', '')).strip(), 'evidence_note': (request.form.get('evidence_note', '') or request.form.get('evidence', '') or request.form.get('note', '')).strip(), 'created_at': None, 'updated_at': None}
-        if data['title']:
-            create_reputation_event_scoped(conn, data, battle_id=battle_id)
         conn.close()
-        return redirect('/reputation/events')
+        from services.reputation_flow_ui import event_create
+        return event_create()
     q = request.args.get('q', '').strip()
     search_cols = [c for c in ['title', 'event_type', 'summary', 'evidence_note', 'note'] if c in cols]
     where_sql = ''
@@ -15229,7 +15432,7 @@ def v156_reputation_events():
     event_ids = [int(row['id']) for row in rows]
     if event_ids:
         placeholders = ','.join(['?'] * len(event_ids))
-        relation_rows = conn.execute(f"\n            SELECT\n                r.event_id,\n                COUNT(r.id) AS relation_count,\n                GROUP_CONCAT(\n                    IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),\n                    '；'\n                ) AS subjects\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id AND s.battle_id = r.battle_id\n            WHERE r.event_id IN ({placeholders})\n            AND r.battle_id = ?\n            GROUP BY r.event_id\n            ", list(event_ids) + [battle_id]).fetchall()
+        relation_rows = workspace_conn.execute(f"\n            SELECT\n                r.event_id,\n                COUNT(r.id) AS relation_count,\n                GROUP_CONCAT(\n                    IFNULL(s.display_name, '未知主体') || '｜' || IFNULL(s.game_id, '-'),\n                    '；'\n                ) AS subjects\n            FROM v156_reputation_event_relations r\n            LEFT JOIN v156_reputation_subjects s ON s.id = r.subject_id\n            WHERE r.event_id IN ({placeholders})\n            \n            GROUP BY r.event_id\n            ", list(event_ids)).fetchall()
         for item in relation_rows:
             relation_stats[int(item['event_id'])] = {'count': int(item['relation_count'] or 0), 'subjects': item['subjects'] or ''}
     conn.close()
@@ -15296,12 +15499,8 @@ def v156_reputation_event_status_quick(event_id):
 
 @app.route("/reputation/events/new")
 def v156_reputation_event_new():
-    from flask import render_template
-
-    return render_template(
-        "reputation_event_new.html",
-        title="新增信誉事件",
-    )
+    from services.reputation_flow_ui import event_new
+    return event_new()
 
 
 # =========================
@@ -15310,58 +15509,55 @@ def v156_reputation_event_new():
 
 @app.route("/reputation/subjects/new", methods=["GET", "POST"])
 def v156_reputation_subject_new():
-    from flask import request, redirect, render_template
-    from services.v156_reputation_store import create_reputation_subject
+    from services.reputation_flow_ui import subject_new
+    return subject_new()
 
-    from flask import g, abort
-    from services.v155_workspace_data_boundary import WorkspaceDataBoundaryError, resolve_workspace_data_boundary
-    from services.v156_reputation_store import (
-        create_reputation_subject_scoped,
+
+@app.route("/reputation/subjects/import", methods=["GET", "POST"])
+def v156_reputation_subject_import():
+    from services.reputation_flow_ui import _battle_id, _connection
+    from services import reputation_bulk_import
+    return reputation_bulk_import.subject_import_handler(
+        _connection(),
+        _battle_id(),
     )
 
-    if request.method == "POST":
-        try:
-            _v155_boundary = resolve_workspace_data_boundary(
-                getattr(g, "v155_access_context", None)
-            )
-        except WorkspaceDataBoundaryError:
-            abort(403)
 
-        try:
-            battle_id = int(
-                _v155_boundary.current_battle_id
-            )
-        except (AttributeError, TypeError, ValueError):
-            abort(403)
+@app.route("/reputation/subjects/import/template.csv")
+def v156_reputation_subject_import_template():
+    from services import reputation_bulk_import
+    return reputation_bulk_import.subject_import_template_response()
 
-        if battle_id <= 0:
-            abort(403)
 
-        conn = get_db_connection()
-
-        data = {
-            "subject_type": (request.form.get("subject_type") or "player").strip(),
-            "display_name": (request.form.get("display_name") or "").strip(),
-            "game_id": (request.form.get("game_id") or "").strip(),
-            "alias_names": (request.form.get("alias_names") or "").strip(),
-            "trust_level": (request.form.get("trust_level") or "unknown").strip(),
-            "risk_level": (request.form.get("risk_level") or "normal").strip(),
-            "status": (request.form.get("status") or "active").strip(),
-            "source": (request.form.get("source") or "manual").strip(),
-            "note": (request.form.get("note") or "").strip(),
-        }
-
-        if not data["display_name"] and not data["game_id"]:
-            conn.close()
-            return redirect("/reputation/subjects/new?error=missing")
-
-        create_reputation_subject_scoped(conn, data, battle_id=battle_id)
-        conn.commit()
-        conn.close()
-
-        return redirect("/reputation/subjects?created=1")
-
-    return render_template(
-        "reputation_subject_new.html",
-        title="新增信誉主体",
+@app.route(
+    "/reputation/events/import",
+    methods=["GET", "POST"],
+)
+def v156_reputation_event_import():
+    from services.reputation_flow_ui import (
+        _battle_id,
+        _connection,
     )
+    from services import reputation_bulk_import
+
+    return (
+        reputation_bulk_import
+        .event_import_handler(
+            _connection(),
+            _battle_id(),
+        )
+    )
+
+
+@app.route(
+    "/reputation/events/import/template.csv",
+    methods=["GET"],
+)
+def v156_reputation_event_import_template():
+    from services import reputation_bulk_import
+
+    return (
+        reputation_bulk_import
+        .event_import_template_response()
+    )
+

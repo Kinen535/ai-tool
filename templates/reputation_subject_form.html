@@ -1,0 +1,45 @@
+{% macro field(name, label, placeholder='') %}
+<div class="rf-field"><label for="rf-{{ name }}">{{ label }}</label>
+    <input id="rf-{{ name }}" name="{{ name }}" value="{{ fd.get(name, '') or '' }}" placeholder="{{ placeholder }}">
+</div>
+{% endmacro %}
+{% macro choice(name, label, options, default) %}
+<div class="rf-field"><label for="rf-{{ name }}">{{ label }}</label>
+    {% set selected = fd.get(name) or default %}
+    <select id="rf-{{ name }}" name="{{ name }}">
+        {% if selected not in options %}<option value="{{ selected }}" selected>{{ selected }}（原值）</option>{% endif %}
+        {% for value, text in options.items() %}<option value="{{ value }}" {% if selected == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+    </select>
+</div>
+{% endmacro %}
+<section class="rf-card">
+    <h2>基本资料</h2>
+    <p class="rf-muted" style="margin-bottom:16px;">名称和游戏编号至少填写一项，其余资料可后续补充。</p>
+    <div class="rf-fields">
+        {{ field('display_name', '名称', '例如：山河白酒') }}
+        {{ field('game_id', '游戏编号', '例如：31475391') }}
+        {{ choice('subject_type', '对象类型', {'player':'玩家','account':'账号','alliance':'同盟','group':'团体','other':'其他'}, 'player') }}
+        {{ field('alias_names', '曾用名', '多个曾用名用逗号分隔') }}
+        {{ field('source', '资料来源', '手工录入（默认）/ 截图记录 / 盟内反馈') }}
+        <div class="rf-field rf-wide"><label for="rf-note">背景与备注</label>
+            <textarea id="rf-note" name="note" rows="3" placeholder="记录背景、时间和资料来源，可后续补充。">{{ fd.get('note', '') or '' }}</textarea>
+        </div>
+    </div>
+</section>
+<details class="rf-fold" {% if editing %}open{% endif %}>
+    <summary>信任、风险与状态 · 可稍后完善</summary>
+    <div class="rf-fields">
+        {{ choice('trust_level', '信任等级', {'unknown':'未知','trusted':'可信','risky':'存疑','black':'黑名单'}, 'unknown') }}
+        {{ choice('risk_level', '风险等级', {'normal':'正常','warning':'预警','danger':'危险','black':'黑名单'}, 'normal') }}
+        {% if editing %}
+        {{ choice('status', '档案状态', {'active':'生效','archived':'归档','ignored':'忽略','inactive':'停用'}, 'active') }}
+        {% else %}
+        {{ choice('status', '档案状态', {'active':'生效','inactive':'停用'}, 'active') }}
+        {% endif %}
+    </div>
+</details>
+<div class="rf-form-footer">
+    <button type="submit" class="rf-button rf-primary">{{ '保存修改' if editing else '保存档案' }}</button>
+    <a class="rf-button" href="{{ cancel_url }}">取消</a>
+    <span>{% if editing and return_to %}保存后返回风险工作台。{% elif editing %}保存后返回档案详情。{% else %}保存后进入详情，可继续记录事件。{% endif %}</span>
+</div>

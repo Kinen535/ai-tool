@@ -1,0 +1,824 @@
+/*
+ * DARK MODE A3.2 RESIDUAL COMPONENT ADAPTERS
+ *
+ * Generated only from residual light-background / dark-text
+ * selectors actually present in the frozen page sources.
+ *
+ * No business template is modified.
+ * Theme Core and A3.1 remain authoritative and unchanged.
+ */
+
+
+/* ========================================================
+   ROUTE: /security
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/security"] .audit-detail p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .audit-detail strong {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .audit-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .configuration-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .console-button.neutral {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .console-section {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .risk-configuration {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .risk-copy {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .risk-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .secondary-metrics {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .secondary-metrics summary {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .task-group {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] .task-link {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /security/accounts
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-audit {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-button-secondary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-card {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-config-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-config-item span {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-create {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-details > summary {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-details > summary::after {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-display-name {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-empty {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-field input {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-field label {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-field select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-field small {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-form input {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-form select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-glance {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-glance-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-glance-item strong {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-header p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-inline-link {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-link {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-link:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-muted {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-note {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-page {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-result-failure {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-section-head p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-self {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-stat {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-stat span {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-summary-main small {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-summary-side {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-account-table th {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] .v158-password-change {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /security/access-center
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] #ac-ux-toast {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-advanced {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-button-clear {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-button-deny {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-button-grant {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-count {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-count span {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-empty {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-field select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-filter button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group summary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group summary::after {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group-sub {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-hero p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-legend {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-link {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-link:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-member {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-member-meta {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice summary {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice summary::after {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice-body {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-notice-item {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-panel-title p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-readonly {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-search {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-shell {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-stat {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-stat em {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-stat span {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-table th {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a1 .ac-inline-save-state {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-adjust {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-adjust:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-adjust[aria-expanded="true"] {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-detail {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-final.is-off {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-final.is-on {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-help > summary {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-source {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-a2-source.is-adjusted {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-permission-name > div:first-child {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-ux-a2 .ac-permission-name strong {
+    color: var(--theme-text) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /security/guard
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-button:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-detail-box__value {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field input {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field label {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-field select {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-hero {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-link-button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-link-button:hover {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-metric {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-more-metrics summary {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-panel {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-policy-card {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-policy-card--safe {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-quota-row {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-record {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-remove-confirm {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-remove-confirm p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-secondary-metric {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-state {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] .guard-whitelist-row {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /security/audit
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-button {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-detail-value {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-entry {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-ip {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-page-copy {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-records {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] .audit-summary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /usage
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-boundary {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-boundary-list b {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-boundary-list li {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-eyebrow {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-module {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-module p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-module-core {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-module-support {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-scenario {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-scenario span {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-scenario strong {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-section-head p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-step {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-step p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] .usage-summary {
+    color: var(--theme-text) !important;
+}
+
+
+/* ========================================================
+   ROUTE: /rules
+   ======================================================== */
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-card {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-detail dd {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-disclosure {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-metric {
+    background: var(--theme-surface-1) !important;
+    background-color: var(--theme-surface-1) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-metric-note {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-muted {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-page {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] .ru-scope p {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] body[data-page-path="/security"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/accounts"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/guard"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/security/audit"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/usage"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body[data-page-path="/rules"] :is(input, select, textarea) {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+    color-scheme: dark;
+}
+
+/* Access Center external visual bridge only. */
+
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-permission,
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-group,
+html[data-theme="dark"] body[data-page-path="/security/access-center"] .ac-card {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}

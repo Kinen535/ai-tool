@@ -1,0 +1,395 @@
+
+/*
+ * DARK MODE A3.1 TARGETED VISUAL ADAPTERS
+ *
+ * Scope:
+ *   /compare
+ *   /security/accounts
+ *
+ * Deliberately excluded:
+ *   /risk
+ *   /members
+ *   /security/access-center
+ *
+ * The global Theme Core remains authoritative and unchanged.
+ */
+
+
+/* ==========================================================
+   COMPARE
+   ========================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-analysis-scope-panel {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+:is(
+    .ca-scope-strip,
+    .ca-filter-grid,
+    .ca-detail-filter-grid,
+    .ca-disclosure-body,
+    .ca-attendance-config-editor,
+    .ca-smart-table-toolbar,
+    .ca-execution-tools
+) {
+    background: var(--theme-surface-2) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+:is(
+    .ca-rules-disclosure,
+    .ca-disclosure,
+    details
+) {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+:is(
+    .ca-rules-disclosure,
+    .ca-disclosure,
+    details
+)
+> summary {
+    background: var(--theme-surface-2) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-analysis-scope-panel
+:is(
+    input,
+    select,
+    textarea
+) {
+    background: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-analysis-scope-panel
+:is(
+    label,
+    .ca-section-title,
+    .ca-form-hint
+) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-analysis-scope-panel
+.ca-form-hint {
+    color: var(--theme-text-muted) !important;
+}
+
+
+/* Group overview sticky columns were retaining light backgrounds. */
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-group-panel {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-group-panel
+table
+:is(th, td):nth-child(1),
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-group-panel
+table
+:is(th, td):nth-child(2) {
+    background: var(--theme-table-row) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-group-panel
+table
+thead
+:is(th):nth-child(1),
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+.ca-group-panel
+table
+thead
+:is(th):nth-child(2) {
+    background: var(--theme-table-head) !important;
+}
+
+
+/* Explicitly neutralise known inline light surfaces on compare only. */
+
+html[data-theme="dark"]
+body[data-page-path="/compare"]
+:is(
+    [style*="background:#fff"],
+    [style*="background: #fff"],
+    [style*="background:#ffffff"],
+    [style*="background: #ffffff"],
+    [style*="background:white"],
+    [style*="background: white"],
+    [style*="background:#f8fafc"],
+    [style*="background: #f8fafc"],
+    [style*="background:#f9fafb"],
+    [style*="background: #f9fafb"],
+    [style*="background:#f1f5f9"],
+    [style*="background: #f1f5f9"]
+)
+:not(button)
+:not([class*="btn"])
+:not([class*="badge"])
+:not([class*="success"])
+:not([class*="warning"])
+:not([class*="danger"])
+:not([class*="error"]) {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+
+/* ==========================================================
+   SECURITY ACCOUNTS
+   ========================================================== */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+:is(
+    h1,
+    h2,
+    h3,
+    h4
+) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-header {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+:is(
+    .v158-account-stat,
+    .v158-account-panel,
+    .v158-account-table-wrap
+) {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-stat
+* {
+    color: inherit;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-muted {
+    color: var(--theme-text-muted) !important;
+}
+
+
+/* Create-account / audit disclosure rows. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+details {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+details
+> summary {
+    background: var(--theme-surface-2) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+
+/* Account forms. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+:is(
+    input,
+    select,
+    textarea
+) {
+    background: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text) !important;
+}
+
+
+/* Older table representation. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-table
+th {
+    background: var(--theme-table-head) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-table
+td {
+    background: var(--theme-table-row) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+
+/* Current account-card / metadata representations. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+:is(
+    [class*="account-card"],
+    [class*="account-meta"],
+    [class*="account-info"],
+    [class*="account-detail"],
+    [class*="account-fact"]
+)
+:not([class*="badge"])
+:not([class*="role"])
+:not([class*="status"])
+:not([class*="lock"]) {
+    background-color: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+
+/*
+ * Base topbar protection.
+ *
+ * security_accounts historically uses account-oriented class names too.
+ * Keep the global current-account widget compact so page CSS cannot make
+ * it consume the topbar and crush the brand column.
+ */
+
+body[data-page-path="/security/accounts"]
+.topbar
+.v158-account-card {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+body[data-page-path="/security/accounts"]
+.topbar
+:is(
+    .v158-account-name,
+    .v158-account-meta
+) {
+    white-space: nowrap !important;
+}
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.topbar
+.v158-account-card {
+    background: #111b2e !important;
+    border-color: #334155 !important;
+}
+
+
+/* Explicit light-background cleanup on accounts only. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+:is(
+    [style*="background:#fff"],
+    [style*="background: #fff"],
+    [style*="background:#ffffff"],
+    [style*="background: #ffffff"],
+    [style*="background:white"],
+    [style*="background: white"],
+    [style*="background:#f8fafc"],
+    [style*="background: #f8fafc"],
+    [style*="background:#f9fafb"],
+    [style*="background: #f9fafb"],
+    [style*="background:#f1f5f9"],
+    [style*="background: #f1f5f9"]
+)
+:not(button)
+:not([class*="badge"])
+:not([class*="role"])
+:not([class*="status"])
+:not([class*="lock"])
+:not([class*="success"])
+:not([class*="warning"])
+:not([class*="danger"])
+:not([class*="error"]) {
+    background: var(--theme-surface-1) !important;
+    border-color: var(--theme-border) !important;
+}
+
+
+/* Dark text left behind by the light account page. */
+
+html[data-theme="dark"]
+body[data-page-path="/security/accounts"]
+.v158-account-page
+:is(
+    [style*="color:#0f172a"],
+    [style*="color: #0f172a"],
+    [style*="color:#111827"],
+    [style*="color: #111827"],
+    [style*="color:#1f2937"],
+    [style*="color: #1f2937"],
+    [style*="color:#334155"],
+    [style*="color: #334155"],
+    [style*="color:#374151"],
+    [style*="color: #374151"]
+) {
+    color: var(--theme-text) !important;
+}

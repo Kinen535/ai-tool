@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='reputation_flow.css') }}?v=flow-a2">
+{% set rf_path = request.path %}
+<nav class="rf-nav" aria-label="信誉档案库导航">
+    <a href="/reputation" class="{% if rf_path == '/reputation' %}is-current{% endif %}"
+       {% if rf_path == '/reputation' %}aria-current="page"{% endif %}>录入首页</a>
+    <a href="/reputation/subjects" class="{% if '/subjects' in rf_path %}is-current{% endif %}"
+       {% if rf_path == '/reputation/subjects' %}aria-current="page"{% endif %}>档案管理</a>
+    <a href="/reputation/events" class="{% if '/events' in rf_path %}is-current{% endif %}"
+       {% if rf_path == '/reputation/events' %}aria-current="page"{% endif %}>事件记录</a>
+    <a href="/reputation/workbench" class="{% if rf_path in ['/reputation/workbench', '/reputation/tasks'] %}is-current{% endif %}"
+       {% if rf_path == '/reputation/workbench' %}aria-current="page"{% endif %}>风险处理</a>
+    {% if g.get('v156_reputation_maintenance_allowed', False) %}
+    <details class="rf-tools">
+        <summary class="{% if rf_path in ['/reputation/duplicates', '/reputation/merge-logs'] %}is-current{% endif %}">维护工具</summary>
+        <div class="rf-tools-menu">
+            <a href="/reputation/duplicates">重复档案检测</a>
+            <a href="/reputation/merge-logs">合并日志</a>
+            <span>安全备份维护页已保护，仅限服务器端访问。</span>
+        </div>
+    </details>
+    {% endif %}
+    <a href="/reputation/search" class="rf-search-link {% if rf_path == '/reputation/search' %}is-current{% endif %}"
+       {% if rf_path == '/reputation/search' %}aria-current="page"{% endif %}>检索资料</a>
+</nav>
+{% if rf_path in ['/reputation/workbench', '/reputation/tasks'] %}
+<div class="rf-subnav">
+    <a href="/reputation/workbench" {% if rf_path == '/reputation/workbench' %}aria-current="page"{% endif %}>风险工作台</a>
+    <a href="/reputation/tasks" {% if rf_path == '/reputation/tasks' %}aria-current="page"{% endif %}>处置任务</a>
+    <span>先完善资料，再按需要处理风险。</span>
+</div>
+{% endif %}

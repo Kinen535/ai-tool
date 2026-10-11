@@ -1,113 +1,42 @@
 {% extends "base.html" %}
-
 {% block content %}
-
-<div style="max-width:1200px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h1>📌 新增信誉事件</h1>
-
-        <div style="display:flex;gap:10px;">
-            <a href="/reputation/events"
-               style="background:#eff6ff;color:#2563eb;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                返回事件列表
-            </a>
-
-            <a href="/reputation/search"
-               style="background:#f8fafc;color:#334155;padding:8px 14px;border-radius:10px;text-decoration:none;">
-                信誉检索
-            </a>
-        </div>
-    </div>
-
-    <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:24px;">
-        <h2>① 事件资料</h2>
-        <p style="color:#64748b;line-height:1.8;">
-            这里用于新增长期信誉事件。建议写事实经过、时间线、证据来源，不要只写情绪化判断。
-        </p>
-
-        <form method="POST" action="/reputation/events" style="margin-top:18px;">
-            <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-                <div>
-                    <label style="font-weight:bold;">事件标题</label>
-                    <input name="title"
-                           placeholder="例如：某玩家背刺事件 / 资源纠纷 / 合作履约"
-                           style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
+{% set fd = form_data or {} %}
+{% macro choice(name, label, options, default) %}
+<div class="rf-field"><label for="rf-{{ name }}">{{ label }}</label><select id="rf-{{ name }}" name="{{ name }}">
+    {% for value, text in options.items() %}<option value="{{ value }}" {% if (fd.get(name) or default) == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+</select></div>
+{% endmacro %}
+<div class="rf-flow">
+    {% include "reputation_flow_nav.html" %}
+    <div class="rf-form-page">
+        {% set cancel_url = '/reputation/subjects/' ~ selected_subject_id if selected_subject else '/reputation' %}
+        <header class="rf-page-title"><div><h1>记录事件</h1><p class="rf-muted">记录事实经过与证据，并选择关联档案；也可以先单独保存。</p></div><a class="rf-button" href="{{ cancel_url }}">{{ '返回档案详情' if selected_subject else '返回录入首页' }}</a></header>
+        {% if form_error %}<div class="rf-alert rf-error" role="alert">{{ form_error }}</div>{% endif %}
+        <form method="POST" action="/reputation/events">
+            <section class="rf-card">
+                <h2>事件资料</h2>
+                <div class="rf-fields">
+                    <div class="rf-field rf-wide"><label for="rf-title">事件标题 <small style="display:inline;">必填</small></label><input id="rf-title" name="title" required value="{{ fd.get('title', '') }}" placeholder="例如：合作履约记录 / 资源纠纷"></div>
+                    <div class="rf-field"><label for="rf-subject_id">关联档案</label><select id="rf-subject_id" name="subject_id">
+                        <option value="" {% if not selected_subject_id %}selected{% endif %}>暂不关联，保存后再补充</option>
+                        {% for s in subjects %}<option value="{{ s.id }}" {% if s.id == selected_subject_id %}selected{% endif %}>{{ s.display_name or '未命名' }}{% if s.game_id %} · {{ s.game_id }}{% endif %}</option>{% endfor %}
+                    </select><small>{% if selected_subject %}已预选当前档案，保存时建立关联。{% elif subjects %}选择对象后，事件会显示在对应档案中。{% else %}还没有档案，可先保存事件，或返回首页新建档案。{% endif %}</small></div>
+                    <div class="rf-field"><label for="rf-event_time">事件时间</label><input id="rf-event_time" name="event_time" value="{{ fd.get('event_time', '') }}" placeholder="例如：2026-10-04 或 S24 决战期"></div>
+                    {{ choice('event_type','事件类型',{'normal':'普通记录','betrayal':'背刺 / 反水','resource_dispute':'资源纠纷','contract_break':'合作履约问题','fraud':'欺诈 / 恶意行为','positive':'正向信誉记录'},'normal') }}
+                    {{ choice('status','处理状态',{'recorded':'记录中','pending':'待核实','resolved':'已处理','voided':'已作废'},'recorded') }}
+                    <div class="rf-field rf-wide"><label for="rf-summary">事实经过</label><textarea id="rf-summary" name="summary" rows="3" placeholder="简要写明事件经过、参与对象与时间线。">{{ fd.get('summary', '') }}</textarea></div>
+                    <div class="rf-field rf-wide"><label for="rf-evidence_note">证据与来源</label><textarea id="rf-evidence_note" name="evidence_note" rows="3" placeholder="记录截图、聊天记录、证人及来源。">{{ fd.get('evidence_note', '') }}</textarea></div>
                 </div>
-
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
-                    <div>
-                        <label style="font-weight:bold;">事件类型</label>
-                        <select name="event_type"
-                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
-                            <option value="normal">普通记录</option>
-                            <option value="betrayal">背刺 / 反水</option>
-                            <option value="resource_dispute">资源纠纷</option>
-                            <option value="contract_break">合作履约问题</option>
-                            <option value="fraud">欺诈 / 恶意行为</option>
-                            <option value="positive">正向信誉记录</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-weight:bold;">影响等级</label>
-                        <select name="impact_level"
-                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
-                            <option value="low">低</option>
-                            <option value="medium">中</option>
-                            <option value="high">高</option>
-                            <option value="critical">严重</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-weight:bold;">处理状态</label>
-                        <select name="status"
-                                style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
-                            <option value="recorded">记录中</option>
-                            <option value="pending">待核实</option>
-                            <option value="resolved">已处理</option>
-                            <option value="voided">已作废</option>
-                        </select>
-                    </div>
+            </section>
+            <details class="rf-fold"><summary>影响等级与关联说明 · 可选</summary>
+                <div class="rf-fields">
+                    {{ choice('impact_level','影响等级',{'low':'低','medium':'中','high':'高','critical':'严重'},'low') }}
+                    <div class="rf-field"><label for="rf-relation_role">关联角色</label><input id="rf-relation_role" name="relation_role" value="{{ fd.get('relation_role', '') }}" placeholder="例如：受影响方 / 证人 / 合作方"></div>
+                    <div class="rf-field rf-wide"><label for="rf-relation_note">关联说明</label><textarea id="rf-relation_note" name="relation_note" rows="2" placeholder="说明所选对象与这次事件的关系。">{{ fd.get('relation_note', '') }}</textarea></div>
                 </div>
-
-                <div>
-                    <label style="font-weight:bold;">事件时间</label>
-                    <input name="event_time"
-                           placeholder="例如：2026-07-01 或 S24 决战期"
-                           style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;">
-                </div>
-
-                <div>
-                    <label style="font-weight:bold;">事件摘要</label>
-                    <textarea name="summary"
-                              rows="5"
-                              placeholder="简要描述事件经过，尽量写事实，不写情绪化定性。"
-                              style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;"></textarea>
-                </div>
-
-                <div>
-                    <label style="font-weight:bold;">证据备注</label>
-                    <textarea name="evidence_note"
-                              rows="5"
-                              placeholder="记录截图、聊天记录、时间线、证人、来源等。"
-                              style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;"></textarea>
-                </div>
-
-                <div style="display:flex;gap:10px;">
-                    <button type="submit"
-                            style="background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;">
-                        保存信誉事件
-                    </button>
-
-                    <a href="/reputation/events"
-                       style="background:#f1f5f9;color:#334155;border-radius:10px;padding:12px 18px;text-decoration:none;font-weight:bold;">
-                        取消
-                    </a>
-                </div>
-            </div>
+            </details>
+            <div class="rf-form-footer"><button class="rf-button rf-primary" type="submit">保存事件</button><a class="rf-button" href="{{ cancel_url }}">取消</a><span>保存后查看详情，继续补充关联或返回档案。</span></div>
         </form>
     </div>
 </div>
-
 {% endblock %}

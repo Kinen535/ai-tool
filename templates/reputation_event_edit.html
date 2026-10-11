@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="rf-flow rf-legacy">
+    {% include "reputation_flow_nav.html" %}
 
-<div style="max-width:1200px;margin:0 auto;padding:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h1>✏️ 编辑信誉事件</h1>
+<div class="rf-legacy-shell" style="max-width:1200px;margin:0 auto;padding:24px;">
+    <div class="rf-legacy-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h1>编辑事件与证据</h1>
 
         <div style="display:flex;gap:10px;">
             <!-- V15.7-A6B event edit return context -->
@@ -13,7 +15,7 @@
                 {% if return_to %}
                     ← 返回风险处置工作台
                 {% else %}
-                    返回事件库
+                    返回事件记录
                 {% endif %}
             </a>
 
@@ -24,8 +26,8 @@
         </div>
     </div>
 
-    <div style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;margin-bottom:18px;">
-        <h2>① 事件信息</h2>
+    <div class="rf-neutral" style="background:#fff7ed;border-left:6px solid #f97316;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>事件资料</h2>
 
         <form method="POST" action="/reputation/events/{{ row.id }}/edit">
                 {% if return_to %}
@@ -48,7 +50,10 @@
                 <option value="cooperation" {% if row.event_type == "cooperation" %}selected{% endif %}>合作履约</option>
                 <option value="management" {% if row.event_type == "management" %}selected{% endif %}>管理事件</option>
                 <option value="other" {% if row.event_type == "other" %}selected{% endif %}>其他</option>
-            </select>
+            <option value="normal" {% if row.event_type == "normal" %}selected{% endif %}>普通记录</option>
+<option value="resource_dispute" {% if row.event_type == "resource_dispute" %}selected{% endif %}>资源纠纷</option>
+<option value="contract_break" {% if row.event_type == "contract_break" %}selected{% endif %}>合作履约问题</option>
+<option value="positive" {% if row.event_type == "positive" %}selected{% endif %}>正向信誉记录</option>{% if row.event_type and row.event_type not in ['general', 'betrayal', 'fraud', 'conflict', 'cooperation', 'management', 'other', 'normal', 'resource_dispute', 'contract_break', 'positive'] %}<option value="{{ row.event_type }}" selected>{{ row.event_type }}（原值）</option>{% endif %}</select>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div>
@@ -59,7 +64,8 @@
                         <option value="normal" {% if row.impact_level == "normal" %}selected{% endif %}>普通</option>
                         <option value="high" {% if row.impact_level == "high" %}selected{% endif %}>高</option>
                         <option value="severe" {% if row.impact_level == "severe" %}selected{% endif %}>严重</option>
-                    </select>
+                    <option value="medium" {% if row.impact_level == "medium" %}selected{% endif %}>中</option>
+<option value="critical" {% if row.impact_level == "critical" %}selected{% endif %}>极严重</option>{% if row.impact_level and row.impact_level not in ['low', 'normal', 'high', 'severe', 'medium', 'critical'] %}<option value="{{ row.impact_level }}" selected>{{ row.impact_level }}（原值）</option>{% endif %}</select>
                 </div>
 
                 <div>
@@ -70,7 +76,9 @@
                         <option value="verified" {% if row.status == "verified" %}selected{% endif %}>已核实</option>
                         <option value="disputed" {% if row.status == "disputed" %}selected{% endif %}>有争议</option>
                         <option value="archived" {% if row.status == "archived" %}selected{% endif %}>已归档</option>
-                    </select>
+                    <option value="pending" {% if row.status == "pending" %}selected{% endif %}>待核实</option>
+<option value="resolved" {% if row.status == "resolved" %}selected{% endif %}>已处理</option>
+<option value="voided" {% if row.status == "voided" %}selected{% endif %}>已作废</option>{% if row.status and row.status not in ['recorded', 'verified', 'disputed', 'archived', 'pending', 'resolved', 'voided'] %}<option value="{{ row.status }}" selected>{{ row.status }}（原值）</option>{% endif %}</select>
                 </div>
             </div>
 
@@ -96,7 +104,7 @@
 
     <div id="relations" style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;align-items:start;">
         <div style="background:white;border-radius:18px;padding:22px;">
-            <h2>② 已关联主体</h2>
+            <h2>已关联档案</h2>
             <p style="color:#64748b;line-height:1.7;">
                 这里决定该事件会穿透到哪些玩家、账号、同盟或团体。后续搜索游戏编号时，会优先读取这些关联。
             </p>
@@ -148,7 +156,7 @@
         </div>
 
         <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
-            <h2>③ 新增关联主体</h2>
+            <h2>添加关联档案</h2>
 
             {% if subjects %}
                 <form method="POST" action="/reputation/events/{{ row.id }}/relations/save">
@@ -193,4 +201,5 @@
     </div>
 </div>
 
+</div>
 {% endblock %}
