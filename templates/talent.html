@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>👥 人才中心</h1>
+
+<div class="health-box">
+
+    <div class="health-score">
+
+        {{ health_score }}
+
+    </div>
+
+    <div class="health-level">
+
+        {{ health_level }}级生态
+
+    </div>
+
+    <div class="health-desc">
+
+        {% if health_level == "S" %}
+            核心梯队完整，联盟人才结构极佳
+        {% elif health_level == "A" %}
+            人才储备充足，整体运行健康
+        {% elif health_level == "B" %}
+            人才结构健康，但存在梯队断层风险
+        {% elif health_level == "C" %}
+            后备力量不足，需要重点培养新人
+        {% else %}
+            人才生态失衡，需要立即调整
+        {% endif %}
+
+    </div>
+
+</div>
+
+<div class="dashboard-box">
+
+<h3>📊 人才雷达</h3>
+
+</div>
+
+<div class="radar-grid">
+
+<div class="radar-card">
+<div class="radar-title">核心成员</div>
+<div class="radar-number">{{ core_count }}</div>
+<div class="radar-pct">战略核心</div>
+</div>
+
+<div class="radar-card">
+<div class="radar-title">骨干成员</div>
+<div class="radar-number">{{ backbone_count }}</div>
+<div class="radar-pct">稳定主力</div>
+</div>
+
+<div class="radar-card">
+<div class="radar-title">后备干部</div>
+<div class="radar-number">{{ reserve_count }}</div>
+<div class="radar-pct">重点培养</div>
+</div>
+
+<div class="radar-card">
+<div class="radar-title">潜力新星</div>
+<div class="radar-number">{{ growth_members|length }}</div>
+<div class="radar-pct">近期成长</div>
+</div>
+
+<div class="radar-card">
+<div class="radar-title">沉默成员</div>
+<div class="radar-number">{{ silent_count }}</div>
+<div class="radar-pct">待激活</div>
+</div>
+
+</div>
+
+<div class="dashboard-grid">
+
+<div class="dashboard-box">
+    <h3>🌱 潜力新星TOP10</h3>
+
+    <p style="color:#888;font-size:13px;">
+      近期成长最快成员
+    </p>
+
+    {% for m in growth_members %}
+    <div class="dashboard-row">
+        <span>
+
+        <a href="/identity/view/{{ m['member_name'] }}?from=talent"
+           style="color:inherit;text-decoration:none;">
+           {{ m["member_name"] }}
+        </a>
+
+        <br>
+
+        <small style="color:#888;">
+        战功+{{ m["battle_gain"] }}
+        ｜
+        助攻 +{{ m["assist_gain"] }}
+        </small>
+
+        </span>
+
+        <strong style="color:#22c55e;">
+            成长指数 {{ m["score_change"] }}
+        </strong>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="dashboard-box">
+<h3>😴 待激活人才TOP10</h3>
+
+<p style="color:#888;">
+价值较高但活跃不足成员
+</p>
+
+<p>
+数量：{{ silent_members|length }}
+</p>
+
+{% for m in silent_members %}
+<div class="dashboard-row">
+
+<span>
+    <a href="/identity/view/{{ m['member_name'] }}?from=talent"
+       style="color:inherit;text-decoration:none;">
+       {{ m["member_name"] }}
+    </a>
+    <br>
+    <small style="color:#888;">
+       身份评级 {{ "%.0f"|format(m.identity_score) }}
+    </small>
+</span>
+
+<strong style="color:#ef4444;">
+    活跃度 {{ "%.1f"|format(m.av) }}
+</strong>
+
+</div>
+{% endfor %}
+
+</div>
+
+<div class="dashboard-box">
+<h3>🏆 重点培养名单</h3>
+
+<p>
+数量：{{ reserve_members|length }}
+</p>
+
+{% for m in reserve_members %}
+<div class="dashboard-row">
+
+<span>
+<a href="/identity/view/{{ m['member_name'] }}?from=talent"
+   style="color:inherit;text-decoration:none;">
+   {{ m["member_name"] }}
+</a>
+</span>
+
+<strong style="color:#22c55e;">
+提拔指数 {{ "%.0f"|format(m["identity_score"]) }}
+</strong>
+
+</div>
+{% endfor %}
+
+</div>
+
+</div>
+
+{% endblock %}
