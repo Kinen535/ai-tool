@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">
+📜 日志详情
+</h1>
+
+<a href="/identity/logs" class="btn">
+← 返回日志中心
+</a>
+
+<div class="card">
+
+<div class="card">
+
+    <h3>📋 系统解读</h3>
+
+    <div class="identity-analysis">
+
+        {% for item in analysis %}
+
+        <p>
+            {{ loop.index }}、
+            {{ item }}
+        </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+<h3>基本信息</h3>
+
+<table class="table">
+
+    <tr>
+        <td>成员</td>
+        <td>{{ row["member_name"] }}</td>
+    </tr>
+
+    <tr>
+        <td>操作人</td>
+        <td>{{ row["operator"] }}</td>
+    </tr>
+
+    <tr>
+        <td>时间</td>
+        <td>{{ row["created_at"] }}</td>
+    </tr>
+
+</table>
+
+</div>
+
+<div class="card">
+
+<h3>身份变化</h3>
+
+<table class="table">
+
+    <tr>
+        <td>旧身份</td>
+        <td>{{ row["old_role"] }}</td>
+    </tr>
+
+    <tr>
+        <td>新身份</td>
+        <td>{{ row["new_role"] }}</td>
+    </tr>
+
+    <tr>
+        <td>旧身份分</td>
+        <td>{{ row["old_score"] }}</td>
+    </tr>
+
+    <tr>
+        <td>新身份分</td>
+        <td>{{ row["new_score"] }}</td>
+    </tr>
+
+    <tr>
+        <td>身份保护</td>
+        <td>
+            {{ row["old_protect"] }}
+            →
+            {{ row["new_protect"] }}
+        </td>
+    </tr>
+
+    <tr>
+        <td>免停滞</td>
+        <td>
+            {{ row["old_exempt"] }}
+            →
+            {{ row["new_exempt"] }}
+        </td>
+    </tr>
+
+</table>
+
+</div>
+
+{% endblock %}

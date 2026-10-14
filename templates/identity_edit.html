@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">
+✏️ 编辑身份
+</h1>
+
+<div class="card">
+
+    <div class="member-edit-header">
+
+        <div class="member-edit-name">
+            👤 {{ row["member_name"] }}
+        </div>
+
+        <div class="member-edit-sub">
+
+            当前身份：
+
+            {% if row["role_tag"]=="admin" %}
+                管理员
+            {% elif row["role_tag"]=="warehouse" %}
+                仓库号
+            {% elif row["role_tag"]=="core" %}
+                核心成员
+            {% else %}
+                普通成员
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <form method="post">
+
+    <div class="member-edit-layout">
+
+        <!-- 左侧编辑区 -->
+
+        <div>
+
+            <div class="form-section">
+
+                <h3>身份配置</h3>
+
+                <label>身份标签</label>
+
+                <select
+                    name="role_tag"
+                    class="form-control"
+                >
+
+                    <option value="member"
+                    {% if row["role_tag"]=="member" %}selected{% endif %}>
+                    普通成员
+                    </option>
+
+                    <option value="admin"
+                    {% if row["role_tag"]=="admin" %}selected{% endif %}>
+                    管理员
+                    </option>
+
+                    <option value="warehouse"
+                    {% if row["role_tag"]=="warehouse" %}selected{% endif %}>
+                    仓库号
+                    </option>
+
+                    <option value="core"
+                    {% if row["role_tag"]=="core" %}selected{% endif %}>
+                    核心成员
+                    </option>
+
+                </select>
+
+                <label>身份描述</label>
+
+                <input
+                    type="text"
+                    name="role_desc"
+                    value="{{ row['role_desc'] }}"
+                    class="form-control"
+                >
+
+                <label>身份规则</label>
+
+                <select
+                    name="role_rule"
+                    class="form-control"
+                >
+
+                    <option value="normal"
+                    {% if row["role_rule"]=="normal" %}selected{% endif %}>
+                    普通规则
+                    </option>
+
+                    <option value="admin"
+                    {% if row["role_rule"]=="admin" %}selected{% endif %}>
+                    管理员规则
+                    </option>
+
+                    <option value="warehouse"
+                    {% if row["role_rule"]=="warehouse" %}selected{% endif %}>
+                    仓库规则
+                    </option>
+
+                    <option value="core"
+                    {% if row["role_rule"]=="core" %}selected{% endif %}>
+                    核心规则
+                    </option>
+
+                </select>
+
+                <label>身份权重</label>
+
+                <input
+                    type="number"
+                    step="0.1"
+                    name="role_weight"
+                    value="{{ row['role_weight'] }}"
+                    class="form-control"
+                >
+
+            </div>
+
+            <div class="form-section">
+
+                <h3>高级保护设置</h3>
+
+                <label class="check-row">
+
+                    <input
+                        type="checkbox"
+                        name="is_protected"
+                        {% if row["is_protected"] == 1 %}
+                        checked
+                        {% endif %}
+                    >
+
+                    身份保护
+
+                    <span>
+                    （不会进入清理名单）
+                    </span>
+
+                </label>
+
+                <label class="check-row">
+
+                    <input
+                        type="checkbox"
+                        name="exempt_stall"
+                        {% if row["exempt_stall"] == 1 %}
+                        checked
+                        {% endif %}
+                    >
+
+                    免停滞处罚
+
+                    <span>
+                    （不会受到停滞检测）
+                    </span>
+
+                </label>
+
+            </div>
+
+            <div class="form-actions">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    保存修改
+                </button>
+
+                <a
+                    href="/identity"
+                    class="btn"
+                >
+                    返回身份中心
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- 右侧预览区 -->
+
+        <div class="member-preview-card">
+
+            <div class="member-preview-title">
+                身份预览
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">成员名称</div>
+                <div class="preview-value">
+                    {{ row["member_name"] }}
+                </div>
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">身份分</div>
+                <div class="preview-value preview-score">
+                    {{ row["identity_score"] }}
+                </div>
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">身份规则</div>
+                <div class="preview-value">
+                    {{ row["role_rule"] }}
+                </div>
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">权重</div>
+                <div class="preview-value">
+                    {{ row["role_weight"] }}
+                </div>
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">身份保护</div>
+                <div class="preview-value">
+
+                    {% if row["is_protected"] == 1 %}
+                    已保护
+                    {% else %}
+                    未保护
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <div class="preview-row">
+                <div class="preview-label">停滞豁免</div>
+                <div class="preview-value">
+
+                    {% if row["exempt_stall"] == 1 %}
+                    已豁免
+                    {% else %}
+                    未豁免
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

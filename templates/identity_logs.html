@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1 class="page-title">
+📜 身份操作日志
+</h1>
+
+<div class="card">
+
+    <div class="card-title">
+        最近身份修改记录
+    </div>
+
+    <div class="table-scroll">
+
+        <table class="table">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>成员</th>
+                    <th>旧身份</th>
+                    <th>新身份</th>
+                    <th>操作人</th>
+                    <th>时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            {% for row in logs %}
+
+            <tr>
+
+                <td>{{ row["id"] }}</td>
+
+                <td>
+                    {{ row["member_name"] }}
+                </td>
+
+                <td>
+                    {{ row["old_role"] }}
+                </td>
+
+                <td>
+                    {{ row["new_role"] }}
+                </td>
+
+                <td>
+                    {{ row["operator"] }}
+                </td>
+
+                <td>
+                    {{ row["created_at"] }}
+                </td>
+
+                <td>
+
+                    <a
+                        href="/identity/log/{{ row['id'] }}"
+                        class="btn"
+                    >
+                        详情
+                    </a>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

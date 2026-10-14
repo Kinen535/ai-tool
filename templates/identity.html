@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+/* IDENTITY A1 RESPONSIBILITY + LAYOUT CONVERGENCE */
+
+.identity-stats.identity-stats-converged {
+    grid-template-columns:
+        repeat(5, minmax(0, 1fr));
+    gap:14px;
+}
+
+.identity-stats-converged .stat-card-link,
+.identity-stats-converged .stat-card {
+    min-width:0;
+}
+
+.identity-value-dashboard {
+    grid-template-columns:1fr;
+    align-items:start;
+    gap:14px;
+}
+
+.identity-value-dashboard
+.dashboard-box {
+    margin:0;
+}
+
+.identity-value-dashboard
+.identity-member-summary {
+    display:grid;
+    grid-template-columns:auto auto 1fr;
+    align-items:center;
+    gap:18px;
+    padding:14px 18px;
+}
+
+.identity-value-dashboard
+.identity-member-summary h4,
+.identity-value-dashboard
+.identity-member-summary .dashboard-big,
+.identity-value-dashboard
+.identity-member-summary .muted {
+    margin:0;
+}
+
+@media (max-width:1200px) {
+
+    .identity-stats.identity-stats-converged {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+
+}
+
+@media (max-width:820px) {
+
+    .identity-stats.identity-stats-converged {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .identity-value-dashboard {
+        grid-template-columns:1fr;
+    }
+
+    .identity-value-dashboard
+    .identity-member-summary {
+        grid-template-columns:1fr;
+        gap:6px;
+    }
+
+}
+
+@media (max-width:520px) {
+
+    .identity-stats.identity-stats-converged {
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
+
+<h1>🏛 身份中心</h1>
+
+<p class="page-desc">
+成员身份、角色规则、保护配置与档案管理
+</p>
+
+<div class="card">
+
+    <div class="card-title">
+        身份档案库
+    </div>
+
+    <div class="muted mb12">
+        用于管理管理员、仓库号、核心成员、特殊身份
+    </div>
+
+    <div class="identity-stats identity-stats-converged">
+
+        <a href="/identity?role=admin" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">管理员</div>
+                <div class="stat-value">{{ admin_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?role=warehouse" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">仓库号</div>
+                <div class="stat-value">{{ warehouse_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?role=core" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">核心成员</div>
+                <div class="stat-value">{{ core_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?protected=1" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">身份保护</div>
+                <div class="stat-value">{{ protected_count }}</div>
+           </div>
+        </a>
+
+        <a href="/identity?exempt=1" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">免停滞</div>
+                <div class="stat-value">{{ exempt_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?grade=S" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">S级核心</div>
+                <div class="stat-value">{{ s_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?grade=A" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">A级骨干</div>
+                <div class="stat-value">{{ a_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?grade=B" class="stat-card-link">
+            <div class="stat-card">
+                <div class="stat-title">B级稳定</div>
+                <div class="stat-value">{{ b_count }}</div>
+            </div>
+        </a>
+
+        <a href="/identity?grade=C" class="stat-card-link">
+           <div class="stat-card">
+               <div class="stat-title">C级观察</div>
+               <div class="stat-value">{{ c_count }}</div>
+           </div>
+        </a>
+
+        <a href="/identity?grade=D" class="stat-card-link">
+           <div class="stat-card">
+               <div class="stat-title">D级淘汰</div>
+               <div class="stat-value">{{ d_count }}</div>
+           </div>
+        </a>
+
+    </div>
+
+    <div class="card identity-value-card">
+
+        <div class="card-title">
+            📊 身份价值速览
+        </div>
+
+        <div class="muted mb12">
+            当前身份档案规模与高价值成员
+        </div>
+
+        <div class="identity-dashboard identity-value-dashboard">
+
+            <div class="dashboard-box identity-member-summary">
+
+                <h4>👥 身份档案成员</h4>
+
+                <div class="dashboard-big">
+                    {{ total_members }}
+                </div>
+
+                <div class="muted">
+                    当前已建立身份档案成员
+                </div>
+
+            </div>
+
+            <div class="dashboard-box">
+
+                <h4>🏆 TOP10身份价值</h4>
+
+                {% for m in top_identity %}
+                <div class="dashboard-row">
+
+                    <span>
+                        {{ m["member_name"] }}
+                    </span>
+
+                    <strong>
+                        {{ m["identity_score"] }}
+                    </strong>
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+<form method="get">
+
+    <div class="identity-search">
+
+        <input
+            type="text"
+            name="keyword"
+            value="{{ keyword }}"
+            placeholder="搜索成员昵称"
+            style="
+            flex:1;
+            padding:10px;
+            border:1px solid #ddd;
+            border-radius:8px;
+            "
+        >
+
+        <button
+            type="submit"
+            class="btn"
+        >
+            搜索
+        </button>
+
+    </div>
+
+</form>
+
+    <div class="identity-current-filter">
+
+    当前筛选：
+    {{ current_filter }}
+
+   （共 {{ members|length }} 人）
+
+    </div>
+
+    <div class="table-scroll">
+
+    <table class="table">
+
+        <thead>
+            <tr>
+                <th>成员</th>
+                <th>身份</th>
+                <th>描述</th>
+                <th>规则</th>
+                <th>权重</th>
+                <th>保护</th>
+                <th>免停滞</th>
+                <th>身份评级</th>
+                <th>身份分</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for row in members %}
+
+        <tr>
+
+            <td>
+                {{ row["member_name"] }}
+            </td>
+
+            <td>
+
+            {% if row["role_tag"] == "admin" %}
+
+            <span class="badge success">
+            🛡 管理员
+            </span>
+
+            {% elif row["role_tag"] == "warehouse" %}
+
+            <span class="badge warning">
+            📦 仓库号
+            </span>
+
+            {% elif row["role_tag"] == "core" %}
+
+            <span class="badge primary">
+            ⭐ 核心成员
+            </span>
+
+            {% else %}
+
+            <span class="badge">
+            👤 普通成员
+            </span>
+
+            {% endif %}
+
+            </td>
+
+            <td>
+                {{ row["role_desc"] or "-" }}
+            </td>
+
+            <td>
+                {{ row["role_rule"] }}
+            </td>
+
+            <td>
+                {{ "%.1f"|format(row["role_weight"] or 1) }}
+            </td>
+
+            <td>
+
+                {% if row["is_protected"] == 1 %}
+                    <span class="badge success">
+                        是
+                    </span>
+                {% else %}
+                    <span class="badge">
+                        否
+                    </span>
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if row["exempt_stall"] == 1 %}
+                    <span class="badge success">
+                        是
+                    </span>
+                {% else %}
+                    <span class="badge">
+                        否
+                    </span>
+                {% endif %}
+
+            </td>
+
+            <!-- 身份评级 -->
+
+            <td>
+
+            {% if row["identity_score"] >= 90 %}
+
+            <span class="grade-s">
+            S级核心成员
+            </span>
+
+            {% elif row["identity_score"] >= 70 %}
+
+            <span class="grade-a">
+            A级骨干成员
+            </span>
+
+            {% elif row["identity_score"] >= 50 %}
+
+            <span class="grade-b">
+            B级稳定成员
+            </span>
+
+            {% elif row["identity_score"] >= 30 %}
+
+            <span class="grade-c">
+            C级观察成员
+            </span>
+
+            {% else %}
+
+            <span class="grade-d">
+            D级待淘汰
+            </span>
+
+            {% endif %}
+
+            </td>
+
+            <!-- 身份价值 -->
+
+            <td>
+
+            {% if row["identity_score"] >= 80 %}
+
+            <span style="color:#16a34a;font-weight:700;">
+            {{ row["identity_score"] }}
+            </span>
+
+            {% elif row["identity_score"] >= 50 %}
+
+            <span style="color:#f59e0b;font-weight:700;">
+            {{ row["identity_score"] }}
+            </span>
+
+            {% else %}
+
+            <span style="color:#ef4444;font-weight:700;">
+            {{ row["identity_score"] }}
+            </span>
+
+            {% endif %}
+
+            </td>
+            <td>
+
+                <a
+                    href="/identity/view/{{ row['member_name'] }}"
+                    class="btn"
+                >
+                    档案
+                </a>
+
+                <a
+                    href="/identity/edit/{{ row['member_name'] }}"
+                    class="btn"
+                >
+                    编辑
+                </a>
+
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+        {% if not members %}
+
+        <tr>
+
+            <td colspan="10">
+
+                暂无身份数据
+
+            </td>
+
+        </tr>
+
+        {% endif %}
+
+        </tbody>
+
+    </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
