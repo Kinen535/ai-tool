@@ -1108,7 +1108,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
             chart: {
 
-                height: 390,
+                height:
+                    window.matchMedia(
+                        "(max-width: 760px)"
+                    ).matches
+                        ? 260
+                        : 390,
 
                 toolbar: {
                     show: false

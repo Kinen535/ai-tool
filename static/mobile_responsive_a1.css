@@ -1,0 +1,2627 @@
+/*
+============================================================
+MOBILE_UI_A1
+Global mobile / tablet experience layer
+Desktop >= 1101px intentionally untouched.
+============================================================
+*/
+
+/* ---------------------------------------------------------
+   Tablet foundation
+--------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+
+    html,
+    body {
+        max-width: 100%;
+    }
+
+    .main-wrapper,
+    .main-content,
+    .main,
+    .page-content {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .page-content > * {
+        max-width: 100%;
+    }
+
+    img,
+    canvas,
+    svg {
+        max-width: 100%;
+    }
+
+    .card,
+    .panel,
+    .page-hero,
+    .hero-card,
+    .dashboard-box,
+    .chart-card,
+    .analysis-panel {
+        min-width: 0;
+    }
+
+    .ai-command-right {
+        width: auto;
+        min-width: 0;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+        max-width: 100%;
+    }
+
+    .row-gap,
+    .page-actions,
+    .toolbar,
+    .actions {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   Phone foundation
+--------------------------------------------------------- */
+
+@media (max-width: 760px) {
+
+    /*
+       Reading comfort
+    */
+
+    body {
+        font-size: 15px;
+        line-height: 1.6;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    .page-content {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .main,
+    .main-content {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .page-title,
+    h1 {
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    h2,
+    h3,
+    h4,
+    p,
+    .muted {
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Touch targets
+       44px follows common mobile touch-target practice.
+    */
+
+    button,
+    .btn,
+    a.btn,
+    input[type="submit"],
+    input[type="button"],
+    input[type="reset"] {
+        min-height: 44px;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    textarea {
+        min-height: 96px;
+    }
+
+    input,
+    select,
+    textarea {
+        max-width: 100%;
+    }
+
+
+    /*
+       Card density
+    */
+
+    .card,
+    .panel,
+    .dashboard-box,
+    .chart-card,
+    .chart-box,
+    .analysis-panel {
+        border-radius: 14px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .stats-grid,
+    .grid-4,
+    .summary-grid,
+    .advanced-card-grid {
+        gap: 10px;
+    }
+
+
+    /*
+       Prevent desktop-width children from enlarging the page.
+    */
+
+    .main,
+    .main-content,
+    .page-content,
+    .card,
+    .panel {
+        min-width: 0;
+    }
+
+    pre,
+    code {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+
+    /*
+       Generic data-table usability.
+       We intentionally preserve table width instead of crushing columns.
+    */
+
+    .table-container,
+    .table-scroll,
+    .table-scroll-wrap,
+    .member-management-table-scroll,
+    .trend-scroll-area {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-inline: contain;
+    }
+
+    .table th,
+    .table td {
+        line-height: 1.45;
+    }
+
+
+    /*
+       Legacy reputation pages currently carry desktop inline padding.
+    */
+
+    .rf-legacy-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+
+    /*
+       Battle cards
+    */
+
+    .battle-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .battle-create-box {
+        padding: 16px !important;
+    }
+
+    .battle-create-box form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .battle-create-box input,
+    .battle-create-box select,
+    .battle-create-box button {
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+
+    /*
+       Reduce accidental horizontal page scrolling.
+       Dedicated table areas can still scroll independently.
+    */
+
+    body {
+        overflow-x: hidden;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   Small phones
+--------------------------------------------------------- */
+
+@media (max-width: 430px) {
+
+    .main,
+    .main-content {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    .page-title,
+    h1 {
+        font-size: clamp(22px, 6vw, 26px);
+    }
+
+    .stats-grid {
+        gap: 8px;
+    }
+
+    .stat-card {
+        min-width: 0;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   Mobile safe areas
+--------------------------------------------------------- */
+
+@supports (
+    padding-bottom: env(safe-area-inset-bottom)
+) {
+
+    @media (max-width: 760px) {
+
+        body {
+            padding-bottom:
+                env(safe-area-inset-bottom);
+        }
+
+        .mobile-header,
+        .mobile-topbar {
+            padding-left:
+                max(
+                    12px,
+                    env(safe-area-inset-left)
+                );
+
+            padding-right:
+                max(
+                    12px,
+                    env(safe-area-inset-right)
+                );
+        }
+    }
+}
+/*
+============================================================
+MOBILE_UI_A1_2_COMPARE_CARDS
+Phone-first member browsing + non-obstructive theme control
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    /*
+       Theme control:
+       JS moves the existing button into the mobile sidebar.
+    */
+
+    .theme-toggle-button.mobile-ui-a1-sidebar-theme {
+        position: static !important;
+        right: auto !important;
+        bottom: auto !important;
+        z-index: auto !important;
+
+        display: flex !important;
+        width: calc(100% - 24px);
+        min-height: 44px;
+
+        margin: 12px;
+        padding: 10px 14px;
+
+        justify-content: center;
+        box-sizing: border-box;
+
+        transform: none !important;
+    }
+
+
+    /*
+       Compare mobile view selector
+    */
+
+    .ca-layout .ca-mobile-view-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+
+        margin: 12px 0;
+        padding: 4px;
+
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 12px;
+
+        background: var(--bg-soft, #f8fafc);
+    }
+
+    .ca-layout .ca-mobile-view-button {
+        min-height: 42px;
+
+        border: 0;
+        border-radius: 9px;
+
+        background: transparent;
+        color: var(--text-sub, #64748b);
+
+        font-size: 14px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    .ca-layout .ca-mobile-view-button.is-active {
+        background: var(--bg-card, #ffffff);
+        color: var(--primary, #2563eb);
+
+        box-shadow:
+            0 2px 10px
+            rgba(15, 23, 42, 0.08);
+    }
+
+
+    /*
+       Status filters become a horizontal chip rail instead
+       of consuming several mobile rows.
+    */
+
+    .ca-layout .ca-status-filters {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+
+        width: 100%;
+        max-width: 100%;
+
+        gap: 8px;
+
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        padding: 2px 1px 7px;
+
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .ca-layout .ca-status-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .ca-layout .ca-filter-button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+
+    /*
+       Card mode is the phone default.
+       The original table remains intact underneath.
+    */
+
+    .ca-layout .ca-mobile-member-list {
+        display: grid;
+        gap: 12px;
+
+        margin: 12px 0 4px;
+    }
+
+    .ca-layout[data-mobile-member-view="table"]
+    .ca-mobile-member-list {
+        display: none;
+    }
+
+    .ca-layout[data-mobile-member-view="cards"]
+    .compare-table-shell {
+        overflow: visible !important;
+
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .ca-layout[data-mobile-member-view="cards"]
+    .compare-table-shell
+    > .ca-member-table {
+        display: none !important;
+    }
+
+    .ca-layout[data-mobile-member-view="cards"]
+    .compare-table-shell
+    > .ca-member-table-empty {
+        display: none !important;
+    }
+
+    .ca-layout[data-mobile-member-view="table"]
+    .compare-table-shell {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+
+    /*
+       Card presentation
+    */
+
+    .ca-layout .ca-mobile-member-card {
+        min-width: 0;
+
+        padding: 15px;
+
+        border:
+            1px solid
+            var(--border-color, #e2e8f0);
+
+        border-radius: 14px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        box-shadow:
+            0 7px 22px
+            rgba(15, 23, 42, 0.05);
+    }
+
+    .ca-layout .ca-mobile-member-card.is-warning {
+        border-left: 4px solid #f59e0b;
+    }
+
+    .ca-layout .ca-mobile-member-card.is-danger {
+        border-left: 4px solid #ef4444;
+    }
+
+    .ca-layout .ca-mobile-member-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+
+        gap: 12px;
+
+        margin-bottom: 13px;
+    }
+
+    .ca-layout .ca-mobile-member-name {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.3;
+
+        overflow-wrap: anywhere;
+    }
+
+    .ca-layout .ca-mobile-member-group {
+        margin-top: 4px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .ca-layout .ca-mobile-member-status {
+        flex: 0 0 auto;
+
+        max-width: 42%;
+
+        padding: 5px 8px;
+
+        border-radius: 999px;
+
+        background:
+            var(--bg-soft, #f1f5f9);
+
+        color:
+            var(--text-sub, #475569);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    .ca-layout .ca-mobile-member-metrics {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 9px;
+    }
+
+    .ca-layout .ca-mobile-metric {
+        min-width: 0;
+
+        padding: 10px;
+
+        border-radius: 10px;
+
+        background:
+            var(--bg-soft, #f8fafc);
+    }
+
+    .ca-layout .ca-mobile-metric-label {
+        display: block;
+
+        margin-bottom: 4px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .ca-layout .ca-mobile-metric-value {
+        display: block;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 16px;
+        font-weight: 900;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Expanded full metrics
+    */
+
+    .ca-layout .ca-mobile-member-details {
+        margin-top: 11px;
+
+        border-top:
+            1px solid
+            var(--border-color, #e2e8f0);
+    }
+
+    .ca-layout .ca-mobile-member-details > summary {
+        min-height: 42px;
+
+        display: flex;
+        align-items: center;
+
+        cursor: pointer;
+
+        color:
+            var(--primary, #2563eb);
+
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .ca-layout .ca-mobile-detail-grid {
+        display: grid;
+        gap: 0;
+
+        padding-bottom: 3px;
+    }
+
+    .ca-layout .ca-mobile-detail-row {
+        display: grid;
+        grid-template-columns:
+            minmax(92px, 0.7fr)
+            minmax(0, 1.3fr);
+
+        gap: 12px;
+
+        padding: 8px 0;
+
+        border-top:
+            1px solid
+            var(--border-color, #edf2f7);
+    }
+
+    .ca-layout .ca-mobile-detail-label {
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 12px;
+    }
+
+    .ca-layout .ca-mobile-detail-value {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 12px;
+        font-weight: 700;
+
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .ca-layout .ca-mobile-empty {
+        padding: 22px 14px;
+
+        border:
+            1px dashed
+            var(--border-color, #cbd5e1);
+
+        border-radius: 12px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        text-align: center;
+    }
+
+
+    /*
+       In card mode column configuration is irrelevant.
+       It automatically returns in table mode.
+    */
+
+    .ca-layout[data-mobile-member-view="cards"]
+    .ca-column-settings {
+        display: none !important;
+    }
+}
+
+
+/*
+   Desktop/tablet never receives the phone card UI.
+*/
+
+@media (min-width: 761px) {
+
+    .ca-mobile-view-switch,
+    .ca-mobile-member-list {
+        display: none !important;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_3_TRENDS
+Phone-first trends charts and history browsing
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    /*
+       Charts: reduce vertical fatigue.
+    */
+
+    #trends-evidence-page .chart-grid {
+        gap: 12px !important;
+    }
+
+    #trends-evidence-page .chart-card {
+        padding: 14px !important;
+        margin-bottom: 0 !important;
+    }
+
+    #trends-evidence-page .chart-header {
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    #trends-evidence-page .chart-badge {
+        display: none !important;
+    }
+
+    #trends-evidence-page .chart-desc {
+        margin-top: 5px;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    #trends-evidence-page .trend-mode-switch {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 10px;
+    }
+
+    #trends-evidence-page .trend-mode-btn {
+        min-height: 40px;
+        padding: 7px 13px;
+    }
+
+    #trends-evidence-page .chart-box {
+        min-height: 260px !important;
+        height: 260px !important;
+    }
+
+
+    /*
+       History section controls.
+    */
+
+    #trends-evidence-page
+    .trends-mobile-view-switch {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 7px;
+
+        margin: 9px 0 11px;
+        padding: 4px;
+
+        border:
+            1px solid
+            var(--border-color, #e2e8f0);
+
+        border-radius: 11px;
+
+        background:
+            var(--bg-soft, #f8fafc);
+    }
+
+    #trends-evidence-page
+    .trends-mobile-view-button {
+        min-height: 40px;
+
+        border: 0;
+        border-radius: 8px;
+
+        background: transparent;
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-view-button.is-active {
+        background:
+            var(--bg-card, #ffffff);
+
+        color:
+            var(--primary, #2563eb);
+
+        box-shadow:
+            0 2px 9px
+            rgba(15, 23, 42, 0.08);
+    }
+
+
+    /*
+       Card list becomes the phone default.
+    */
+
+    #trends-evidence-page
+    .trends-mobile-card-list {
+        display: grid;
+        gap: 10px;
+
+        margin-bottom: 4px;
+    }
+
+    #trends-evidence-page
+    .trends-history-scroll[
+        data-mobile-history-view="cards"
+    ]
+    > table {
+        display: none !important;
+    }
+
+    #trends-evidence-page
+    .trends-history-scroll[
+        data-mobile-history-view="table"
+    ]
+    > .trends-mobile-card-list {
+        display: none !important;
+    }
+
+    #trends-evidence-page
+    .trends-history-scroll[
+        data-mobile-history-view="cards"
+    ] {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    #trends-evidence-page
+    .trends-history-scroll[
+        data-mobile-history-view="table"
+    ] {
+        max-height: 360px !important;
+        overflow: auto !important;
+
+        -webkit-overflow-scrolling: touch;
+    }
+
+
+    /*
+       Individual history card.
+    */
+
+    #trends-evidence-page
+    .trends-mobile-card {
+        min-width: 0;
+
+        padding: 14px;
+
+        border:
+            1px solid
+            var(--border-color, #e2e8f0);
+
+        border-radius: 13px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        box-shadow:
+            0 6px 18px
+            rgba(15, 23, 42, 0.045);
+    }
+
+    #trends-evidence-page
+    .trends-mobile-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+
+        gap: 10px;
+
+        margin-bottom: 11px;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-card-title {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 16px;
+        font-weight: 900;
+        line-height: 1.35;
+
+        overflow-wrap: anywhere;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-card-subtitle {
+        margin-top: 3px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-card-badge {
+        flex: 0 0 auto;
+
+        max-width: 42%;
+
+        padding: 5px 8px;
+
+        border-radius: 999px;
+
+        background:
+            var(--bg-soft, #f1f5f9);
+
+        color:
+            var(--text-sub, #475569);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-metrics {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 8px;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-metric {
+        min-width: 0;
+
+        padding: 9px 10px;
+
+        border-radius: 10px;
+
+        background:
+            var(--bg-soft, #f8fafc);
+    }
+
+    #trends-evidence-page
+    .trends-mobile-metric-label {
+        display: block;
+
+        margin-bottom: 3px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-metric-value {
+        display: block;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 15px;
+        font-weight: 900;
+
+        overflow-wrap: anywhere;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-details {
+        margin-top: 9px;
+
+        border-top:
+            1px solid
+            var(--border-color, #e2e8f0);
+    }
+
+    #trends-evidence-page
+    .trends-mobile-details > summary {
+        min-height: 40px;
+
+        display: flex;
+        align-items: center;
+
+        cursor: pointer;
+
+        color:
+            var(--primary, #2563eb);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-detail-row {
+        display: grid;
+        grid-template-columns:
+            minmax(90px, 0.8fr)
+            minmax(0, 1.2fr);
+
+        gap: 10px;
+
+        padding: 7px 0;
+
+        border-top:
+            1px solid
+            var(--border-color, #edf2f7);
+    }
+
+    #trends-evidence-page
+    .trends-mobile-detail-label {
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-detail-value {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 11px;
+        font-weight: 700;
+
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Slightly reduce oversized surrounding whitespace.
+    */
+
+    #trends-evidence-page
+    .trends-history-note {
+        margin:
+            7px 0 10px !important;
+
+        font-size: 12px;
+        line-height: 1.5;
+    }
+}
+
+
+@media (min-width: 761px) {
+
+    #trends-evidence-page
+    .trends-mobile-view-switch,
+
+    #trends-evidence-page
+    .trends-mobile-card-list {
+        display: none !important;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_3_R1_HISTORY_BATCHING
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    #trends-evidence-page
+    .trends-mobile-batch-footer {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1fr)
+            auto;
+
+        gap: 10px;
+        align-items: center;
+
+        margin-top: 2px;
+        padding: 12px 2px 4px;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-batch-counter {
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-load-more {
+        min-height: 42px;
+
+        padding: 8px 14px;
+
+        border:
+            1px solid
+            var(--border-color, #dbe3ef);
+
+        border-radius: 10px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        color:
+            var(--primary, #2563eb);
+
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    #trends-evidence-page
+    .trends-mobile-load-more[hidden] {
+        display: none !important;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_4_R1_REPUTATION
+Reputation mobile navigation / forms / layout / table containment
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    /*
+       Top reputation workflow navigation.
+       JS identifies the existing navigation without changing templates.
+    */
+
+    .mobile-reputation-nav {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+
+        width: 100%;
+        max-width: 100%;
+
+        gap: 7px !important;
+
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        padding:
+            5px 4px 8px !important;
+
+        box-sizing: border-box;
+
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+    }
+
+    .mobile-reputation-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-reputation-nav a {
+        flex: 0 0 auto !important;
+
+        min-width: max-content;
+        min-height: 40px;
+
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+
+        padding:
+            8px 13px !important;
+
+        white-space: nowrap;
+
+        font-size: 13px !important;
+        line-height: 1.2;
+    }
+
+
+    /*
+       Main search page.
+    */
+
+    .mobile-reputation-search-form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+
+        gap: 9px !important;
+
+        width: 100%;
+    }
+
+    .mobile-reputation-search-form
+    input,
+
+    .mobile-reputation-search-form
+    button {
+        width: 100% !important;
+        max-width: 100%;
+
+        box-sizing: border-box;
+    }
+
+    .mobile-reputation-search-form
+    button {
+        min-height: 44px;
+    }
+
+
+    /*
+       Quick-link form:
+       five desktop columns become a readable vertical workflow.
+    */
+
+    .mobile-reputation-quick-link {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+
+        gap: 10px !important;
+    }
+
+    .mobile-reputation-quick-link
+    > * {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .mobile-reputation-quick-link
+    input,
+
+    .mobile-reputation-quick-link
+    select,
+
+    .mobile-reputation-quick-link
+    button {
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+
+    /*
+       Generic desktop two-column reputation layouts.
+    */
+
+    .mobile-reputation-stack-grid {
+        display: grid !important;
+        grid-template-columns:
+            minmax(0, 1fr) !important;
+
+        gap: 12px !important;
+    }
+
+
+    /*
+       Dashboard/statistics grids.
+    */
+
+    .mobile-reputation-stat-grid {
+        display: grid !important;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    .mobile-reputation-stat-grid
+    > * {
+        min-width: 0;
+    }
+
+
+    /*
+       Subject archive listing.
+    */
+
+    .rf-legacy-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+
+        gap: 10px;
+    }
+
+    .rf-legacy-header
+    > div {
+        display: flex !important;
+        flex-wrap: wrap;
+
+        width: 100%;
+
+        gap: 8px !important;
+    }
+
+    .rf-legacy-header
+    > div
+    > a {
+        flex: 1 1 140px;
+
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        min-height: 42px;
+
+        text-align: center;
+    }
+
+    .rf-list-card {
+        padding: 14px !important;
+    }
+
+    .rf-subject-search-form {
+        display: grid !important;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 8px !important;
+
+        width: 100%;
+    }
+
+    .rf-subject-search-input {
+        grid-column: 1 / -1 !important;
+
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    .rf-subject-page-size {
+        min-width: 0;
+    }
+
+    .rf-subject-search-button,
+    .rf-subject-reset-button {
+        width: 100% !important;
+        min-width: 0;
+
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        min-height: 44px;
+
+        box-sizing: border-box;
+    }
+
+
+    /*
+       Tables stay complete but can no longer widen the entire phone page.
+    */
+
+    .mobile-reputation-table-wrap {
+        width: 100%;
+        max-width: 100%;
+
+        overflow-x: auto !important;
+        overflow-y: hidden;
+
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-inline: contain;
+    }
+
+    .mobile-reputation-table-wrap
+    > table {
+        max-width: none;
+    }
+
+    .rf-table-wrap,
+    .reputation-task-table-card,
+    .reputation-workbench-table-card,
+    .rep-import-table-wrap {
+        max-width: 100%;
+
+        overflow-x: auto !important;
+
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-inline: contain;
+    }
+
+
+    /*
+       Task/workbench pages:
+       avoid desktop filter grids on phones.
+    */
+
+    .mobile-reputation-filter-form {
+        display: grid !important;
+        grid-template-columns:
+            minmax(0, 1fr) !important;
+
+        gap: 9px !important;
+    }
+
+    .mobile-reputation-filter-form
+    > * {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .mobile-reputation-filter-form
+    input,
+
+    .mobile-reputation-filter-form
+    select,
+
+    .mobile-reputation-filter-form
+    button,
+
+    .mobile-reputation-filter-form
+    a {
+        width: 100% !important;
+        max-width: 100%;
+
+        box-sizing: border-box;
+    }
+
+    .reputation-task-page,
+    .reputation-workbench,
+    .rf-legacy-shell {
+        width: 100%;
+        max-width: 100%;
+
+        box-sizing: border-box;
+    }
+
+    .reputation-task-table-card,
+    .reputation-workbench-table-card {
+        padding: 10px !important;
+    }
+
+
+    /*
+       Long labels/IDs should wrap inside cards rather than widen page.
+    */
+
+    .rf-flow,
+    .rf-legacy-shell,
+    .reputation-task-page,
+    .reputation-workbench {
+        overflow-wrap: anywhere;
+    }
+}
+
+
+@media (max-width: 430px) {
+
+    .mobile-reputation-stat-grid {
+        gap: 8px !important;
+    }
+
+    .rf-subject-search-form {
+        grid-template-columns:
+            1fr !important;
+    }
+
+    .rf-subject-search-input {
+        grid-column: auto !important;
+    }
+
+    .rf-subject-page-size {
+        width: 100%;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_4_R2_MEMBERS
+Phone-first member management
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    /*
+       Mobile controller
+    */
+
+    .mobile-members-toolbar {
+        display: grid;
+        gap: 9px;
+
+        margin:
+            10px 0 12px;
+    }
+
+    .mobile-members-search {
+        width: 100%;
+        min-height: 44px;
+
+        padding:
+            10px 13px;
+
+        box-sizing: border-box;
+
+        border:
+            1px solid
+            var(--border-color, #dbe3ef);
+
+        border-radius: 11px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 16px;
+    }
+
+    .mobile-members-view-switch {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+        gap: 7px;
+
+        padding: 4px;
+
+        border:
+            1px solid
+            var(--border-color, #e2e8f0);
+
+        border-radius: 11px;
+
+        background:
+            var(--bg-soft, #f8fafc);
+    }
+
+    .mobile-members-view-button {
+        min-height: 40px;
+
+        border: 0;
+        border-radius: 8px;
+
+        background: transparent;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    .mobile-members-view-button.is-active {
+        background:
+            var(--bg-card, #ffffff);
+
+        color:
+            var(--primary, #2563eb);
+
+        box-shadow:
+            0 2px 9px
+            rgba(15, 23, 42, 0.08);
+    }
+
+
+    /*
+       Card/table switching
+    */
+
+    .mobile-members-a1-host[
+        data-mobile-member-view="cards"
+    ]
+    .member-management-table-scroll {
+        display: none !important;
+    }
+
+    .mobile-members-a1-host[
+        data-mobile-member-view="table"
+    ]
+    .mobile-members-card-list {
+        display: none !important;
+    }
+
+    .mobile-members-a1-host[
+        data-mobile-member-view="table"
+    ]
+    .member-management-table-scroll {
+        display: block !important;
+
+        max-height:
+            calc(
+                100vh - 220px
+            ) !important;
+    }
+
+
+    /*
+       Card list
+    */
+
+    .mobile-members-card-list {
+        display: grid;
+        gap: 11px;
+    }
+
+    .mobile-member-card {
+        min-width: 0;
+
+        padding: 14px;
+
+        border:
+            1px solid
+            var(--border-color, #e2e8f0);
+
+        border-radius: 13px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        box-shadow:
+            0 6px 18px
+            rgba(15, 23, 42, 0.045);
+    }
+
+    .mobile-member-card-head {
+        display: flex;
+
+        align-items: flex-start;
+        justify-content:
+            space-between;
+
+        gap: 10px;
+
+        margin-bottom: 11px;
+    }
+
+    .mobile-member-name {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.3;
+
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-member-subtitle {
+        margin-top: 4px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 12px;
+        font-weight: 700;
+
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-member-badge {
+        flex: 0 0 auto;
+
+        max-width: 40%;
+
+        padding: 5px 8px;
+
+        border-radius: 999px;
+
+        background:
+            var(--bg-soft, #f1f5f9);
+
+        color:
+            var(--text-sub, #475569);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Main metrics
+    */
+
+    .mobile-member-metrics {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+        gap: 8px;
+    }
+
+    .mobile-member-metric {
+        min-width: 0;
+
+        padding: 10px;
+
+        border-radius: 10px;
+
+        background:
+            var(--bg-soft, #f8fafc);
+    }
+
+    .mobile-member-metric-label {
+        display: block;
+
+        margin-bottom: 3px;
+
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .mobile-member-metric-value {
+        display: block;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 16px;
+        font-weight: 900;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Full details
+    */
+
+    .mobile-member-details {
+        margin-top: 9px;
+
+        border-top:
+            1px solid
+            var(--border-color, #e2e8f0);
+    }
+
+    .mobile-member-details
+    > summary {
+        min-height: 40px;
+
+        display: flex;
+        align-items: center;
+
+        cursor: pointer;
+
+        color:
+            var(--primary, #2563eb);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .mobile-member-detail-row {
+        display: grid;
+
+        grid-template-columns:
+            minmax(95px, 0.8fr)
+            minmax(0, 1.2fr);
+
+        gap: 10px;
+
+        padding: 7px 0;
+
+        border-top:
+            1px solid
+            var(--border-color, #edf2f7);
+    }
+
+    .mobile-member-detail-label {
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 11px;
+    }
+
+    .mobile-member-detail-value {
+        min-width: 0;
+
+        color:
+            var(--text-main, #0f172a);
+
+        font-size: 11px;
+        font-weight: 700;
+
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+
+    /*
+       Batch loading
+    */
+
+    .mobile-members-batch-footer {
+        display: grid;
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            auto;
+
+        gap: 10px;
+
+        align-items: center;
+
+        padding:
+            4px 2px 2px;
+    }
+
+    .mobile-members-batch-counter {
+        color:
+            var(--text-sub, #64748b);
+
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .mobile-members-load-more {
+        min-height: 42px;
+
+        padding:
+            8px 13px;
+
+        border:
+            1px solid
+            var(--border-color, #dbe3ef);
+
+        border-radius: 10px;
+
+        background:
+            var(--bg-card, #ffffff);
+
+        color:
+            var(--primary, #2563eb);
+
+        font-size: 12px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    .mobile-members-load-more[
+        hidden
+    ] {
+        display: none !important;
+    }
+
+
+    /*
+       Complete table remains usable.
+    */
+
+    .member-management-table-scroll {
+        max-width: 100%;
+
+        -webkit-overflow-scrolling:
+            touch;
+    }
+}
+
+
+@media (min-width: 761px) {
+
+    .mobile-members-toolbar,
+    .mobile-members-card-list {
+        display: none !important;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_4_R2_R1_MEMBER_DETAILS_FIX
+Explicit member card expand/collapse control
+============================================================
+*/
+
+@media (max-width: 760px) {
+
+    .mobile-member-details {
+        margin-top: 9px;
+
+        border-top:
+            1px solid
+            var(--border-color, #e2e8f0);
+    }
+
+    .mobile-member-details-toggle {
+        width: 100%;
+        min-height: 44px;
+
+        display: flex;
+        align-items: center;
+
+        padding: 8px 0;
+
+        border: 0;
+
+        background: transparent;
+
+        color:
+            var(--primary, #2563eb);
+
+        font: inherit;
+        font-size: 12px;
+        font-weight: 800;
+
+        text-align: left;
+
+        cursor: pointer;
+
+        -webkit-tap-highlight-color:
+            transparent;
+    }
+
+    .mobile-member-details-toggle[
+        aria-expanded="true"
+    ] {
+        color:
+            var(--primary, #2563eb);
+    }
+
+    .mobile-member-details-body[
+        hidden
+    ] {
+        display: none !important;
+    }
+
+    .mobile-member-details-body {
+        display: block;
+    }
+}
+
+/*
+============================================================
+MOBILE_UI_A1_5_R1_TABLET_PORTRAIT
+761-900px dedicated tablet portrait layer
+============================================================
+*/
+
+.tablet-a15-theme-proxy {
+    display: none;
+}
+
+
+@media
+(min-width: 761px)
+and (max-width: 1100px)
+and (orientation: portrait) {
+
+    /*
+    ----------------------------------------------------------
+    A. Global shell:
+       fixed desktop sidebar becomes tablet drawer.
+    ----------------------------------------------------------
+    */
+
+    body.tablet-portrait-a15 {
+        overflow-x: hidden !important;
+    }
+
+    body.tablet-portrait-a15.tablet-sidebar-open {
+        overflow: hidden !important;
+    }
+
+    body.tablet-portrait-a15
+    .app-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    body.tablet-portrait-a15
+    .sidebar {
+        position: fixed !important;
+
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+
+        width: min(
+            78vw,
+            280px
+        ) !important;
+
+        height: 100dvh !important;
+
+        margin: 0 !important;
+
+        transform:
+            translateX(-105%) !important;
+
+        transition:
+            transform
+            0.22s ease !important;
+
+        z-index: 10002 !important;
+
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+
+        box-shadow:
+            16px 0 36px
+            rgba(
+                2,
+                6,
+                23,
+                0.24
+            );
+    }
+
+    body.tablet-portrait-a15
+    .sidebar {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    body.tablet-portrait-a15
+    .sidebar * {
+        visibility: visible;
+    }
+
+    body.tablet-portrait-a15
+    .mobile-menu-btn,
+
+    body.tablet-portrait-a15
+    .mobile-close-btn {
+        display: inline-flex !important;
+
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.tablet-portrait-a15
+    .mobile-close-btn {
+        position: absolute !important;
+
+        top: 18px !important;
+        right: 16px !important;
+
+        z-index: 2;
+    }
+
+    body.tablet-portrait-a15
+    .mobile-overlay {
+        display: block !important;
+
+        position: fixed !important;
+        inset: 0 !important;
+
+        z-index: 10001 !important;
+
+        background:
+            rgba(
+                2,
+                6,
+                23,
+                0.52
+            ) !important;
+
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+
+        transition:
+            opacity 0.2s ease,
+            visibility 0.2s ease;
+    }
+
+    body.tablet-portrait-a15
+    .main-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+
+        margin-left: 0 !important;
+
+        flex:
+            1 1 100% !important;
+    }
+
+    body.tablet-portrait-a15
+    .topbar {
+        width: 100% !important;
+        max-width: 100% !important;
+
+        box-sizing: border-box;
+    }
+
+    body.tablet-portrait-a15
+    .main-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+
+        box-sizing: border-box;
+
+        overflow-x: hidden !important;
+    }
+
+
+    /*
+       Drawer open state.
+    */
+
+    body.tablet-portrait-a15
+    .sidebar.tablet-a15-open {
+        transform:
+            translateX(0) !important;
+    }
+
+    body.tablet-portrait-a15
+    .mobile-overlay.tablet-a15-open {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+
+
+    /*
+    ----------------------------------------------------------
+    B. Theme switch:
+       remove floating bottom-right control.
+       Tablet uses proxy control in drawer.
+    ----------------------------------------------------------
+    */
+
+    body.tablet-portrait-a15
+    .theme-toggle-button.tablet-a15-theme-original {
+        display: none !important;
+    }
+
+    body.tablet-portrait-a15
+    .tablet-a15-theme-proxy {
+        display: flex !important;
+
+        align-items: center;
+        justify-content: center;
+
+        width:
+            calc(100% - 28px);
+
+        min-height: 44px;
+
+        margin:
+            18px 14px 24px;
+
+        padding:
+            9px 12px;
+
+        border:
+            1px solid
+            rgba(
+                148,
+                163,
+                184,
+                0.28
+            );
+
+        border-radius: 12px;
+
+        background:
+            rgba(
+                15,
+                23,
+                42,
+                0.28
+            );
+
+        color: inherit;
+
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+
+    /*
+    ----------------------------------------------------------
+    C. Generic tablet table containment.
+    ----------------------------------------------------------
+    */
+
+    .tablet-a15-table-scroll {
+        width: 100%;
+        max-width: 100%;
+
+        overflow-x: auto !important;
+        overflow-y: hidden;
+
+        -webkit-overflow-scrolling:
+            touch;
+
+        overscroll-behavior-inline:
+            contain;
+
+        box-sizing: border-box;
+    }
+
+    .tablet-a15-table-scroll
+    > table {
+        max-width: none !important;
+    }
+
+
+    /*
+    ----------------------------------------------------------
+    D. /snapshots
+    ----------------------------------------------------------
+    */
+
+    body.tablet-portrait-a15[
+        data-page-path="/snapshots"
+    ]
+    .tablet-a15-table-scroll
+    > table {
+        min-width:
+            720px !important;
+    }
+
+
+    /*
+    ----------------------------------------------------------
+    E. /tasks
+    ----------------------------------------------------------
+    */
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-task-stats-8 {
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-task-stats-6 {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-task-filter-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-task-split {
+        grid-template-columns:
+            minmax(0, 1fr)
+            !important;
+
+        gap: 14px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-task-filter-grid
+    > * {
+        min-width: 0 !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .tablet-a15-table-scroll
+    > table.task-table {
+        min-width:
+            780px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/tasks"
+    ]
+    .stat-card {
+        min-width: 0 !important;
+    }
+
+
+    /*
+    ----------------------------------------------------------
+    F. /strategic
+    ----------------------------------------------------------
+    */
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .tablet-strategic-grid-6 {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .tablet-strategic-grid-5 {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .tablet-strategic-grid-4 {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .tablet-strategic-grid-3 {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .tablet-strategic-split {
+        grid-template-columns:
+            minmax(0, 1fr)
+            !important;
+
+        gap: 14px !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    .stat-card {
+        min-width: 0 !important;
+    }
+
+    body.tablet-portrait-a15[
+        data-page-path="/strategic"
+    ]
+    table {
+        max-width: 100%;
+    }
+}
+
+/* MOBILE_UI_A1_5_R1_1_TABLET_RANGE_FIX */
+
+/*
+============================================================
+MOBILE_UI_A1_5_R2_TABLET_LANDSCAPE
+Touch-tablet landscape final containment
+============================================================
+*/
+
+
+/*
+------------------------------------------------------------
+Snapshots:
+this wrapper is safe at every width.
+------------------------------------------------------------
+*/
+
+.snapshot-table-scroll-a15 {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    box-sizing: border-box;
+
+    -webkit-overflow-scrolling:
+        touch;
+
+    overscroll-behavior-inline:
+        contain;
+}
+
+.snapshot-table-scroll-a15
+> table {
+    max-width: none;
+}
+
+
+/*
+------------------------------------------------------------
+Landscape tablet only.
+
+We deliberately require a coarse pointer so ordinary desktop
+widths are not treated as tablets.
+------------------------------------------------------------
+*/
+
+@media
+(min-width: 901px)
+and (max-width: 1400px)
+and (orientation: landscape)
+and (pointer: coarse) {
+
+    body.tablet-landscape-a15 {
+        overflow-x: hidden !important;
+    }
+
+    body.tablet-landscape-a15
+    .main-wrapper,
+
+    body.tablet-landscape-a15
+    .main-content {
+        min-width: 0 !important;
+        max-width: 100% !important;
+
+        box-sizing: border-box;
+    }
+
+
+    /*
+       Floating theme button is undesirable on tablet landscape.
+       Use the sidebar proxy instead.
+    */
+
+    body.tablet-landscape-a15
+    .theme-toggle-button {
+        display: none !important;
+    }
+
+    body.tablet-landscape-a15
+    .tablet-a15-landscape-theme-proxy {
+        display: flex !important;
+
+        width:
+            calc(100% - 28px);
+
+        min-height: 44px;
+
+        margin:
+            18px 14px 24px;
+
+        padding:
+            9px 12px;
+
+        align-items: center;
+        justify-content: center;
+
+        box-sizing: border-box;
+
+        border:
+            1px solid
+            rgba(
+                148,
+                163,
+                184,
+                0.28
+            );
+
+        border-radius: 12px;
+
+        background:
+            rgba(
+                15,
+                23,
+                42,
+                0.28
+            );
+
+        color: inherit;
+
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+
+    /*
+       /snapshots:
+       page itself must not drift horizontally.
+    */
+
+    body.tablet-landscape-a15[
+        data-page-path="/snapshots"
+    ]
+    .main-content {
+        overflow-x:
+            hidden !important;
+    }
+
+    body.tablet-landscape-a15[
+        data-page-path="/snapshots"
+    ]
+    .snapshot-table-scroll-a15 {
+        overflow-x:
+            auto !important;
+    }
+
+    body.tablet-landscape-a15[
+        data-page-path="/snapshots"
+    ]
+    .snapshot-table-scroll-a15
+    > table {
+        width: max-content !important;
+        min-width: 100% !important;
+    }
+
+
+    /*
+       Keep upload/stat cards inside content width.
+    */
+
+    body.tablet-landscape-a15[
+        data-page-path="/snapshots"
+    ]
+    .two-col {
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    body.tablet-landscape-a15[
+        data-page-path="/snapshots"
+    ]
+    .two-col
+    > * {
+        min-width: 0 !important;
+    }
+}
+
+
+@media not all and (
+    min-width: 901px
+) {
+    .tablet-a15-landscape-theme-proxy {
+        display: none;
+    }
+}
