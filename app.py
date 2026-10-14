@@ -11106,6 +11106,58 @@ def v155_security_after_request(response):
         is_static_path,
     )
 
+    response.headers.setdefault(
+        "X-Content-Type-Options",
+        "nosniff",
+    )
+    response.headers.setdefault(
+        "X-Frame-Options",
+        "SAMEORIGIN",
+    )
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "frame-ancestors 'self'",
+    )
+    response.headers.setdefault(
+        "Referrer-Policy",
+        "strict-origin-when-cross-origin",
+    )
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    )
+
+    forwarded_proto = str(
+        request.headers.get(
+            "X-Forwarded-Proto",
+            "",
+        )
+        or ""
+    ).split(",", 1)[0].strip().lower()
+
+    if (
+        request.is_secure
+        or forwarded_proto == "https"
+    ):
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000",
+        )
+
+    if (
+        request.path == "/login"
+        or request.path == "/logout"
+        or request.path.startswith(
+            "/security"
+        )
+    ):
+        response.headers["Cache-Control"] = (
+            "no-store"
+        )
+        response.headers["Pragma"] = (
+            "no-cache"
+        )
+
     try:
         if getattr(g, "v155_security_skip", False):
             return response
