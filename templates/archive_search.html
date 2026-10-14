@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set result = result|default({}) %}
+{% set q = q|default('') %}
+
+<div style="max-width:1500px;margin:0 auto;padding:24px;">
+    <h1>🔎 档案检索中枢</h1>
+
+    <div style="background:#eff6ff;border-left:6px solid #2563eb;border-radius:18px;padding:22px;margin-bottom:18px;">
+        <h2>① 全局检索</h2>
+        <p style="color:#475569;">
+            支持搜索：游戏编号、人物名、分组名、友盟名、敌军名、事件关键词。后续跨赛季信誉档案会优先依赖这里。
+        </p>
+
+        <form method="get" action="/archives/search" style="display:flex;gap:10px;margin-top:14px;">
+            <input name="q"
+                   value="{{ q }}"
+                   placeholder="输入游戏编号 / 名字 / 事件关键词，例如：31475391"
+                   style="flex:1;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;">
+            <button style="padding:12px 18px;background:#2563eb;color:white;border:0;border-radius:10px;font-weight:bold;">
+                搜索档案
+            </button>
+            <a href="/archives/search"
+               style="padding:12px 18px;background:#f3f4f6;color:#374151;border-radius:10px;text-decoration:none;">
+                重置
+            </a>
+        </form>
+
+        {% if q %}
+            <div style="display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:12px;margin-top:18px;">
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>总命中</div>
+                    <h2>{{ result.summary.total }}</h2>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>事件关联</div>
+                    <h2>{{ result.summary.relations }}</h2>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>事件记录</div>
+                    <h2>{{ result.summary.events }}</h2>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>人物档案</div>
+                    <h2>{{ result.summary.players }}</h2>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>友盟档案</div>
+                    <h2>{{ result.summary.alliances }}</h2>
+                </div>
+                <div style="background:white;border-radius:12px;padding:14px;text-align:center;">
+                    <div>敌军档案</div>
+                    <h2>{{ result.summary.enemies }}</h2>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if not q %}
+        <div style="background:white;border-radius:18px;padding:22px;color:#64748b;">
+            请输入关键词开始检索。建议优先使用“游戏编号”，因为名字可能跨赛季变化。
+        </div>
+    {% else %}
+
+        <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;margin-bottom:18px;">
+            <h2>② 事件关联命中</h2>
+            <p style="color:#64748b;">这里是最有价值的结果：说明该对象曾经被哪些战场事件关联过。</p>
+
+            {% if result.relations %}
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:10px;text-align:left;">事件</th>
+                        <th style="padding:10px;text-align:left;">类型</th>
+                        <th style="padding:10px;text-align:left;">对象类型</th>
+                        <th style="padding:10px;text-align:left;">对象名称</th>
+                        <th style="padding:10px;text-align:left;">游戏编号</th>
+                        <th style="padding:10px;text-align:left;">备注</th>
+                        <th style="padding:10px;text-align:left;">入口</th>
+                    </tr>
+                    {% for r in result.relations %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:10px;font-weight:bold;">{{ r.event_title }}</td>
+                        <td style="padding:10px;">{{ r.event_type }}</td>
+                        <td style="padding:10px;">{{ r.target_type_label }}</td>
+                        <td style="padding:10px;">{{ r.target_name }}</td>
+                        <td style="padding:10px;color:#64748b;">{{ r.target_game_id or "-" }}</td>
+                        <td style="padding:10px;color:#64748b;max-width:360px;">{{ r.relation_note or "-" }}</td>
+                        <td style="padding:10px;">
+                            <a href="/archives/events/{{ r.event_id }}?next={{ request.full_path.rstrip('?')|urlencode }}">
+                                查看事件 →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div style="padding:14px;background:white;border-radius:12px;color:#64748b;">
+                    暂无事件关联命中。
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+            <div style="background:white;border-radius:18px;padding:22px;">
+                <h2>③ 人物档案命中</h2>
+
+                {% if result.players %}
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr style="background:#f3f4f6;">
+                            <th style="padding:8px;text-align:left;">成员</th>
+                            <th style="padding:8px;text-align:left;">风险</th>
+                            <th style="padding:8px;text-align:left;">活跃</th>
+                            <th style="padding:8px;text-align:left;">稳定</th>
+                            <th style="padding:8px;text-align:left;">入口</th>
+                        </tr>
+                        {% for p in result.players %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px;font-weight:bold;">{{ p.member }}</td>
+                            <td style="padding:8px;">{{ p.risk_level|default("-") }}</td>
+                            <td style="padding:8px;">{{ "%.1f"|format(p.av|default(0)|float) }}</td>
+                            <td style="padding:8px;">{{ "%.1f"|format(p.bs|default(0)|float) }}</td>
+                            <td style="padding:8px;">
+                                <a href="/identity/view?member={{ p.member|urlencode }}&next={{ request.full_path.rstrip('?')|urlencode }}">
+                                    档案 →
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                        暂无人物命中。
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="background:white;border-radius:18px;padding:22px;">
+                <h2>④ 事件记录命中</h2>
+
+                {% if result.events %}
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr style="background:#f3f4f6;">
+                            <th style="padding:8px;text-align:left;">事件</th>
+                            <th style="padding:8px;text-align:left;">类型</th>
+                            <th style="padding:8px;text-align:left;">状态</th>
+                            <th style="padding:8px;text-align:left;">入口</th>
+                        </tr>
+                        {% for e in result.events %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:8px;font-weight:bold;">{{ e.title }}</td>
+                            <td style="padding:8px;">{{ e.event_type }}</td>
+                            <td style="padding:8px;">{{ e.status }}</td>
+                            <td style="padding:8px;">
+                                <a href="/archives/events/{{ e.id }}?next={{ request.full_path.rstrip('?')|urlencode }}">
+                                    详情 →
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <div style="padding:14px;background:#f9fafb;border-radius:12px;color:#64748b;">
+                        暂无事件命中。
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+            <div style="background:#ecfdf5;border-left:6px solid #16a34a;border-radius:18px;padding:22px;">
+                <h2>⑤ 友盟档案命中</h2>
+
+                {% if result.alliances %}
+                    {% for a in result.alliances %}
+                        <div style="background:white;border-radius:12px;padding:14px;margin-bottom:10px;">
+                            <b>{{ a.name }}</b>
+                            <div style="color:#475569;margin-top:6px;">
+                                关系：{{ a.relation_status }}　信任：{{ a.trust_level }}　联系人：{{ a.contact_name or "-" }}
+                            </div>
+                            <div style="color:#64748b;margin-top:6px;">
+                                {{ a.notes or "-" }}
+                            </div>
+                            <div style="margin-top:8px;">
+                                <a href="/archives/friends/{{ a.id }}?next={{ request.full_path.rstrip('?')|urlencode }}">详情 →</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding:14px;background:white;border-radius:12px;color:#64748b;">
+                        暂无友盟命中。
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:18px;padding:22px;">
+                <h2>⑥ 敌军档案命中</h2>
+
+                {% if result.enemies %}
+                    {% for e in result.enemies %}
+                        <div style="background:white;border-radius:12px;padding:14px;margin-bottom:10px;">
+                            <b>{{ e.name }}</b>
+                            <div style="color:#475569;margin-top:6px;">
+                                威胁：{{ e.threat_level }}　活跃：{{ e.activity_level }}
+                            </div>
+                            <div style="color:#64748b;margin-top:6px;">
+                                打法：{{ e.tactics or "-" }}
+                            </div>
+                            <div style="margin-top:8px;">
+                                <a href="/archives/enemies/{{ e.id }}?next={{ request.full_path.rstrip('?')|urlencode }}">详情 →</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding:14px;background:white;border-radius:12px;color:#64748b;">
+                        暂无敌军命中。
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% endif %}
+</div>
+
+{% endblock %}
