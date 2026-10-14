@@ -119,12 +119,29 @@ def build_request_access_context(
 
     try:
         try:
-            return (
-                resolve_default_access_context(
-                    conn,
-                    user_id,
-                )
+            context = resolve_default_access_context(
+                conn,
+                user_id,
             )
+            from flask import current_app
+            if current_app.config.get(
+                "ACCOUNT_BATTLE_SCOPE_ENABLED", False
+            ) is True:
+                if context is None:
+                    return None
+                from services.v155_account_battle_scope import (
+                    resolve_account_battle_scope,
+                )
+                scope = resolve_account_battle_scope(
+                    conn,
+                    membership_id=context["membership_id"],
+                    workspace_id=context["workspace_id"],
+                )
+                if scope is None:
+                    return None
+                context = dict(context)
+                context.update(scope)
+            return context
         except sqlite3.Error:
             return None
     finally:

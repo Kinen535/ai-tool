@@ -253,13 +253,20 @@
                         查看
                     </a>
 
-                    {% if can_manage_battles %}
+                    {% if account_battle_scope_enabled or can_manage_battles %}
                     <form
                         method="post"
                         action="{{
-                            url_for(
-                                'battle_select',
-                                battle_id=b.id
+                            (
+                                url_for(
+                                    'account_battle_select',
+                                    battle_id=b.id
+                                )
+                                if account_battle_scope_enabled
+                                else url_for(
+                                    'battle_select',
+                                    battle_id=b.id
+                                )
                             )
                         }}"
                         class="battle-action-form"

@@ -335,20 +335,45 @@ def list_snapshot_times(battle_id: int | None = None) -> list[str]:
 
 def load_current_battle_members() -> pd.DataFrame:
 
+    account_battle_id = None
+
+    if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True:
+        try:
+            boundary = resolve_workspace_data_boundary(
+                getattr(g, "v155_access_context", None)
+            )
+        except WorkspaceDataBoundaryError:
+            abort(403)
+
+        account_battle_id = int(boundary.current_battle_id)
+
+        if account_battle_id <= 0:
+            abort(403)
+
     conn = get_conn()
 
-    battle_row = conn.execute("""
-        SELECT id
-        FROM battles
-        WHERE is_current = 1
-        LIMIT 1
-    """).fetchone()
+    if account_battle_id is not None:
+        battle_row = conn.execute(
+            "SELECT id FROM battles WHERE id=? LIMIT 1",
+            (account_battle_id,),
+        ).fetchone()
 
-    if not battle_row:
-        conn.close()
-        return pd.DataFrame()
+        if not battle_row:
+            conn.close()
+            abort(403)
+    else:
+        battle_row = conn.execute("""
+            SELECT id
+            FROM battles
+            WHERE is_current = 1
+            LIMIT 1
+        """).fetchone()
 
-    battle_id = battle_row["id"]
+        if not battle_row:
+            conn.close()
+            return pd.DataFrame()
+
+    battle_id = int(battle_row["id"])
 
     snapshot_row = conn.execute("""
         SELECT snapshot_time
@@ -4075,6 +4100,13 @@ def overview():
 
     battle_row = conn.execute('SELECT id, battle_name FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
+    if (
+        app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True
+        and not battle_row
+    ):
+        conn.close()
+        abort(403)
+
     battle_id = battle_row["id"] if battle_row else 1
     current_battle = battle_row["battle_name"] if battle_row else "未设置战场"
 
@@ -4085,6 +4117,10 @@ def overview():
     try:
         members = load_current_battle_members()
     except Exception as e:
+        if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True:
+            # Never turn a denied or failed scoped read into
+            # a successful overview response.
+            raise
         print("❌ load_current_battle_members 报错:", e)
         members = pd.DataFrame()
 
@@ -4611,6 +4647,13 @@ def compare():
 
             battle_row = get_conn().execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
 
+            if (
+                app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False)
+                is True
+                and not battle_row
+            ):
+                abort(403)
+
             battle_id = battle_row["id"] if battle_row else 1
 
             attendance_config = (
@@ -4693,6 +4736,9 @@ def compare():
                 )
 
         except Exception as e:
+            from werkzeug.exceptions import HTTPException
+            if isinstance(e, HTTPException):
+                raise
 
             print("❌ compare GET SQLite 读取失败:", str(e))
             traceback.print_exc()
@@ -4853,6 +4899,13 @@ def compare():
         # 加载快照
         # ==================================================
         battle_row = get_conn().execute('SELECT id FROM battles WHERE id = ? LIMIT 1', (_v155_boundary.current_battle_id,)).fetchone()
+
+        if (
+            app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False)
+            is True
+            and not battle_row
+        ):
+            abort(403)
 
         battle_id = (
             battle_row["id"]
@@ -5357,6 +5410,9 @@ def compare():
         flash("对比分析完成", "success")
 
     except Exception as e:
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            raise
 
         print("❌ compare 报错:", str(e))
 
@@ -8013,6 +8069,12 @@ def battles():
                 or 0
             )
 
+            if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True:
+                _v155_battle["is_current"] = int(
+                    int(_v155_battle["id"])
+                    == int(_v155_boundary.current_battle_id)
+                )
+
             battle_rows.append(
                 _v155_battle
             )
@@ -8112,6 +8174,9 @@ def battles():
         can_manage_battles=role_allows(
             current_role,
             "manager",
+        ),
+        account_battle_scope_enabled=(
+            app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True
         ),
         can_delete_battles=role_allows(
             current_role,
@@ -8692,11 +8757,78 @@ def battle_delete(battle_id):
     )
 
 
+
+@app.route("/battle/account-select/<int:battle_id>", methods=["POST"])
+def account_battle_select(battle_id):
+    if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is not True:
+        abort(404)
+
+    from services.v155_rbac_workspace_resolver import has_permission
+    from services.v155_account_battle_switch import (
+        switch_account_battle,
+        AccountBattleSwitchDenied,
+    )
+
+    actor = getattr(g, "v158_current_user", None)
+    context = getattr(g, "v155_access_context", None)
+    if not isinstance(actor, dict) or not isinstance(context, dict):
+        abort(403)
+
+    try:
+        actor_id = int(actor["id"])
+        context_user_id = int(context["user_id"])
+        membership_id = int(context["membership_id"])
+        workspace_id = int(context["workspace_id"])
+    except (KeyError, TypeError, ValueError):
+        abort(403)
+
+    if actor_id <= 0 or actor_id != context_user_id:
+        abort(403)
+
+    if not has_permission(context, "battle.view"):
+        abort(403)
+
+    if not validate_csrf_token(
+        session, request.form.get("csrf_token", "")
+    ):
+        abort(400)
+
+    conn = get_conn()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        result = switch_account_battle(
+            conn,
+            user_id=actor_id,
+            membership_id=membership_id,
+            workspace_id=workspace_id,
+            target_battle_id=battle_id,
+        )
+        if int(result["current_battle_id"]) != battle_id:
+            raise RuntimeError("battle_switch_verification_failed")
+        conn.commit()
+    except AccountBattleSwitchDenied:
+        if conn.in_transaction:
+            conn.rollback()
+        abort(403)
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    flash("已切换个人当前战场。", "success")
+    return redirect(url_for("battles"))
+
+
 @app.route(
     "/battle/select/<int:battle_id>",
     methods=["POST"],
 )
 def battle_select(battle_id):
+    if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True:
+        abort(403)
+
     current_user = (
         getattr(
             g,
@@ -12232,6 +12364,221 @@ def v155_rbac_backend_permission_gate_before_request():
     return None
 
 
+
+@app.route("/security/accounts/battle-grants", methods=["POST"])
+def v155_security_account_battle_grants():
+    if app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is not True:
+        abort(404)
+
+    actor = getattr(g, "v158_current_user", None)
+    context = getattr(g, "v155_access_context", None)
+
+    if not isinstance(actor, dict):
+        abort(403)
+
+    if not role_allows(str(actor.get("role") or ""), "super_admin"):
+        abort(403)
+
+    # A platform administrator may manage Workspace battle grants
+    # without being entitled to read any battle data personally.
+    # This recovery is local to this administrative POST endpoint.
+    # It never adds battle_ids or changes the general request context.
+    if not isinstance(context, dict):
+        from services.v155_rbac_request_context import (
+            _open_read_only_connection,
+        )
+        from services.v155_rbac_workspace_resolver import (
+            resolve_default_access_context,
+        )
+
+        try:
+            admin_user_id = int(actor["id"])
+        except (KeyError, TypeError, ValueError):
+            abort(403)
+
+        if admin_user_id <= 0:
+            abort(403)
+
+        context_conn = _open_read_only_connection(DB_FILE)
+        try:
+            context = resolve_default_access_context(
+                context_conn, admin_user_id
+            )
+        finally:
+            context_conn.close()
+
+    if not isinstance(context, dict):
+        abort(403)
+
+    try:
+        actor_id = int(actor["id"])
+        context_id = int(context["user_id"])
+        workspace_id = int(context["workspace_id"])
+        target_user_id = int(request.form["target_user_id"])
+        default_id = int(request.form["default_battle_id"])
+        requested_ids = request.form.getlist("battle_ids")
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+
+    if (
+        actor_id <= 0
+        or actor_id != context_id
+        or workspace_id <= 0
+        or target_user_id <= 0
+        or target_user_id == actor_id
+    ):
+        abort(403)
+
+    if not requested_ids or len(requested_ids) > 100:
+        abort(400)
+
+    if not validate_csrf_token(
+        session, request.form.get("csrf_token", "")
+    ):
+        abort(400)
+
+    from services.v155_account_battle_grants import (
+        set_membership_battle_grants,
+        BattleGrantDenied,
+    )
+
+    conn = _v158_open_auth_connection()
+
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+
+        actor_db = conn.execute(
+            """
+            SELECT u.id, u.username, u.role
+            FROM v158_users u
+            JOIN v155_workspace_members m
+              ON m.user_id=u.id
+            JOIN v155_workspaces w
+              ON w.id=m.workspace_id
+            JOIN v155_roles r
+              ON r.id=m.role_id
+             AND r.workspace_id=m.workspace_id
+            WHERE u.id=?
+              AND u.role='super_admin'
+              AND u.status='active'
+              AND m.workspace_id=?
+              AND m.status='active'
+              AND m.is_default=1
+              AND w.status='active'
+              AND r.status='active'
+            """,
+            (actor_id, workspace_id),
+        ).fetchall()
+
+        if len(actor_db) != 1:
+            abort(403)
+
+        actor_record = actor_db[0]
+
+        target = conn.execute(
+            """
+            SELECT m.id
+            FROM v155_workspace_members m
+            JOIN v158_users u ON u.id=m.user_id
+            WHERE m.workspace_id=?
+              AND m.user_id=?
+              AND m.status='active'
+              AND m.is_default=1
+              AND u.status='active'
+            """,
+            (workspace_id, target_user_id),
+        ).fetchall()
+
+        if len(target) != 1:
+            abort(403)
+
+        before_grants = [
+            {
+                "battle_id": int(r["battle_id"]),
+                "status": str(r["status"]),
+                "is_default": int(r["is_default"]),
+            }
+            for r in conn.execute(
+                """
+                SELECT battle_id,status,is_default
+                FROM v155_membership_battle_access
+                WHERE membership_id=?
+                ORDER BY battle_id
+                """,
+                (int(target[0]["id"]),),
+            ).fetchall()
+        ]
+
+        result = set_membership_battle_grants(
+            conn,
+            workspace_id=workspace_id,
+            membership_id=int(target[0]["id"]),
+            battle_ids=requested_ids,
+            default_battle_id=default_id,
+        )
+
+        after_grants = [
+            {
+                "battle_id": int(r["battle_id"]),
+                "status": str(r["status"]),
+                "is_default": int(r["is_default"]),
+            }
+            for r in conn.execute(
+                """
+                SELECT battle_id,status,is_default
+                FROM v155_membership_battle_access
+                WHERE membership_id=?
+                ORDER BY battle_id
+                """,
+                (int(target[0]["id"]),),
+            ).fetchall()
+        ]
+
+        if (
+            tuple(result["battle_ids"])
+            != tuple(sorted(int(x) for x in requested_ids))
+            or int(result["current_battle_id"]) != default_id
+        ):
+            raise RuntimeError("grant_postcondition_failed")
+
+        record_action_log(
+            conn,
+            user_id=actor_id,
+            username_snapshot=str(actor_record["username"] or "")[:64],
+            role_snapshot="super_admin",
+            battle_id=None,
+            action_key="account_battle_grants_update",
+            action_label="更新子账号战场授权",
+            target_type="user",
+            target_id=str(target_user_id),
+            target_label=str(target_user_id),
+            result_status="success",
+            before_data={"grants": before_grants},
+            after_data={"grants": after_grants},
+            reason="account_battle_grants_updated",
+            request_method=request.method,
+            request_path=request.path,
+            ip_address=_v158_request_ip(),
+            user_agent=request.headers.get("User-Agent", "")[:1000],
+        )
+
+        conn.commit()
+
+    except BattleGrantDenied:
+        if conn.in_transaction:
+            conn.rollback()
+        abort(403)
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    flash("子账号战场授权已更新。", "success")
+    return redirect(url_for("v158_security_accounts"))
+
+
 @app.route(
     "/security/accounts",
     methods=["GET", "POST"],
@@ -12495,8 +12842,79 @@ def v158_security_accounts():
             session
         )
 
+
+        battle_scope_admin_enabled = False
+        battle_scope_choices = []
+        battle_scope_by_user = {}
+
+        _actor = getattr(g, "v158_current_user", None) or {}
+        _scope_context = getattr(g, "v155_access_context", None)
+
+        if (
+            app.config.get("ACCOUNT_BATTLE_SCOPE_ENABLED", False) is True
+            and isinstance(_actor, dict)
+            and isinstance(_scope_context, dict)
+            and role_allows(str(_actor.get("role") or ""), "super_admin")
+            and int(_actor.get("id") or 0)
+                == int(_scope_context.get("user_id") or -1)
+        ):
+            _wid = int(_scope_context["workspace_id"])
+            battle_scope_admin_enabled = True
+
+            battle_scope_choices = [
+                dict(row) for row in conn.execute(
+                    """
+                    SELECT wb.battle_id, b.battle_name
+                    FROM v155_workspace_battles wb
+                    JOIN battles b ON b.id=wb.battle_id
+                    WHERE wb.workspace_id=? AND wb.status='active'
+                    ORDER BY wb.battle_id
+                    """,
+                    (_wid,),
+                ).fetchall()
+            ]
+
+            _members = conn.execute(
+                """
+                SELECT m.user_id, m.id AS membership_id
+                FROM v155_workspace_members m
+                JOIN v158_users u ON u.id=m.user_id
+                WHERE m.workspace_id=?
+                  AND m.status='active'
+                  AND m.is_default=1
+                  AND u.status='active'
+                """,
+                (_wid,),
+            ).fetchall()
+
+            for _member in _members:
+                _uid = int(_member["user_id"])
+                _mid = int(_member["membership_id"])
+                _grants = conn.execute(
+                    """
+                    SELECT battle_id, is_default
+                    FROM v155_membership_battle_access
+                    WHERE membership_id=? AND status='active'
+                    """,
+                    (_mid,),
+                ).fetchall()
+                battle_scope_by_user[_uid] = {
+                    "ids": [int(r["battle_id"]) for r in _grants],
+                    "default": next(
+                        (
+                            int(r["battle_id"])
+                            for r in _grants
+                            if int(r["is_default"]) == 1
+                        ),
+                        None,
+                    ),
+                }
+
         return render_template(
             "security_accounts.html",
+            battle_scope_admin_enabled=battle_scope_admin_enabled,
+            battle_scope_choices=battle_scope_choices,
+            battle_scope_by_user=battle_scope_by_user,
             report=report,
             csrf_token=csrf_token,
             title="账号管理",
