@@ -7211,7 +7211,13 @@ def talent():
 
 @app.route("/rules")
 def rules():
-    return render_template("rules.html", high_power=HIGH_POWER, mid_power=MID_POWER, high_battle_min=HIGH_BATTLE_MIN, mid_battle_min=MID_BATTLE_MIN, core_battle_min=CORE_BATTLE_MIN)
+    from services.attendance_config_store import default_attendance_config
+
+    return render_template(
+        "rules.html",
+        attendance_defaults=default_attendance_config(),
+        high_power=HIGH_POWER,
+    )
 
 @app.route('/identity/logs')
 def identity_logs():

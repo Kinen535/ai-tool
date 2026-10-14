@@ -1,16 +1,90 @@
-{% extends "base.html" %}{% block content %}
-<h1 class="page-title">规则说明</h1>
-<div class="card"><div class="card-title">当前默认规则</div>
-<table class="table"><tbody>
-<tr><td>高战判定</td><td>势力值 ≥ {{ high_power }}</td></tr>
-<tr><td>中战判定</td><td>势力值 ≥ {{ mid_power }}</td></tr>
-<tr><td>高战最低战功增长</td><td>{{ high_battle_min }}</td></tr>
-<tr><td>中战最低战功增长</td><td>{{ mid_battle_min }}</td></tr>
-<tr><td>核心判定</td><td>战功增长 ≥ {{ core_battle_min }} 且助攻有明显增长</td></tr>
-</tbody></table></div>
-<div class="card"><div class="card-title">关键能力</div>
-<div class="paragraph">1. 一天可以上传多次原始表，形成多个时间点快照。</div>
-<div class="paragraph">2. A 模式：自动对比最近两次快照，适合偷懒日常巡查。</div>
-<div class="paragraph">3. B 模式：手动选择任意两个时间点，适合抓禁地违规、查打城执行。</div>
-<div class="paragraph">4. 势力增长阈值由你自己输入筛选，不会在程序里写死。</div>
-</div>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+{% set ru_access = g.get('v155_access_context') or {} %}
+{% set ru_permissions = ru_access.get('permissions', []) or [] %}
+{% set ru_can_compare = 'compare.view' in ru_permissions %}
+{% set ru_thresholds = attendance_defaults['thresholds'] %}
+{% set ru_weights = attendance_defaults['weights'] %}
+{% set ru_enabled = attendance_defaults['enabled_metrics'] %}
+<style>
+.ru-page{max-width:1280px;margin:0 auto;color:var(--text-main,#172337)}
+.ru-page *{box-sizing:border-box}
+.ru-head{margin:0 0 20px}.ru-head h1{margin:0 0 6px;font-size:28px;line-height:1.3}
+.ru-page p{margin:0;line-height:1.65}.ru-muted{color:var(--text-sub,#64748b);font-size:14px}
+.ru-card{margin:0 0 16px;padding:22px;border:1px solid var(--border-color,#e2e8f0);border-radius:16px;background:var(--bg-card,#fff)}
+.ru-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.ru-page h2{margin:0 0 6px;font-size:19px;line-height:1.4}.ru-page h3{margin:0 0 6px;font-size:15px;line-height:1.4}
+.ru-badge{display:inline-block;flex-shrink:0;padding:5px 10px;border-radius:999px;font-size:12px;background:var(--primary-soft,#eef2ff);color:var(--text-main,#172337)}
+.ru-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.ru-metric{padding:16px;border-radius:12px;background:var(--bg-soft,#f8fafc);border:1px solid var(--border-color,#e2e8f0)}
+.ru-metric-label{font-size:14px;font-weight:600}.ru-metric-value{display:block;margin:5px 0;font-size:28px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}
+.ru-metric-note{font-size:12px;color:var(--text-sub,#64748b);line-height:1.6}
+.ru-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+.ru-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 15px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;background:var(--primary,#2563eb);color:#fff}
+.ru-link:focus-visible,.ru-disclosure summary:focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:3px}
+.ru-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:14px}
+.ru-scope p{font-size:13px;color:var(--text-sub,#64748b)}
+.ru-disclosure{margin:0 0 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--bg-card,#fff)}
+.ru-disclosure summary{padding:15px 18px;cursor:pointer;font-size:15px;font-weight:600;line-height:1.5}
+.ru-detail{padding:0 18px 18px}.ru-detail dl{margin:0}.ru-detail dt{margin:14px 0 4px;font-weight:600;font-size:14px}.ru-detail dt:first-child{margin-top:0}
+.ru-detail dd{margin:0;font-size:13px;line-height:1.7;color:var(--text-sub,#64748b)}
+@media(max-width:760px){.ru-card{padding:16px}.ru-head h1{font-size:24px}.ru-card-head{flex-direction:column;gap:8px}.ru-metrics,.ru-grid{grid-template-columns:1fr}.ru-metric{padding:13px 15px}.ru-metric-value{font-size:25px}.ru-grid{gap:14px}.ru-actions{align-items:flex-start;flex-direction:column}.ru-link{width:100%}}
+</style>
+<section class="ru-page" aria-labelledby="ru-title" data-rules-page="a1">
+    <header class="ru-head">
+        <h1 id="ru-title">规则管理</h1>
+        <p class="ru-muted">查看考勤标准与评价口径，在对应页面调整战场配置。</p>
+    </header>
+
+    <section class="ru-card" aria-labelledby="ru-attendance-title">
+        <div class="ru-card-head">
+            <div>
+                <h2 id="ru-attendance-title">考勤标准</h2>
+                <p class="ru-muted">以下为系统默认值。当前战场已保存的标准，请进入数据对比查看。</p>
+            </div>
+            <span class="ru-badge">系统默认值</span>
+        </div>
+        <div class="ru-metrics">
+            {% for code, label in [('battle', '战功增长'), ('assist', '助攻增长'), ('donate', '捐献增长')] %}
+            <article class="ru-metric" data-rules-metric="{{ code }}">
+                <div class="ru-metric-label">{{ label }}达标值</div>
+                <strong class="ru-metric-value">{{ '%g'|format(ru_thresholds[code]) }}</strong>
+                <div class="ru-metric-note">原始权重 {{ '%g'|format(ru_weights[code]) }} · 默认{{ '纳入考勤' if ru_enabled[code] else '不纳入考勤' }}</div>
+            </article>
+            {% endfor %}
+        </div>
+        <p class="ru-muted">关闭的指标不参与综合考勤。启用指标的权重按总和折算；全空指标自动停用默认{{ '开启' if attendance_defaults['auto_disable_empty_metrics'] else '关闭' }}。</p>
+        <div class="ru-actions">
+            {% if ru_can_compare %}
+            <a class="ru-link" href="/compare">进入数据对比与考勤设置</a>
+            <span class="ru-muted">在“考勤标准设置”中查看、调整并保存当前战场标准。</span>
+            {% else %}
+            <span class="ru-muted">查看战场考勤配置需要数据对比访问权限。</span>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="ru-card" aria-labelledby="ru-scope-title">
+        <h2 id="ru-scope-title">规则在哪里生效</h2>
+        <div class="ru-grid">
+            <article class="ru-scope"><h3>系统默认值</h3><p>战场未保存自定义考勤标准时，使用系统默认配置。</p></article>
+            <article class="ru-scope"><h3>战场考勤配置</h3><p>达标值、权重和启用指标按战场保存，用于对应战场的考勤分析。</p></article>
+            <article class="ru-scope"><h3>单次分析与筛选</h3><p>所选快照确定统计周期；成员明细筛选条件用于当前查询，不等同于考勤达标标准。</p></article>
+        </div>
+    </section>
+
+    <details class="ru-disclosure">
+        <summary>查看分析与评价口径</summary>
+        <div class="ru-detail"><dl>
+            <dt>统计周期</dt><dd>战功、助攻、捐献及势力增长，按结束快照与起始快照的对应数值差计算。比较结果时，应同时确认所选周期。</dd>
+            <dt>综合考勤</dt><dd>按启用指标、达标值、权重及豁免信息进行评价。考勤状态与对比基础评分、成员身份标签分别表达不同含义。</dd>
+            <dt>对比基础评分</dt><dd>结合势力增长、执行表现、相对势力和行为贡献，并考虑身份加分、风险条件和保护标记。核心标签不能简化为一项战功增长门槛。</dd>
+            <dt>异常标签与建议</dt><dd>疑似异常、低活跃等标签用于提示复核。应结合快照完整性、统计周期、成员职责与实际情况判断；名单和建议不等于自动处置结果。</dd>
+        </dl></div>
+    </details>
+    <details class="ru-disclosure">
+        <summary>查看势力人数统计口径</summary>
+        <div class="ru-detail"><p class="ru-muted">高势力人数统计使用势力值 ≥ {{ high_power }} 的门槛。这项统计不等同于考勤达标或核心成员判定。</p></div>
+    </details>
+</section>
+{% endblock %}
