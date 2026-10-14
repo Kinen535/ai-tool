@@ -216,7 +216,7 @@ def _build_learning_signals(
         signals.append({
             "level": "warning",
             "name": "执行反馈不足",
-            "conclusion": "关键任务反馈不足，Learning Engine 不应把当前结果直接学习为策略失败。",
+            "conclusion": "关键任务反馈不足，学习引擎不应把当前结果直接学习为策略失败。",
             "evidence": (
                 f"feedback_rate={execution_feedback.get('feedback_rate')}, "
                 f"p1_feedback_rate={execution_feedback.get('p1_feedback_rate')}"
@@ -249,7 +249,7 @@ def _build_learning_signals(
         signals.append({
             "level": "info",
             "name": "复盘样本不足",
-            "conclusion": "当前有效复盘样本不足，Learning Engine 只能记录误差，不能给出稳定参数修正。",
+            "conclusion": "当前有效复盘样本不足，学习引擎只能记录误差，不能给出稳定参数修正。",
             "evidence": f"有效复盘样本 {len(valid_history)} / {MIN_VALID_REFLECTIONS}",
         })
         return signals
@@ -406,13 +406,13 @@ def _build_summary(
 ) -> str:
     if learning_status == "blocked_by_execution_feedback":
         return (
-            "Learning Engine 已接入 V12 执行反馈：当前关键任务反馈不足，"
+            "学习引擎已接入 V12 执行反馈：当前关键任务反馈不足，"
             "系统不会把当前结果直接学习为策略失败，需先提高 P1 反馈率。"
         )
 
     if learning_status == "collecting_samples":
         return (
-            f"Learning Engine 已启动安全模式：当前有效复盘样本 {valid_count} 条，"
+            f"学习引擎已启动安全模式：当前有效复盘样本 {valid_count} 条，"
             "暂不自动修正权重，只记录误差、执行反馈与学习信号。"
         )
 
@@ -439,7 +439,7 @@ def _build_decision(
             "action": "improve_execution_feedback_first",
             "label": "先提高执行反馈质量",
             "confidence": 0.82,
-            "reason": "P1 任务反馈不足，Learning Engine 暂不判断策略参数是否需要调整。",
+            "reason": "P1 任务反馈不足，学习引擎暂不判断策略参数是否需要调整。",
         }
 
     if learning_status == "collecting_samples":
@@ -496,7 +496,7 @@ def _build_execution(
     if learning_status == "collecting_samples":
         return [
             "继续保存每轮 V11 推演快照。",
-            "继续保存每轮 Reflection Engine 复盘结果。",
+            "继续保存每轮复盘引擎的复盘结果。",
             "继续保存 V12 执行反馈结果。",
             "至少积累 3 条有效复盘记录后，再评估是否需要调整参数。",
         ]

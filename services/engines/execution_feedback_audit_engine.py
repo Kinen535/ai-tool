@@ -248,5 +248,5 @@ def _build_execution(stats: Dict[str, Any]) -> List[str]:
 
     return [
         "继续保留反馈变更日志。",
-        "后续将审计结果接入 Reflection / Learning。",
+        "后续将审计结果接入复盘与学习流程。",
     ]

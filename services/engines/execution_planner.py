@@ -159,7 +159,7 @@ def _build_risk_first_plan(
             action="每轮快照后固定筛出 TOP20 风险对象，由组长确认后处理。",
             reason="避免风险池长期堆积。",
             deadline="本周",
-            review_metric="raw_cleanup_count 是否下降",
+            review_metric="原始清理风险人数是否下降",
         ),
         _task(
             phase="this_week",
