@@ -1,386 +1,822 @@
 <!doctype html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="utf-8">
-
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
+    <meta
+        name="color-scheme"
+        content="dark"
+    >
 
     <title>系统登录 · 个人数据分析开发记录</title>
 
+    <link
+        rel="preload"
+        href="{{ url_for('static', filename='images/login_cyberpunk_fire_qilin_v1.jpg') }}"
+        as="image"
+        type="image/jpeg"
+        fetchpriority="high"
+    >
+
     <style>
+        /*
+         * LOGIN_A2_CYBERPUNK_AND_SAFE_CREDENTIAL_MEMORY
+         */
         :root {
-            color-scheme: light;
-            --page-bg: #eef3f9;
-            --card-bg: rgba(255, 255, 255, 0.96);
-            --text-main: #162033;
-            --text-sub: #64748b;
-            --border: #d9e2ef;
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --danger-bg: #fff1f2;
-            --danger-text: #be123c;
-            --danger-border: #fecdd3;
+            --night-1000: #02050c;
+            --night-950: #050914;
+            --night-900: #081120;
+            --panel: rgba(5, 12, 25, 0.86);
+            --panel-strong: rgba(4, 9, 19, 0.94);
+            --line: rgba(82, 209, 255, 0.28);
+            --line-strong: rgba(82, 209, 255, 0.62);
+            --cyan: #55d9ff;
+            --cyan-strong: #13bcea;
+            --violet: #8b5cf6;
+            --orange: #ff7a18;
+            --gold: #ffbb45;
+            --text: #f7fbff;
+            --muted: #a8b8ca;
+            --muted-dark: #73859a;
+            --danger: #ff8b83;
+            --danger-bg: rgba(120, 20, 28, 0.38);
+            --shadow:
+                0 32px 90px rgba(0, 0, 0, 0.58);
         }
 
         * {
             box-sizing: border-box;
         }
 
+        html {
+            min-height: 100%;
+            background: var(--night-1000);
+        }
+
         body {
-            margin: 0;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            color: var(--text-main);
-            background:
-                radial-gradient(
-                    circle at top left,
-                    rgba(37, 99, 235, 0.18),
-                    transparent 38%
-                ),
-                radial-gradient(
-                    circle at bottom right,
-                    rgba(14, 165, 233, 0.14),
-                    transparent 36%
-                ),
-                var(--page-bg);
+            margin: 0;
+            overflow-x: hidden;
+            color: var(--text);
+            background: var(--night-1000);
             font-family:
+                Inter,
+                "PingFang SC",
+                "Microsoft YaHei",
+                system-ui,
                 -apple-system,
                 BlinkMacSystemFont,
                 "Segoe UI",
-                "PingFang SC",
-                "Microsoft YaHei",
                 sans-serif;
         }
 
-        .login-shell {
-            width: 100%;
-            max-width: 460px;
+        body::before {
+            position: fixed;
+            z-index: 0;
+            inset: 0;
+            content: "";
+            background-image:
+                linear-gradient(
+                    90deg,
+                    rgba(0, 3, 10, 0.08) 0%,
+                    rgba(0, 4, 13, 0.04) 40%,
+                    rgba(2, 7, 18, 0.44) 62%,
+                    rgba(2, 6, 15, 0.82) 100%
+                ),
+                url("{{ url_for('static', filename='images/login_cyberpunk_fire_qilin_v1.jpg') }}");
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            transform: scale(1.002);
         }
 
-        .brand {
-            margin-bottom: 20px;
-            text-align: center;
+        body::after {
+            position: fixed;
+            z-index: 0;
+            inset: 0;
+            content: "";
+            pointer-events: none;
+            background:
+                radial-gradient(
+                    circle at 22% 45%,
+                    transparent 0%,
+                    transparent 34%,
+                    rgba(0, 4, 12, 0.18) 68%,
+                    rgba(0, 3, 10, 0.54) 100%
+                ),
+                linear-gradient(
+                    180deg,
+                    rgba(1, 5, 14, 0.28) 0%,
+                    transparent 22%,
+                    transparent 72%,
+                    rgba(1, 4, 11, 0.58) 100%
+                );
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .page-shell {
+            position: relative;
+            z-index: 1;
+            min-height: calc(100vh - 48px);
+            padding:
+                clamp(28px, 4vw, 64px)
+                clamp(28px, 5vw, 86px)
+                70px;
+            display: grid;
+            grid-template-columns:
+                minmax(0, 1fr)
+                minmax(390px, 455px);
+            align-items: center;
+            gap: clamp(40px, 6vw, 110px);
+        }
+
+        .site-identity {
+            position: absolute;
+            top: clamp(28px, 4vw, 56px);
+            left: clamp(28px, 5vw, 86px);
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 10px 14px 10px 10px;
+            border: 1px solid rgba(109, 218, 255, 0.22);
+            border-radius: 16px;
+            background: rgba(2, 8, 20, 0.48);
+            box-shadow:
+                0 16px 38px rgba(0, 0, 0, 0.24);
+            backdrop-filter: blur(12px);
         }
 
         .brand-mark {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 20px;
-            color: white;
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border: 1px solid rgba(116, 225, 255, 0.58);
+            border-radius: 13px;
+            color: #ffffff;
             background:
                 linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #0f5bcc
+                    145deg,
+                    rgba(19, 188, 234, 0.92),
+                    rgba(91, 75, 221, 0.94)
                 );
             box-shadow:
-                0 18px 45px
-                rgba(37, 99, 235, 0.24);
-            font-size: 30px;
+                0 0 22px rgba(38, 198, 255, 0.33),
+                inset 0 0 18px rgba(255, 255, 255, 0.10);
+            font-size: 23px;
+            font-weight: 850;
         }
 
-        .brand h1 {
+        .brand-kicker {
+            margin: 0 0 3px;
+            color: var(--cyan);
+            font-size: 10px;
+            font-weight: 850;
+            letter-spacing: 0.18em;
+        }
+
+        .brand-name {
             margin: 0;
-            font-size: 26px;
-            line-height: 1.35;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 760;
+            letter-spacing: 0.03em;
+            text-shadow:
+                0 2px 12px rgba(0, 0, 0, 0.72);
         }
 
-        .brand p {
-            margin: 8px 0 0;
-            color: var(--text-sub);
-            font-size: 14px;
+        .scene-copy {
+            align-self: end;
+            max-width: 390px;
+            margin-bottom: 18px;
+            padding: 18px 20px;
+            border-left: 3px solid var(--orange);
+            border-radius: 0 14px 14px 0;
+            color: rgba(246, 250, 255, 0.94);
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(4, 9, 20, 0.75),
+                    rgba(4, 9, 20, 0.22)
+                );
+            text-shadow:
+                0 2px 12px rgba(0, 0, 0, 0.86);
+            backdrop-filter: blur(4px);
+        }
+
+        .scene-copy strong {
+            display: block;
+            margin-bottom: 7px;
+            color: #ffffff;
+            font-size: 22px;
+            letter-spacing: 0.08em;
+        }
+
+        .scene-copy span {
+            color: #c8d5e4;
+            font-size: 13px;
+            line-height: 1.7;
         }
 
         .login-card {
-            padding: 30px;
-            border: 1px solid
-                rgba(217, 226, 239, 0.9);
+            position: relative;
+            grid-column: 2;
+            overflow: hidden;
+            width: 100%;
+            padding:
+                clamp(30px, 3.2vw, 44px)
+                clamp(28px, 3vw, 40px)
+                34px;
+            border: 1px solid var(--line);
             border-radius: 24px;
-            background: var(--card-bg);
+            background:
+                linear-gradient(
+                    155deg,
+                    rgba(10, 24, 43, 0.91),
+                    var(--panel) 46%,
+                    var(--panel-strong) 100%
+                );
             box-shadow:
-                0 24px 60px
-                rgba(15, 23, 42, 0.12);
-            backdrop-filter: blur(14px);
+                var(--shadow),
+                0 0 0 1px rgba(91, 207, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px) saturate(1.12);
         }
 
-        .login-card h2 {
-            margin: 0 0 6px;
-            font-size: 21px;
+        .login-card::before {
+            position: absolute;
+            top: 0;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            content: "";
+            background:
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--cyan),
+                    var(--violet),
+                    var(--orange),
+                    transparent
+                );
+            box-shadow:
+                0 0 18px rgba(64, 210, 255, 0.58);
         }
 
-        .login-card .desc {
-            margin: 0 0 22px;
-            color: var(--text-sub);
-            font-size: 14px;
+        .login-card::after {
+            position: absolute;
+            z-index: -1;
+            width: 190px;
+            height: 190px;
+            top: -105px;
+            right: -80px;
+            content: "";
+            border-radius: 50%;
+            background:
+                rgba(35, 190, 255, 0.10);
+            filter: blur(3px);
+        }
+
+        .public-site-title {
+            margin: 0 0 14px;
+            color: #e9fbff;
+            font-family:
+                "STSong",
+                "Songti SC",
+                "SimSun",
+                "Noto Serif SC",
+                serif;
+            font-size: 23px;
+            font-weight: 700;
+            line-height: 1.42;
+            letter-spacing: 0.10em;
+            text-shadow:
+                0 0 5px rgba(226, 251, 255, 0.96),
+                0 0 12px rgba(68, 215, 255, 0.82),
+                0 0 24px rgba(50, 137, 255, 0.52),
+                0 0 38px rgba(123, 82, 255, 0.32);
+        }
+
+        .login-card h1 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 30px;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+        }
+
+        .desc {
+            margin: 12px 0 26px;
+            color: var(--muted);
+            font-size: 13px;
             line-height: 1.7;
         }
 
         .error-box {
-            margin-bottom: 18px;
+            margin: 0 0 18px;
             padding: 12px 14px;
-            border: 1px solid
-                var(--danger-border);
-            border-radius: 12px;
-            color: var(--danger-text);
+            border: 1px solid rgba(255, 113, 106, 0.40);
+            border-radius: 11px;
+            color: #ffd2cf;
             background: var(--danger-bg);
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            line-height: 1.55;
         }
 
         .field {
-            margin-bottom: 18px;
+            margin-bottom: 17px;
         }
 
         .field label {
             display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 750;
+            margin: 0 0 8px;
+            color: #dbe9f7;
+            font-size: 13px;
+            font-weight: 720;
         }
 
         .field input {
             width: 100%;
-            min-height: 48px;
-            padding: 11px 13px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            height: 48px;
+            padding: 0 14px;
             outline: none;
-            color: var(--text-main);
-            background: white;
-            font-size: 16px;
+            border: 1px solid rgba(141, 177, 207, 0.34);
+            border-radius: 10px;
+            color: #ffffff;
+            caret-color: var(--cyan);
+            background: rgba(1, 8, 19, 0.62);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
             transition:
-                border-color 0.2s,
-                box-shadow 0.2s;
+                border-color 160ms ease,
+                box-shadow 160ms ease,
+                background 160ms ease;
+        }
+
+        .field input::placeholder {
+            color: #71859a;
+        }
+
+        .field input:hover {
+            border-color: rgba(92, 209, 249, 0.52);
         }
 
         .field input:focus {
-            border-color: var(--primary);
+            border-color: var(--cyan);
+            background: rgba(2, 12, 27, 0.86);
             box-shadow:
-                0 0 0 4px
-                rgba(37, 99, 235, 0.12);
+                0 0 0 3px rgba(74, 209, 255, 0.14),
+                0 0 22px rgba(42, 196, 247, 0.10);
+        }
+
+        .credential-row {
+            margin: -1px 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .remember-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-option input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--cyan-strong);
+            cursor: pointer;
+        }
+
+        .password-note {
+            color: var(--muted-dark);
+            text-align: right;
         }
 
         .submit-button {
             width: 100%;
             min-height: 50px;
-            border: 0;
-            border-radius: 13px;
-            color: white;
-            background: var(--primary);
-            font-size: 16px;
-            font-weight: 800;
+            border: 1px solid rgba(117, 226, 255, 0.34);
+            border-radius: 11px;
+            color: #ffffff;
+            background:
+                linear-gradient(
+                    110deg,
+                    #087fa9 0%,
+                    #176bd3 48%,
+                    #6845d9 100%
+                );
+            box-shadow:
+                0 13px 30px rgba(0, 112, 190, 0.28),
+                inset 0 1px 0 rgba(255, 255, 255, 0.17);
             cursor: pointer;
+            font-weight: 780;
+            letter-spacing: 0.05em;
             transition:
-                transform 0.15s,
-                background 0.2s;
+                transform 160ms ease,
+                box-shadow 160ms ease,
+                filter 160ms ease;
         }
 
         .submit-button:hover {
-            background: var(--primary-hover);
+            transform: translateY(-1px);
+            filter: brightness(1.09);
+            box-shadow:
+                0 17px 34px rgba(0, 139, 208, 0.35),
+                0 0 20px rgba(62, 208, 255, 0.14);
         }
 
         .submit-button:active {
-            transform: translateY(1px);
+            transform: translateY(0);
         }
 
         .security-note {
             margin: 18px 0 0;
-            color: var(--text-sub);
-            font-size: 12px;
-            line-height: 1.7;
-            text-align: center;
+            padding: 12px 13px;
+            border: 1px solid rgba(122, 165, 201, 0.14);
+            border-radius: 10px;
+            color: #8395a9;
+            background: rgba(0, 5, 14, 0.43);
+            font-size: 11px;
+            line-height: 1.65;
         }
 
-        @media (max-width: 520px) {
-            body {
-                padding: 16px;
+        .security-note strong {
+            color: #b8c9d9;
+        }
+
+        .compliance-footer {
+            position: fixed;
+            z-index: 5;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            min-height: 48px;
+            padding: 9px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            border-top:
+                1px solid rgba(83, 180, 219, 0.16);
+            color: #8194a9;
+            background: rgba(1, 5, 13, 0.88);
+            box-shadow:
+                0 -10px 28px rgba(0, 0, 0, 0.20);
+            backdrop-filter: blur(14px);
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .compliance-footer a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .compliance-footer a:hover {
+            color: var(--cyan);
+            text-decoration: underline;
+        }
+
+        .compliance-separator {
+            color: #40536a;
+        }
+
+        @media (max-width: 980px) {
+            body::before {
+                background-image:
+                    linear-gradient(
+                        90deg,
+                        rgba(0, 4, 12, 0.20),
+                        rgba(1, 6, 16, 0.68)
+                    ),
+                    url("{{ url_for('static', filename='images/login_cyberpunk_fire_qilin_v1.jpg') }}");
+                background-position: 38% center;
+            }
+
+            .page-shell {
+                grid-template-columns: 1fr;
+                justify-items: end;
+                padding-top: 110px;
+            }
+
+            .scene-copy {
+                display: none;
             }
 
             .login-card {
-                padding: 24px 20px;
-                border-radius: 20px;
+                grid-column: 1;
+                max-width: 440px;
+            }
+        }
+
+        @media (max-width: 620px) {
+            body::before {
+                background-image:
+                    linear-gradient(
+                        rgba(1, 5, 14, 0.64),
+                        rgba(1, 5, 14, 0.80)
+                    ),
+                    url("{{ url_for('static', filename='images/login_cyberpunk_fire_qilin_v1.jpg') }}");
+                background-position: 34% center;
             }
 
-            .brand h1 {
-                font-size: 22px;
+            .page-shell {
+                min-height: calc(100vh - 58px);
+                padding: 38px 16px 82px;
+                justify-items: stretch;
+            }
+
+            .site-identity {
+                top: 18px;
+                left: 16px;
+                right: 16px;
+                width: fit-content;
+            }
+
+            .brand-mark {
+                width: 42px;
+                height: 42px;
+                font-size: 21px;
+            }
+
+            .login-card {
+                max-width: none;
+                padding: 30px 22px 27px;
+                border-radius: 20px;
+                background:
+                    linear-gradient(
+                        155deg,
+                        rgba(9, 22, 40, 0.95),
+                        rgba(3, 8, 18, 0.96)
+                    );
+            }
+
+            .login-card h1 {
+                font-size: 27px;
+            }
+
+            .credential-row {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .password-note {
+                text-align: left;
+            }
+
+            .compliance-footer {
+                min-height: 58px;
+                padding: 7px 11px;
+                gap: 3px 8px;
+                font-size: 10px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition: none !important;
             }
         }
     </style>
 </head>
 
 <body>
+    <main class="page-shell">
+        <section
+            class="login-card"
+            aria-labelledby="login-title"
+        >
+            <p class="public-site-title" id="login-title">
+                个人数据分析开发记录
+            </p>
 
-<div class="login-shell">
-
-    <div class="brand">
-        <div class="brand-mark">策</div>
-
-        <h1>个人数据分析开发记录</h1>
-
-        <p>V15.8 统一账号认证中心</p>
-    </div>
-
-    <main class="login-card">
-
-        <h2>登录系统</h2>
-
-        <p class="desc">
-            请使用已分配的系统账号和密码进入管理后台。
-        </p>
-
-        {% if error %}
+            {% if error %}
             <div
                 class="error-box"
                 role="alert"
             >
                 {{ error }}
             </div>
-        {% endif %}
+            {% endif %}
 
-        <form
-            method="post"
-            action="{{ url_for('v158_login') }}"
-        >
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token }}"
+            <form
+                id="loginForm"
+                method="post"
+                action="{{ url_for('v158_login') }}"
+                autocomplete="on"
             >
-
-            <input
-                type="hidden"
-                name="next"
-                value="{{ next_path }}"
-            >
-
-            <div class="field">
-                <label for="username">
-                    用户名
-                </label>
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token }}"
+                >
 
                 <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    value="{{ username }}"
-                    maxlength="64"
-                    autocomplete="username"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    required
-                    autofocus
+                    type="hidden"
+                    name="next"
+                    value="{{ next_path }}"
                 >
-            </div>
 
-            <div class="field">
-                <label for="password">
-                    密码
-                </label>
+                <div class="field">
+                    <label for="username">
+                        用户名
+                    </label>
 
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    maxlength="128"
-                    autocomplete="current-password"
-                    required
+                    <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        value="{{ username|default('') }}"
+                        placeholder="请输入用户名"
+                        autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        required
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="password">
+                        密码
+                    </label>
+
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="请输入密码"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <div class="credential-row">
+                    <label
+                        class="remember-option"
+                        for="rememberUsername"
+                    >
+                        <input
+                            id="rememberUsername"
+                            type="checkbox"
+                        >
+                        <span>记住用户名</span>
+                    </label>
+
+                </div>
+
+                <button
+                    class="submit-button"
+                    type="submit"
                 >
-            </div>
+                    进入系统
+                </button>
+            </form>
 
-            <button
-                class="submit-button"
-                type="submit"
-            >
-                安全登录
-            </button>
-        </form>
-
-        <p class="security-note">
-            连续登录失败达到安全阈值后，
-            账号将被临时锁定。
-        </p>
-
+            <p class="security-note">
+                <strong>安全提示：</strong>
+                连续登录失败可能触发临时限制。
+                请确认账号信息后再试，勿向他人透露登录凭据。
+            </p>
+        </section>
     </main>
 
-</div>
-
-
-<!-- ICP-COMPLIANCE-FOOTER-BEGIN -->
-<footer
-    id="icp-compliance-footer"
-    style="
-        position:fixed;
-        left:50%;
-        bottom:8px;
-        transform:translateX(-50%);
-        z-index:2147483000;
-        box-sizing:border-box;
-        max-width:calc(100% - 32px);
-        padding:6px 12px;
-        border-radius:8px;
-        background:rgba(15,23,42,0.82);
-        color:#cbd5e1;
-        font-size:12px;
-        line-height:1.5;
-        text-align:center;
-        white-space:nowrap;
-        box-shadow:0 4px 16px rgba(0,0,0,0.18);
-    "
->
-    <a
-        href="https://beian.miit.gov.cn/"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="
-            color:inherit;
-            text-decoration:none;
-        "
-    >粤ICP备2026111634号-1</a>
-
-    <span
-        aria-hidden="true"
-        style="margin:0 6px;"
-    >·</span>
-
-    <a
-        href="https://beian.mps.gov.cn/#/query/webSearch?code=44011102485214"
-        target="_blank"
-        rel="noreferrer"
-        style="
-            color:inherit;
-            text-decoration:none;
-        "
+    <!-- ICP-COMPLIANCE-FOOTER-BEGIN -->
+    <footer
+        id="icp-compliance-footer"
+        class="compliance-footer"
     >
-        <img
-            src="/static/mps-beian.png"
-            alt=""
-            width="18"
-            height="20"
-            loading="lazy"
-            decoding="async"
-            style="
-                display:inline-block;
-                width:18px;
-                height:20px;
-                margin-right:4px;
-                vertical-align:-5px;
-            "
+        <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
         >
-        粤公网安备44011102485214号
-    </a>
-</footer>
-<!-- ICP-COMPLIANCE-FOOTER-END -->
+            粤ICP备2026111634号-1
+        </a>
 
+        <span
+            class="compliance-separator"
+            aria-hidden="true"
+        >
+            ·
+        </span>
+
+        <a
+            href="https://beian.mps.gov.cn/#/query/webSearch?code=44011102485214"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            粤公网安备44011102485214号
+        </a>
+    </footer>
+    <!-- ICP-COMPLIANCE-FOOTER-END -->
+
+    <script>
+        /*
+         * Only the username is stored here.
+         * Password storage and autofill remain under the browser's
+         * password manager and are never read by this script.
+         */
+        (function () {
+            "use strict";
+
+            const storageKey =
+                "login.rememberedUsername";
+
+            const form =
+                document.getElementById("loginForm");
+
+            const username =
+                document.getElementById("username");
+
+            const remember =
+                document.getElementById(
+                    "rememberUsername"
+                );
+
+            if (!form || !username || !remember) {
+                return;
+            }
+
+            try {
+                const savedUsername =
+                    window.localStorage.getItem(
+                        storageKey
+                    );
+
+                if (
+                    savedUsername
+                    && !username.value
+                ) {
+                    username.value = savedUsername;
+                }
+
+                remember.checked =
+                    Boolean(savedUsername);
+            } catch (error) {
+                remember.disabled = true;
+            }
+
+            remember.addEventListener(
+                "change",
+                function () {
+                    if (remember.checked) {
+                        return;
+                    }
+
+                    try {
+                        window.localStorage.removeItem(
+                            storageKey
+                        );
+                    } catch (error) {
+                        return;
+                    }
+                }
+            );
+
+            form.addEventListener(
+                "submit",
+                function () {
+                    try {
+                        if (
+                            remember.checked
+                            && username.value.trim()
+                        ) {
+                            window.localStorage.setItem(
+                                storageKey,
+                                username.value.trim()
+                            );
+                        } else {
+                            window.localStorage.removeItem(
+                                storageKey
+                            );
+                        }
+                    } catch (error) {
+                        return;
+                    }
+                }
+            );
+        }());
+    </script>
 </body>
 </html>
