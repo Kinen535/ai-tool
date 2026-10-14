@@ -15436,7 +15436,12 @@ def v156_reputation_event_relation_delete(event_id, relation_id):
     conn = sqlite3.connect("data/snapshots.db")
     conn.row_factory = sqlite3.Row
 
-    delete_reputation_event_relation_scoped(conn, relation_id, event_id=event_id, battle_id=battle_id)
+    delete_reputation_event_relation_scoped(
+        conn,
+        event_id=event_id,
+        relation_id=relation_id,
+        battle_id=battle_id,
+    )
 
     conn.close()
 
